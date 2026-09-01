@@ -22,7 +22,8 @@
       "title": "Ce te descrie cel mai bine?",
       "description": "Selectează opțiunea care se potrivește cel mai bine nevoilor tale",
       "loadError": "Nu s-au putut încărca tipurile de utilizatori. Te rugăm să încerci din nou.",
-      "selectionLabel": "Selectare tip utilizator"
+      "selectionLabel": "Selectare tip utilizator",
+      "errorLabel": "Eroare la încărcarea tipului de utilizator"
     },
     "language": {
       "selectLabel": "Selectează o limbă",
@@ -65,7 +66,8 @@
       "encryptionBody": "Câmpurile profilului sunt criptate implicit, dar administratorul acestei instanțe controlează setările la nivel de câmp și poate permite ca anumite date să fie stocate sau partajate diferit.",
       "adminControlNotice": "Gestionarea datelor este configurată de administratorul acestei instanțe, inclusiv ce poate fi stocat necriptat sau partajat cu instrumente AI.",
       "noWarrantyNotice": "Software-ul Enclave este furnizat ca atare, fără garanție. Utilizarea acestei instanțe este supusă politicilor administratorului.",
-      "retentionNotice": "Termenele de păstrare și ștergere a datelor sunt stabilite de administratorul acestei instanțe. Contactați-i pentru solicitări de acces, corectare sau ștergere."
+      "retentionNotice": "Termenele de păstrare și ștergere a datelor sunt stabilite de administratorul acestei instanțe. Contactați-i pentru solicitări de acces, corectare sau ștergere.",
+      "errorLabel": "Eroare la solicitarea link-ului magic"
     },
     "verify": {
       "verifying": "Se verifică linkul...",
@@ -125,20 +127,28 @@
       "databaseName": "Bază de date",
       "knowledgeGraph": "Interogare graf de cunoștințe",
       "config": "Configurare",
-      "configName": "Configurare"
+      "configName": "Configurare",
+      "knowledgeSearch": "Caută în documentele încărcate și fragmentele de cunoștințe",
+      "knowledgeSearchName": "Cunoștințe",
+      "curatedResources": "Găsește resurse de recomandare verificate de admin și organizații de încredere",
+      "curatedResourcesName": "Resurse"
     },
     "documentScope": {
       "title": "Baze de cunoștințe",
       "description": "Selectează sursele de inclus în context",
       "noSources": "Nu sunt surse disponibile",
       "clearAll": "Șterge tot",
-      "docsLabel": "Documente"
+      "docsLabel": "Documente",
+      "clearAllSelectedAria": "Șterge toate documentele selectate",
+      "docsLabelWithCount": "Documente {{count}}"
     },
     "messages": {
       "searching": "Caut \"{{term}}\"...",
       "searchingPrefix": "Se caută",
       "searchResults": "Am căutat \"{{term}}\" pentru tine:",
-      "newConversation": "Conversație nouă"
+      "newConversation": "Conversație nouă",
+      "copy": "Copiază mesajul",
+      "copied": "Mesaj copiat"
     },
     "code": {
       "copy": "Copiază",
@@ -157,7 +167,88 @@
       "roleUser": "Tu",
       "roleAssistant": "Asistent",
       "footer": "Exportat din {{instanceName}}",
-      "exportedOn": "Exportat la {{timestamp}}"
+      "exportedOn": "Exportat la {{timestamp}}",
+      "copiedExportNotice": "Această exportare părăsește stocarea activă a produsului și se află în afara ciclului de viață al Active Storage după descărcare."
+    },
+    "new": "Chat nou",
+    "listTitle": "Chat-uri",
+    "contextTitle": "Context",
+    "messageActions": "Acțiuni mesaj",
+    "actions": {
+      "stop": "Oprește răspunsul",
+      "stopDisabled": "Nu există niciun răspuns de oprit.",
+      "regenerate": "Regenerare răspuns",
+      "edit": "Editează mesajul",
+      "waitForResponse": "Așteaptă până când răspunsul curent se termină.",
+      "startConversation": "Începe sau reia mai întâi o Conversație.",
+      "resolveConfirmation": "Confirmă Modificarea în așteptare înainte de a schimba istoricul."
+    },
+    "composerContextAria": "Context editor",
+    "sessions": {
+      "ariaLabel": "Sesiuni de chat",
+      "current": "Chat curent",
+      "empty": "Gol",
+      "messageCount_one": "{{count}} mesaj",
+      "messageCount_few": "{{count}} mesaje",
+      "messageCount_other": "{{count}} mesaje",
+      "deleteConfirmTitle": "Ștergi \"{{title}}\"?",
+      "rename": "Redenumește {{title}}",
+      "delete": "Șterge {{title}}",
+      "resumeInvalid": "Imposibil de încărcat conversația.",
+      "renameEmpty": "Titlul conversației este obligatoriu.",
+      "renameError": "Imposibil de redenumit conversația.",
+      "deleteError": "Imposibil de șters conversația.",
+      "loading": "Se încarcă chat-urile...",
+      "error": "Imposibil de încărcat chat-urile",
+      "saved": "Chat salvat",
+      "deleteConfirmBody": "Aceasta elimină conversația salvată și memoria sesiunii sale.",
+      "deleteCancel": "Anulează ștergerea conversației",
+      "cancel": "Anulează",
+      "deleteConfirm": "Șterge conversația",
+      "deleteDeleting": "Ștergerea...",
+      "renameInput": "Titlu conversație",
+      "renameCancel": "Anulează redenumirea conversației",
+      "renameSave": "Salvează titlul conversației",
+      "renameSaving": "Redenumire...",
+      "open": "Deschide sesiunile de chat",
+      "close": "Închide sesiunile de chat"
+    },
+    "currentChatAria": "Chat curent",
+    "newFromCurrent": "Începe un chat nou",
+    "documentsContextTitle": "Documente",
+    "errors": {
+      "requestLabel": "Eroare la cererea de chat"
+    },
+    "trace": {
+      "finalizing": "Finalizarea răspunsului...",
+      "collapse": "Restrânge",
+      "expand": "Extinde",
+      "reasoning": "Raționament",
+      "thinking": "Gândire",
+      "transcript": "Transcriere {{label}}",
+      "reasoningSummaryAria": "Rezumat raționament",
+      "reasoningTranscriptAria": "Transcriere raționament",
+      "label": "Urmărire",
+      "toolCalls": "Apeluri instrumente",
+      "retrieval": "Recuperare",
+      "input": "Intrare",
+      "output": "Ieșire",
+      "retrievedSource": "Sursă recuperată",
+      "score": "scor {{score}}",
+      "optionalDetailsAria": "detalii opționale {{label}}"
+    },
+    "conversationMessagesAria": "Mesaje conversație",
+    "conversationSurfaceAria": "Suprafață conversație",
+    "conversationThreadAria": "Fir conversație",
+    "activity": {
+      "label": "Activitate",
+      "summaryAria": "Rezumat activitate",
+      "detailsAria": "Detalii activitate",
+      "timelineAria": "Linie de timp activitate",
+      "show": "Arată activitate",
+      "hide": "Ascunde activitate",
+      "showOptional": "Arată detalii opționale",
+      "hideOptional": "Ascunde detalii opționale"
     }
   },
   "common": {
@@ -197,7 +288,17 @@
     "retry": "Reîncercare",
     "saved": "Salvat",
     "sending": "Se trimite...",
-    "gotIt": "Am înțeles"
+    "gotIt": "Am înțeles",
+    "send": "Trimite",
+    "backToAdminDashboard": "Înapoi la Panoul de Control Admin",
+    "loadingPage": "Se încarcă pagina",
+    "pageLoadError": "Eroare la încărcarea paginii. Te rugăm să reîncarci.",
+    "export": "Exportă",
+    "reset": "Resetează",
+    "exit": "Ieșire",
+    "none": "Niciunul",
+    "all": "Toate",
+    "warning": "Avertisment"
   },
   "settings": {
     "title": "Setări",
@@ -220,8 +321,23 @@
       "deploymentConfig": "Configurare implementare",
       "deploymentConfigDesc": "Servicii, SMTP, stocare",
       "userConfig": "Configurare Utilizator",
-      "userConfigDesc": "Tipuri de utilizatori și întrebări de integrare"
-    }
+      "userConfigDesc": "Tipuri de utilizatori și întrebări de integrare",
+      "guidedSetup": "Configurare Ghidată",
+      "guidedSetupDesc": "Parcurge configurarea, documentele, resursele și testarea.",
+      "guides": "Ghiduri Admin",
+      "guidesDesc": "Înțelege ce configurează administratorii și unde.",
+      "testUserSession": "Testare Sesiune Utilizator",
+      "testUserSessionDesc": "Chat ca un utilizator simulat și revizuiește feedback-ul beta.",
+      "diagnostics": "Diagnosticare",
+      "diagnosticsDesc": "Efectuaau teste de verificare în timpul investigării problemelor.",
+      "resourceDirectory": "Director Resurse",
+      "resourceDirectoryDesc": "Curatează manual resursele de referință de încredere."
+    },
+    "diagnostics": "Diagnosticare",
+    "adminWorkflows": "Fluxuri de lucru Admin",
+    "settingsSection": "Setări",
+    "dataAndContent": "Date și Conținut",
+    "operations": "Operațiuni"
   },
   "admin": {
     "confirmDelete": "Sigur doriți să ștergeți această înregistrare?",
@@ -264,7 +380,12 @@
       "instanceSectionTitle": "Configurare instanță",
       "onboardingFieldsHint": "Creează întrebările la care utilizatorii răspund în timpul înrolării.",
       "userSectionDesc": "Configurează tipurile de utilizatori și întrebările la care utilizatorii răspund în timpul înregistrării.",
-      "userSectionTitle": "Configurare utilizator"
+      "userSectionTitle": "Configurare utilizator",
+      "fieldScopeFilterLabel": "Filtrează întrebările după tipul de utilizator",
+      "noFieldsForScope": "Nu există încă întrebări aplicabile acestui tip de utilizator.",
+      "reorderNeedsAllScope": "Afișează toate întrebările pentru a le reordona",
+      "fieldScopeGlobalHint": "Întrebări la care răspunde fiecare utilizator, indiferent de tipul său.",
+      "fieldScopeTypeHint": "Tot ce este întrebat acestui tip de utilizator: întrebările globale la care răspunde toată lumea, plus propriile sale întrebări."
     },
     "database": {
       "backToSetup": "Înapoi la setări admin",
@@ -352,7 +473,14 @@
       "nip07Unavailable": "Nu a fost detectată nicio extensie Nostr",
       "plaintextFieldIcon": "Câmp text simplu",
       "primaryKeyIcon": "Cheie primară",
-      "unlockDecryption": "Deblochează decriptarea"
+      "unlockDecryption": "Deblochează decriptarea",
+      "safeQueryResults": "Rezultate interogare sigure",
+      "queryError": "Eroare interogare",
+      "writeResult": "Rezultat scriere bază de date",
+      "emptyQueryResult": "Rezultat interogare gol",
+      "readOnly": "Doar citire",
+      "tableLoadError": "Eroare încărcare tabel",
+      "readOnlyHint": "Editările directe în baza de date sunt dezactivate; folosește fluxurile de admin auditate pentru a face modificări."
     },
     "fields": {
       "nameRequired": "Numele câmpului este obligatoriu",
@@ -442,7 +570,11 @@
       "removeFieldFailed": "Nu s-a putut elimina câmpul",
       "reorderFailed": "Nu s-a putut reordona câmpul",
       "loadUsersFailed": "Nu s-au putut încărca utilizatorii",
-      "updateTypeFailed": "Nu s-a putut actualiza tipul de utilizator"
+      "updateTypeFailed": "Nu s-a putut actualiza tipul de utilizator",
+      "loadSettingsFailed": "Eșuat la încărcarea setărilor",
+      "externalConfigConflict": "Sage sau un alt admin a modificat aceste setări în timp ce editai. Reîncarcă această pagină înainte de salvare pentru a nu suprascrie valorile mai noi.",
+      "externalSettingsConflict": "Sage sau un alt admin a modificat aceste setări în timp ce editai. Reîncarcă această pagină înainte de salvare.",
+      "externalUserConfigConflict": "Sage sau un alt admin a modificat Tipurile de Utilizatori sau Întrebările de Onboarding în timp ce editai. Reîncarcă această pagină înainte de salvarea brouneului."
     },
     "userMigration": {
       "title": "Migrare tip utilizator",
@@ -489,7 +621,10 @@
       "noUsersHint": "Încearcă să schimbi filtrul de mai sus sau să reîmprospătezi.",
       "pubkeyPresent": "Cheie publică Nostr prezentă",
       "rowResultSuccess": "Migrat. Lipsesc câmpuri obligatorii: {{count}}.",
-      "singleSummary": "Utilizator #{{userId}} migrat. Lipsesc câmpuri obligatorii: {{count}}."
+      "singleSummary": "Utilizator #{{userId}} migrat. Lipsesc câmpuri obligatorii: {{count}}.",
+      "usersErrorLabel": "Eroare la migrarea utilizatorilor pe tip de utilizator",
+      "errorLabel": "Eroare la migrarea tipului de utilizator",
+      "summaryLabel": "Rezumat migrare tip utilizator"
     },
     "configAssistant": {
       "openAria": "Deschide asistentul admin",
@@ -527,8 +662,40 @@
         "restartRequiredFor": "Restart necesar pentru: {{keys}}.",
         "restartRequiredNo": "Restart necesar: nu.",
         "restartCheckFailedHttp": "Verificarea necesității restartului a eșuat (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Verificarea necesității restartului a eșuat (eroare de rețea)."
-      }
+        "restartCheckFailedNetwork": "Verificarea necesității restartului a eșuat (eroare de rețea).",
+        "pageRefreshRecommended": "Reîncarcă această pagină pentru a vedea actualizările temei."
+      },
+      "onboardingWelcome": "Bun venit — să ne configurăm spațiul. Răspunde la oricâte dorești într-un singur mesaj (numerează-le și sări peste orice nu ești sigur):\n\n1. **Nume** — cum ar trebui să numim acest spațiu? (apare în antet și în tab-ul browserului)\n2. **Descriere** — o propoziție despre scopul acestuia (o notă privată, care nu este vizibilă utilizatorilor)\n3. **Nume asistent** — cum ar trebui să se numească ajutorul AI?\n4. **Culoare accent** — culoarea de evidențiere pentru butoane și linkuri (un nume precum albastru/teal, sau un cod hex precum #3B82F6)\n5. **Temă** — light, dark sau sistem (potrivită cu dispozitivul)?\n6. **Limbă implicită** — de ex. Engleză sau Spaniolă (opțional)\n7. **Slogan** — o scurtă linie pentru antet (opțional)\n8. **Utilizatori noi** — îi lăsăm să intre imediat sau aprobăm fiecare persoană?\n9. **Tipuri de utilizatori** — ce fel de persoane (non-admin) vor folosi acest spațiu? (de ex. Profesor și Student) — voi crea fiecare tip pentru tine\n\nExemplu: \"9. Profesor și Student\". Voi salva totul într-o singură etapă — și poți trece la configurarea manuală oricând.",
+      "collapseSidebar": "Retrag sidebar asistent",
+      "expandSidebar": "Deschide sidebar asistent admin",
+      "resize": "Redimensionare panou asistent admin",
+      "railLabel": "Asistent",
+      "shareSecretsHint": "Dezactivat implicit. Activează mai întâi instrumentul de Configurare. Când este activat, valorile de configurare pentru implementarea secretelor sunt dezvăluite pe client și trimise către Sage pentru acest flux de prototip.",
+      "applyIntentUsePanel": "Folosiți panoul cu modificări în așteptare de mai jos și apăsați pe Aplică pentru a confirma aceste actualizări de configurare.",
+      "applyIntentNoPending": "Nu există modificări de configurare în așteptare pentru a fi aplicate. Cere asistentului să propună mai întâi un set de modificări.",
+      "startNewConversation": "Începe o nouă conversație cu asistentul",
+      "reducedContextNoticeLabel": "Notificare context redus",
+      "sessionMemoryNoticeLabel": "Notificare compactare Memorie Sesiune",
+      "sessionMemoryNotice": "Contextul mai vechi a fost rezumat pentru a menține această conversație activă.",
+      "reducedContextNotice": "Unele elemente de context au fost reduse pentru a se încadra în bugetul furnizorului de model ({{sections}}). Răspunsurile pot fi mai puțin complete până când nu începeți o nouă conversație cu asistentul.",
+      "reducedContextSections": {
+        "recentConversation": "istoric conversație recentă"
+      },
+      "approvalCardTitle": "Aprobarea modificărilor de configurare",
+      "applying": "Aplicare",
+      "applied": "Aplicat",
+      "rejected": "Respins",
+      "failed": "Eșuat",
+      "superseded": "Înlocuit",
+      "hideDetails": "Ascunde detaliile",
+      "reviewDetails": "Revizuire detalii",
+      "reject": "Respinge",
+      "approve": "Aprobă",
+      "applyErrorLabel": "Eroare la aplicarea configurării",
+      "onboardingTitle": "Chat de configurare asistată",
+      "onboardingContext": "Conversație de configurare concentrată",
+      "directShareSecretsHint": "Opțional: include valorile secretelor de deployment stocate în contextul acestei Conversații. Citirea directă a secretelor nu necesită acest lucru.",
+      "directWritePrompt": "Întreabă despre configurarea admin. Sage poate inspecta setările și, după confirmarea cu tine în conversație, poate aplica direct modificările acceptate."
     },
     "reachout": {
       "badgeDefault": "Implicit",
@@ -695,7 +862,16 @@
       "typographyTitle": "Tipografie",
       "userIconLabel": "Pictogramă utilizator",
       "userLabelLabel": "Etichetă utilizator",
-      "userLabelPlaceholder": "ex., Tu"
+      "userLabelPlaceholder": "ex., Tu",
+      "publicEmailDisplayNameLabel": "Numele de afișare public al e-mailului (opțional)",
+      "publicEmailDisplayNameHint": "Utilizat în e-mailurile de autentificare prin link magic. Lăsați gol pentru a utiliza numele Instanței.",
+      "defaultsTitle": "Valori implicite Instanță",
+      "defaultsDesc": "Setați limba și tema de bază utilizate înainte de aplicarea oricăror controale locale ale browserului.",
+      "defaultLanguageLabel": "Limbă implicită",
+      "defaultThemeLabel": "Temă implicită",
+      "themeSystem": "Sistem",
+      "themeLight": "Luminos",
+      "themeDark": "Întunecat"
     },
     "userConfig": {
       "subtitle": "Configurează tipurile de utilizatori și întrebările la care utilizatorii răspund în timpul înrolării.",
@@ -703,6 +879,55 @@
       "typeDescription": "Descriere",
       "typeIcon": "Pictogramă tip",
       "typeName": "Numele tipului"
+    },
+    "userApproval": {
+      "updateFailed": "Eșuat la actualizarea aprobării utilizatorului.",
+      "approvedUser": "Utilizatorul #{{id}} a fost aprobat.",
+      "revokedUser": "Utilizatorul #{{id}} a fost mutat în așteptare.",
+      "title": "Aprobarea utilizatorilor",
+      "subtitle": "Alege dacă noii Utilizatori autentificați pot intra în chat imediat sau trebuie să aștepte aprobarea Adminului.",
+      "requireManualLabel": "Solicită aprobare manuală pentru noii utilizatori",
+      "requireManualHint": "Când este activată, noii Utilizatori vor ajunge pe ecranul de aprobare în așteptare până când un Admin îi aprobă.",
+      "loadingHint": "Încărcare...",
+      "saveButton": "Salvează aprobarea utilizatorilor",
+      "savedCalloutLabel": "Aprobarea utilizatorului a fost salvată",
+      "errorCalloutLabel": "Eroare la aprobarea utilizatorului",
+      "pendingTitle": "Aprobări în așteptare",
+      "pendingCount_zero": "{{count}} utilizatori necesită aprobare înainte de accesul la chat.",
+      "pendingCount_one": "{{count}} utilizator necesită aprobare înainte de accesul la chat.",
+      "pendingCount_two": "{{count}} utilizatori necesită aprobare înainte de accesul la chat.",
+      "pendingCount_few": "{{count}} utilizatori necesită aprobare înainte de accesul la chat.",
+      "pendingCount_many": "{{count}} utilizatori necesită aprobare înainte de accesul la chat.",
+      "pendingCount_other": "{{count}} utilizatori necesită aprobare înainte de accesul la chat.",
+      "nonePending": "Nu există utilizatori care să aștepte aprobarea.",
+      "actionSavedCalloutLabel": "Aprobarea utilizatorului a fost actualizată",
+      "actionErrorCalloutLabel": "Actualizarea aprobării utilizatorului a eșuat",
+      "loadingUsers": "Încărcare utilizatori...",
+      "emptyState": "Noii Utilizatori care așteaptă aprobarea vor apărea aici atunci când este necesară aprobarea manuală.",
+      "emailOnFile": "Email în fișier",
+      "nameOnFile": "Nume în fișier",
+      "approveButton": "Aprobă",
+      "revokeButton": "Revocă"
+    },
+    "userRosterExport": {
+      "auditFailed": "Exportul listei de utilizatori nu a putut fi auditat. Tabelul nu a fost descărcat.",
+      "decryptUnavailable": "Este necesară o extensie de browser cu decriptare NIP-04 pentru a pregăti această listă.",
+      "decryptFailed": "O valoare criptată din listă nu a putut fi decriptată. Nu a fost creat niciun tabel.",
+      "prepared": "Lista completă este pregătită. Descărcarea este acum activată.",
+      "prepareRequired": "Pregătește lista actuală înainte de descărcare.",
+      "prepareButton": "Pregătește lista de utilizatori",
+      "downloadButton": "Descarcă lista pregătită",
+      "success": "Tabelul cu lista de utilizatori a fost descărcat.",
+      "failed": "Exportarea listei de utilizatori a eșuat.",
+      "button": "Exportă utilizatorii",
+      "successLabel": "Exportul listei de utilizatori este gata",
+      "errorLabel": "Exportul listei de utilizatori a eșuat"
+    },
+    "userIdentity": {
+      "decrypting": "Decriptare nume/email...",
+      "decryptFailed": "Nu s-a putut decripta numele/email-ul",
+      "unlockDetails": "Deblochează pentru a afișa numele/email-ul",
+      "unlockButton": "Deblochează detaliile"
     }
   },
   "adminOnboarding": {
@@ -727,7 +952,9 @@
     "legalResponsibilityNotice": "Ești responsabil pentru configurarea legală, informările utilizatorilor și politicile de gestionare a datelor pentru această instanță.",
     "extracted": {
       "change_language_789b14": "Schimbă limba"
-    }
+    },
+    "statusError": "Verificarea stării instanței a eșuat",
+    "connectionError": "Conectarea a eșuat"
   },
   "errors": {
     "requestFailed": "Cererea a eșuat",
@@ -761,11 +988,228 @@
     "adminSessionExpired": "Sesiunea de administrator a expirat",
     "authenticationFailed": "Autentificarea a eșuat",
     "noNostrExtension": "Nu s-a găsit nicio extensie Nostr",
-    "exportFailed": "Export Eșuat"
+    "exportFailed": "Export Eșuat",
+    "failedToRetryDeletionTombstone": "Eroare la reîncercarea ștergerii tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Eroare la confirmarea suprafeței de deployment neacceptate",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Eroare la confirmarea categoriei de suprafețe de deployment neacceptate",
+    "failedToPreviewRetention": "Eroare la vizualizarea politicii de retenție",
+    "failedToUpdateRetentionPolicy": "Eroare la actualizarea politicii de retenție",
+    "failedToRunScheduledRetention": "Eroare la rularea procesului programat de retenție",
+    "failedToUpdateArtifactEncryptionPosture": "Eroare la actualizarea posturii de criptare a artefactelor",
+    "queryExecutionFailed": "Executarea interogării a eșuat"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Administratorii pot"
+    },
+    "summary": {
+      "brand": {
+        "title": "Personalizează instanța",
+        "body": "Nume, logo, temă, identitatea asistentului și afișarea adresei de e-mail public."
+      },
+      "people": {
+        "title": "Gestionează utilizatorii",
+        "body": "Tipuri de utilizatori, întrebări de onboarding, aprobări, migrare și acces."
+      },
+      "agent": {
+        "title": "Configurează Sage",
+        "body": "Reguli de prompt, setări de răspuns, acces la documente și setări implicite pentru instrumente."
+      },
+      "launch": {
+        "title": "Lansare în siguranță",
+        "body": "Email, domenii, CORS, HTTPS, rutarea modelelor, sănătate și mediul de rulare."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Marcă",
+        "title": "Identitate și aspect",
+        "body": "Faceți instanța să semene cu organizația dumneavoastră.",
+        "detail1": "Nume, slogan, nume asistent și etichetă utilizator.",
+        "detail2": "Logo, favicon, iconiță, culoare accent, temă, tipografie și stil chat.",
+        "detail3": "Limba implicită și numele de afișare pentru emailul public.",
+        "link": "Deschide Setările Instanței"
+      },
+      "people": {
+        "eyebrow": "Acces",
+        "title": "Persoane și acces",
+        "body": "Decide cine folosește instanța și ce le ceri.",
+        "detail1": "Tipuri de utilizatori pentru grupuri precum personal, membri sau clienți.",
+        "detail2": "Câmpuri de onboarding, întrebări obligatorii, opțiuni, placeholder-e și câmpuri pe tipuri.",
+        "detail3": "Aprobare manuală, migrarea utilizatorilor, revocarea accesului și ștergere.",
+        "link": "Deschide Setările Utilizatorului"
+      },
+      "agent": {
+        "eyebrow": "Comportament",
+        "title": "Comportamentul agentului",
+        "body": "Modelează modul în care Sage răspunde și ce instrumente sunt activate implicit.",
+        "detail1": "Șablon prompt, reguli de comportament, subiecte interzise și setări răspuns.",
+        "detail2": "Setări implicite pentru instrumentele Knowledge, Resources, Web, Config și Database.",
+        "detail3": "Setări globale plus suprascrieri pe tip de utilizator.",
+        "link": "Deschide Setările Agentului"
+      },
+      "docs": {
+        "eyebrow": "Cunoștințe",
+        "title": "Cunoștințe din documente",
+        "body": "Oferă agentului material sursă pe care îl poate căuta.",
+        "detail1": "Încarcă PDF-uri, politici, FAQ-uri, manuale și ghiduri.",
+        "detail2": "Documentele sunt fragmentate, vectorizate și făcute căutabile.",
+        "detail3": "Document Access controlează ce poate fi selectat sau activ în mod implicit.",
+        "link": "Deschide Încărcarea Documentelor"
+      },
+      "resources": {
+        "eyebrow": "Referințe",
+        "title": "Resurse verificate",
+        "body": "Adăugați recomandări de încredere pe care agentul le poate recomanda.",
+        "detail1": "Nume, descrieri, tip resursă, limbi, acoperire și tipuri de ajutor.",
+        "detail2": "Telefon, e-mail, URL, canal securizat, adresă și note.",
+        "detail3": "Resursele verificate apar primele. Resursele arhivate rămân ascunse utilizatorilor.",
+        "link": "Deschide Directorul de Resurse"
+      },
+      "ops": {
+        "eyebrow": "Operațiuni",
+        "title": "Operațiuni și runtime",
+        "body": "Menține instanța conectată, accesibilă și funcțională.",
+        "detail1": "SMTP pentru link-uri magice prin e-mail, domenii, CORS, HTTPS și URL-uri publice.",
+        "detail2": "Furnizor model, model embedding, căutare, stocare și sănătatea serviciului.",
+        "detail3": "Export mediu runtime, pregătire, setări învechite și migrarea cheii de admin.",
+        "link": "Deschide Setările de Deployment"
+      },
+      "title": "Ce configurează administratorii",
+      "body": "Acestea sunt principalele suprafețe de control. Puteți folosi paginile direct sau puteți cere Asistentului Admin să pregătească modificările."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Întrebați",
+        "title": "Asistent Admin",
+        "body": "Puneți întrebări despre configurarea actuală și solicitați modificări de configurare.",
+        "detail1": "Citirea configurației verifică starea reală a instanței în loc să speculeze.",
+        "detail2": "Modificările propuse sunt pregătite pentru revizuire.",
+        "detail3": "Apply execută endpoint-urile de admin aprobate fără un alt pas al modelului.",
+        "link": "Deschide Asistentul Admin",
+        "directWriteDetail2": "Sage solicită confirmarea conversațională înainte de o scriere suportată.",
+        "directWriteDetail3": "După confirmare, Sage își apelează Instrumentele de configurare directă și raportează rezultatul real."
+      },
+      "guided": {
+        "eyebrow": "Începe",
+        "title": "Configurare Ghidată",
+        "body": "Folosiți un chat ghidat pentru a crea o primă configurare utilă.",
+        "detail1": "Identitate, asistent, limbă, politică de acces, tipuri de utilizatori, întrebări și reguli de comportament.",
+        "detail2": "Apoi încărcați documente, adăugați resurse și testați.",
+        "link": "Deschide Configurarea Ghidată"
+      },
+      "test": {
+        "eyebrow": "Validează",
+        "title": "Testare și feedback",
+        "body": "Încercați agentul din perspectiva unui utilizator înainte de lansare.",
+        "detail1": "Selectați un tip de utilizator, porniți o sesiune de test și salvați proba.",
+        "detail2": "Revizuiți jurnalele beta criptate și evaluați răspunsurile.",
+        "link": "Deschideți sesiunea de test pentru utilizator"
+      },
+      "database": {
+        "eyebrow": "Inspectare",
+        "title": "Explorator Bază de date",
+        "body": "Inspectați datele SQLite stocate în timpul depanării.",
+        "detail1": "Utilizați interogări SELECT cu permisiuni de citire pentru inspecție.",
+        "detail2": "Nu o utilizați ca cale de modificare a produsului.",
+        "link": "Deschideți Exploratorul Bazei de date"
+      },
+      "title": "Fluxuri de lucru administrative comune",
+      "body": "Utilizați-le atunci când configurați, verificați calitatea sau investigați datele."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Mediu de execuție",
+        "title": "O singură sesiune de conversație",
+        "body": "Knowledge, Resources, Web, Config și Database sunt seturi de instrumente vizibile, nu sisteme de chat separate.",
+        "detail1": "Modelul poate apela instrumentele activate atunci când acestea sunt utile.",
+        "detail2": "Config și Database apar doar pentru administratorii validați de server."
+      },
+      "auth": {
+        "eyebrow": "Autentificare",
+        "title": "Căi de autentificare diferite",
+        "body": "Administratorii folosesc NIP-07. Utilizatorii folosesc linkuri magice prin e-mail.",
+        "detail1": "Cheile private ale administratorilor rămân în semnatarul din browser.",
+        "detail2": "SMTP trebuie să funcționeze înainte ca linkurile magice pentru utilizatori să funcționeze în producție."
+      },
+      "data": {
+        "eyebrow": "Confidențialitate",
+        "title": "Limitarea datelor este importantă",
+        "body": "Câmpurile de profil criptate rămân în afara contextului de chat.",
+        "detail1": "Doar câmpurile necriptate pot fi marcate pentru contextul chat-ului AI.",
+        "detail2": "Secretul de deployment este stocat criptat și afișat mascat implicit."
+      },
+      "ops": {
+        "eyebrow": "Operațiuni",
+        "title": "Unele modificări necesită operatori",
+        "body": "Aplicația poate salva setările de runtime dorite; aceasta nu repornește serviciile în mod silențios.",
+        "detail1": "Exportați mediul de runtime după modificări de provider, origin, CORS sau căutare.",
+        "detail2": "Utilizați starea de readiness și sănătatea serviciului pentru a confirma ce rulează efectiv."
+      },
+      "title": "Aspecte esențiale ale produsului de reținut",
+      "body": "Aceste reguli mențin configurarea corectă și previn depășirea accidentală a atribuțiilor."
+    },
+    "ask": {
+      "prompt1": "Ce mai lipsește înainte ca această instanță să fie gata pentru utilizatori?",
+      "prompt2": "Revizuiește tipurile de utilizatori actuale, întrebările de onboarding, documentația și resursele.",
+      "prompt3": "Pregătește modificările pentru revizuire: stabilește tonul asistentului și limba implicită.",
+      "title": "Lucruri bune de întrebat Asistentul Admin",
+      "body": "Solicită o revizuire înainte de a cere modificări. Acesta poate inspecta configurarea și poate pregăti un set de modificări.",
+      "directWriteBody": "Solicită lui Sage să inspecteze sau să modifice configurația suportată. Acesta va confirma modificarea intenționată cu tine înainte de scriere.",
+      "directWritePrompt3": "Stabilește tonul asistentului și limba implicită, și confirmă mai întâi modificarea intenționată cu mine."
+    },
+    "hero": {
+      "eyebrow": "Hartă de control pentru Admin",
+      "shortVersion": {
+        "title": "Versiune scurtă",
+        "body": "Administratorii stabilesc identitatea, utilizatorii, cunoștințele, instrumentele și setările de lansare. Unele modificări de runtime necesită încă repornirea unui operator."
+      }
+    },
+    "title": "Ghiduri Admin",
+    "subtitle": "O hartă simplă a ceea ce configurează administratorii, ceea ce poate face produsul și ceea ce necesită atenție înainte de lansare.",
+    "quickStart": {
+      "title": "Începe aici",
+      "body": "Efectuează mai întâi setările mici și utile. Rafinează-le după testarea cu întrebări reale."
+    },
+    "safety": {
+      "title": "Baze de siguranță",
+      "body": "Administratorii controlează accesul, datele, comportamentul și setările de runtime. Procedează cu prudență la modificările cu risc.",
+      "items": {
+        "0": "Administratorii se autentifică cu NIP-07. Utilizatorii se autentifică prin link-uri magice pe e-mail.",
+        "1": "Câmpurile utilizatorului sunt criptate implicit. Doar câmpurile în text clar pot fi partajate cu chat-ul.",
+        "2": "Secretul rămâne mascat decât dacă îl partajezi pentru sesiunea curentă de admin.",
+        "3": "Modificările asistentului sunt propuneri. Tu revizuiești și apeși pe Aplică.",
+        "4": "Deployment Settings stochează valorile runtime dorite. Operatorii trebuie tot să exporte env și să repornească serviciile la nevoie."
+      },
+      "directItems": {
+        "0": "Administratorii se autentifică cu NIP-07. Utilizatorii se autentifică prin link-uri magice pe e-mail.",
+        "1": "Câmpurile utilizatorului sunt criptate implicit. Doar câmpurile în text clar pot fi partajate cu chat-ul.",
+        "2": "Secretul rămâne mascat decât dacă îl partajezi pentru sesiunea curentă de admin.",
+        "3": "Sage confirmă modificările de configurare cu tine în chat, apoi aplică direct modificările suportate.",
+        "4": "Deployment Settings stochează valorile runtime dorite. Operatorii trebuie tot să exporte env și să repornească serviciile la nevoie."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Autentifică-te ca admin",
+        "body": "Folosește cheia admin NIP-07. Păstreaz-o confidențială."
+      },
+      "1": {
+        "title": "Stabilește bazele",
+        "body": "Denumește instanța, alege aspectul și stabilește identitatea asistentului."
+      },
+      "2": {
+        "title": "Definește-ți utilizatorii",
+        "body": "Crea tipuri de utilizatori, întrebări de onboarding și reguli de aprobare."
+      },
+      "3": {
+        "title": "Adaugă cunoștințe de încredere",
+        "body": "Încarcă documente și adaugă resurse verificate."
+      },
+      "4": {
+        "title": "Testează înainte de lansare",
+        "body": "Chat ca utilizator, analizează feedback-ul, apoi invită persoane reale."
+      }
     }
   },
   "adminDashboard": {
@@ -802,7 +1246,55 @@
     "securityStep3Primary": "Rulează validarea configurației",
     "securityStep3Secondary": "Revizuiește datele stocate",
     "user": "Configurare utilizator",
-    "userDesc": "Definiți tipurile de utilizatori și întrebările de integrare"
+    "userDesc": "Definiți tipurile de utilizatori și întrebările de integrare",
+    "subtitleSimple": "Alege unde dorești să lucrezi în această instanță.",
+    "workflowsSectionLabel": "Fluxuri de lucru Admin",
+    "adminAssistant": "Asistent Admin",
+    "adminAssistantDesc": "Folosește chat-ul de admin pentru ajutor la configurare și revizuirea modificărilor.",
+    "guidedSetup": "Configurare Ghidată",
+    "guidedSetupDesc": "Parcurge pașii de configurare, documente, resurse și testare.",
+    "guides": "Ghiduri Admin",
+    "guidesDesc": "Înțelege ce configurează administratorii și unde.",
+    "testUserSession": "Sesiune Test Utilizator",
+    "testUserSessionDesc": "Chat ca un utilizator simulat și analizează logurile beta salvate.",
+    "aiSetupTitle": "Configurează cu asistentul AI",
+    "aiSetupBody": "Lasă asistentul să colecteze datele de bază pentru denumirea și configurarea instanței tale într-o singură etapă. Poți trece la configurarea manuală oricând.",
+    "aiSetupAction": "Începe configurarea ghidată",
+    "readinessTitle": "Pregătire pentru Implementare",
+    "readinessDesc": "Revizuiește stadiul de pregătire înainte de a invita utilizatori. Verifică blocajele, avertismentele, modificările care necesită restart și starea de recuperare într-un singur loc.",
+    "readinessPrimary": "Deschide Revizuirea Pregătirii",
+    "firstRunPathTitle": "Parcursul de prima rulare Admin",
+    "firstRunStep1Title": "Configurează linia de bază a Instanței",
+    "firstRunStep1Body": "Setează branding-ul, limba, tema, câmpurile utilizatorului și Agent Settings înainte de revizuire.",
+    "firstRunStep1Action": "Deschide Setările Instanței",
+    "firstRunStep2Title": "Revizuiește Pregătirea pentru Implementare",
+    "firstRunStep2Body": "Verifică blocajele, avertismentele, modificările care necesită restart și starea de recuperare înainte de a invita utilizatori.",
+    "firstRunStep2Action": "Deschide Wizardul de Implementare",
+    "firstRunStep3Title": "Folosește diagnosticul doar în timpul investigațiilor",
+    "firstRunStep3Body": "Păstrează testele de fum și diagnosticul accesibile fără a le face calea principală de utilizare a produsului.",
+    "firstRunStep3Action": "Deschide Diagnosticul",
+    "instanceDescSimple": "Nume, identitate de e-mail publică, temă și controale de brand.",
+    "aiDescSimple": "Prompt-uri, comportamentul modelului și valorile implicite ale documentelor.",
+    "deploymentDescSimple": "Setări de rulare, detalii despre sănătate și disponibilitate.",
+    "resources": "Director Resurse",
+    "resourcesDesc": "Selectați avocați de încredere, ONG-uri și resurse de trimitere",
+    "resourcesDescSimple": "Gestionați manual resursele de trimitere de încredere.",
+    "testFeedback": "Testare și Feedback",
+    "testFeedbackDesc": "Chat ca utilizator de test și evaluați răspunsurile pentru a vă rafina configurația",
+    "diagnosticsSectionLabel": "Diagnosticare",
+    "operationsSectionLabel": "Operațiuni",
+    "testDashboard": "Diagnosticare",
+    "testDashboardDesc": "Executați verificări de fum în dezvoltare și inspectați modulele de diagnosticare",
+    "testDashboardDescSimple": "Executați verificări de fum atunci când investigați o problemă.",
+    "iaChecklistTitle": "Lista de verificare pentru revizuirea arhitecturii informaționale de către admin",
+    "iaChecklistBody": "Păstrați Setările de Deployment, Setările de Instanță, Setările Agent, Disponibilitatea Ciclică, Disponibilitatea Deployment și suprafețele de diagnostic distincte în timpul revizuirii umane.",
+    "humanReviewTitle": "Transfer către revizuirea umană",
+    "humanReviewStatus": "Este necesar suport de deployment premium",
+    "humanReviewBody": "Aplicarea mediului de rulare rămâne explicită: exportați artefactele, aplicați-le cu suportul operatorului, reporniți serviciile afectate și verificați dovezile de disponibilitate.",
+    "humanReviewAction": "Revizuire Disponibilitate Deployment",
+    "settingsSectionLabel": "Setări",
+    "userManager": "Manager Utilizatori",
+    "userManagerDesc": "Revizuiți utilizatorii, verificați starea, exportați liste și aprobați accesul."
   },
   "adminAI": {
     "title": "Configurare AI",
@@ -887,7 +1379,18 @@
       "userInfoPlaceholder": "{user_info} — înlocuit cu câmpurile de profil ale utilizatorului curent, dacă sunt disponibile"
     },
     "revert": "Anulare",
-    "revertToGlobal": "Revenire la Global"
+    "revertToGlobal": "Revenire la Global",
+    "knowledgeSearchDisabledLabel": "Căutarea de cunoștințe este oprită",
+    "knowledgeSearchDisabledMessage": "Documentele implicite active nu vor fi utilizate până când Sursele de Cunoștințe nu sunt setate pe documente implicite selectate sau pe toate documentele disponibile.",
+    "assembledPromptOutput": "Rezultat prompt asamblat",
+    "saveError": "Eroare la salvare",
+    "revertError": "Eroare la revenire",
+    "toggleError": "Comutarea a eșuat",
+    "loadErrorLabel": "Eroare la încărcarea setărilor Agent",
+    "previewErrorLabel": "Eroare la previzualizarea setărilor Agent",
+    "documentToggleErrorLabel": "Eroare la comutarea documentelor setărilor Agent",
+    "documentDefaultsHintV2": "Documentele marcate ca \"Disponibile\" pot fi utilizate de Căutarea de Cunoștințe. Documentele marcate ca \"Active implicit\" sunt incluse atunci când Sursele de Cunoștințe sunt setate pe documente implicite selectate.",
+    "externalChangeConflict": "Sage sau un alt administrator a modificat această setare în timp ce editați. Anulați și redeschideți editorul înainte de salvare."
   },
   "adminDeployment": {
     "title": "Configurare implementare",
@@ -985,7 +1488,9 @@
       "unknown": "Necunoscut",
       "usersMigrated": "Utilizatori migrați",
       "usersToMigrate": "Utilizatori de migrat",
-      "warning": "Aceasta este o operațiune avansată. O migrare incorectă te poate bloca din datele criptate. Continuă doar dacă înțelegi implicațiile."
+      "warning": "Aceasta este o operațiune avansată. O migrare incorectă te poate bloca din datele criptate. Continuă doar dacă înțelegi implicațiile.",
+      "inputWarningLabel": "Avertisment migrare cheie Admin",
+      "destructiveWarningLabel": "Avertisment distructiv migrare cheie Admin"
     },
     "revealFailed": "Nu s-a putut dezvălui valoarea. Verifică conexiunea extensiei Nostr.",
     "searchHelp": {
@@ -1016,7 +1521,8 @@
       "overviewDesc": "Setările de securitate controlează autentificarea, gestionarea sesiunilor și scurtăturile de dezvoltare. Valorile implicite sunt configurate pentru dezvoltare locală.",
       "overviewNote": "În producție, asigură-te că flagurile de simulare sunt dezactivate și FRONTEND_URL corespunde domeniului tău real.",
       "overviewTitle": "Prezentare generală securitate",
-      "overviewWhen": "Revizuiește aceste setări înainte de a implementa pe un server cu acces public."
+      "overviewWhen": "Revizuiește aceste setări înainte de a implementa pe un server cu acces public.",
+      "devNote": "Folosiți MOCK_EMAIL pentru testarea e-mailurilor locale; sesiunile de utilizator și admin necesită în continuare fluxul normal de verificare."
     },
     "sslHelp": {
       "ariaLabel": "Ajutor configurare SSL și HTTPS",
@@ -1117,7 +1623,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Folder încărcări",
       "vector_database_eb5526": "Bază de date vectorială"
-    }
+    },
+    "exportSageRuntimeEnv": "Exportați mediul Sage",
+    "readiness": {
+      "title": "Pregătirea pentru implementare",
+      "statusTitle": "Pregătirea pentru implementare: {{status}}",
+      "description": "Revizuiți dovezile necesare înainte ca această implementare de instanță unică să fie gata pentru operare normală.",
+      "openWizard": "Deschideți revizuirea pregătirii",
+      "blockerCount": "{{count}} blocaje",
+      "warningCount": "{{count}} avertismente",
+      "readyCount": "{{count}} gata",
+      "empty": "Nu sunt disponibile încă verificări de pregătire a deployment-ului.",
+      "conversationBlocking": "Blochează Conversațiile normale",
+      "blocker": "Blocaj",
+      "warning": "Avertisment",
+      "ready": "Gata",
+      "reviewInferenceVerification": "Revizuire Verificare Inferență",
+      "reviewDataLifecycleStatus": "Revizuire Status Ciclu de Viață Date",
+      "reviewDeploymentValidation": "Revizuire Setări Deployment",
+      "reviewRestartRequired": "Revizuire Repornire Necesară",
+      "reviewOperationalReadiness": "Revizuire Pregătire Operațională",
+      "reviewServiceHealth": "Revizuire Sănătate Serviciu",
+      "reviewRuntimeEnv": "Revizuire Export Mediu Runtime",
+      "deployment_settings_validation": {
+        "label": "Validare Setări Deployment",
+        "status": {
+          "invalid": {
+            "summary": "Validarea Setărilor de Deployment prezintă erori care trebuie reparate.",
+            "nextAction": "Revizuire erorile de validare ale Setărilor de Deployment."
+          },
+          "warnings": {
+            "summary": "Validarea Setărilor de Deployment prezintă avertismente consultative.",
+            "nextAction": "Revizuire avertismentele de validare ale Setărilor de Deployment."
+          },
+          "valid": {
+            "summary": "Validarea Setărilor de Deployment nu prezintă erori sau avertismente.",
+            "nextAction": "Nu este necesară nicio acțiune."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inferență Verificabilă",
+        "status": {
+          "current": {
+            "summary": "Furnizorul de Model configurat are un Jurnal de Verificare Inferență actual.",
+            "nextAction": "Nu este necesară nicio acțiune. Revizuiește Jurnalul de Verificare Inferență actual când se schimbă revendicările furnizorului."
+          },
+          "deferred_missing": {
+            "summary": "Inferența Criptată și Verificabilă nu este verificată în prezent pentru Furnizorul de Model configurat.",
+            "nextAction": "Configurează un Furnizor de Model suportat și rulează Verificarea Inferenței înainte de a considera Pregătirea Deployment-ului ca fiind completă."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Revizuire Ciclu de Viață Date",
+        "status": {
+          "needs_review": {
+            "summary": "Revizuirea Ciclui de Viață al Datelor necesită revizuire de către Admin.",
+            "nextAction": "Revizuiește postura Ciclului de Viață al Stocării Active și înregistrează Revizuirea Ciclului de Viață al Datelor."
+          },
+          "stale": {
+            "summary": "Revizuirea Ciclului de Viață al Datelor înregistrat este învechită după o schimbare de ciclu de viață suportată.",
+            "nextAction": "Revizuiește postura actuală a Ciclului de Viață al Stocării Active și înregistrează o nouă Revizuire a Ciclului de Viață al Datelor."
+          },
+          "reviewed": {
+            "summary": "Revizuirea ciclului de viață al datelor a fost finalizată.",
+            "nextAction": "Nu este necesară nicio acțiune, cu excepția cazului în care postura ciclului de viață acceptată se modifică."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Confirmări ale suprafeței de deployment",
+        "status": {
+          "acknowledged": {
+            "summary": "Categoriile de suprafețe de deployment nesuportate au fost confirmate.",
+            "nextAction": "Nu este necesară nicio acțiune."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Categoriile de suprafețe de deployment nesuportate necesită confirmarea Operatorului.",
+            "nextAction": "Revizuiți categoriile de suprafețe de deployment listate și confirmați fiecare în parte înainte de a considera Deployment Readiness ca fiind complet."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Exercițiu Backup și Restaurare",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Este necesar un extras recent al unui exercițiu de Backup și Restaurare efectuat de Operator.",
+            "nextAction": "Efectuați și înregistrați un exercițiu de Backup și Restaurare pentru acest Deployment."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Repornire necesară",
+        "status": {
+          "current": {
+            "summary": "Nicio setare de Deployment care necesită repornire nu s-a modificat de la pornirea serviciului.",
+            "nextAction": "Nu este necesară nicio acțiune."
+          },
+          "restart_required": {
+            "summary": "Setările de Deployment care necesită repornire s-au modificat după pornirea serviciului. ({{changedSettings}})",
+            "nextAction": "Aplicați setările de Deployment dorite și reporniți serviciile afectate înainte de a le considera actuale."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Configurație Runtime Sage",
+        "status": {
+          "not_generated": {
+            "summary": "Mediul runtime Sage nu a fost încă generat din setările de Deployment.",
+            "nextAction": "Exportați mediul runtime Sage înainte de a considera că setările de Deployment au fost aplicate în Sage."
+          },
+          "matches_desired": {
+            "summary": "Configurația runtime Sage activă corespunde setărilor de Deployment dorite.",
+            "nextAction": "Nu este necesară nicio acțiune."
+          },
+          "drifted": {
+            "summary": "Configurația runtime Sage activă diferă de setările de Deployment dorite.",
+            "nextAction": "Investigați divergența configurației runtime Sage, aplicați mediul Sage generat și reporniți Sage."
+          },
+          "current": {
+            "summary": "Mediul runtime Sage a fost generat din setările de Deployment actuale.",
+            "nextAction": "Nu este necesară nicio acțiune, cu excepția cazului în care artefactul generat nu a fost aplicat în Deployment."
+          },
+          "stale": {
+            "summary": "Setările de Deployment s-au modificat după ce mediul runtime Sage a fost generat.",
+            "nextAction": "Exportați un mediu runtime Sage proaspăt și aplicați-l prin procesul de repornire a Deployment."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Configurație Runtime Core Backend",
+        "status": {
+          "not_generated": {
+            "summary": "Mediul runtime core-backend nu a fost încă generat din setările de Deployment.",
+            "nextAction": "Exportați mediul runtime core-backend înainte de a considera că setările de Deployment au fost aplicate în core-backend."
+          },
+          "matches_desired": {
+            "summary": "Configurația runtime core-backend activă corespunde setărilor de Deployment dorite.",
+            "nextAction": "Nu este necesară nicio acțiune."
+          },
+          "drifted": {
+            "summary": "Configurația runtime core-backend activă diferă de setările de Deployment dorite.",
+            "nextAction": "Investigați divergența configurației core-backend runtime, aplicați mediul core-backend generat și reporniți core-backend."
+          },
+          "current": {
+            "summary": "Mediul runtime core-backend a fost generat din Setările de Deployment actuale.",
+            "nextAction": "Nu este necesară nicio acțiune, cu excepția cazului în care artefactul generat nu a fost aplicat în Deployment."
+          },
+          "stale": {
+            "summary": "Setările de Deployment s-au modificat după generarea mediului runtime core-backend.",
+            "nextAction": "Exportați un mediu runtime core-backnd proaspăt și aplicați-l prin procesul de restart al Deployment-ului."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Asistent Deployment",
+      "step": "Pasul {{current}} din {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Pregătire Operațională",
+      "description": "Revizuiți exercițiile de backup, restaurare, monitorizare și recuperare înainte de funcționarea normală."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — cheia dvs. API Tinfoil pentru proxy-ul local.",
+      "apiKeyLabel": "Cheie API Tinfoil",
+      "ariaLabel": "Ajutor configurare runtime Sage",
+      "exampleConfig": "Exemplu configurație",
+      "goToPage": "Mergi la pagina",
+      "sageExtra": "Setați LLM_API_KEY cu cheia dvs. Tinfoil de la {{tinfoilSignupUrl}}. Stack-ul o mapează către Sage și proxy-ul local Tinfoil.",
+      "sageHint": "Acest prototip direcționează traficul Agent Runtime prin Sage și Tinfoil. LLM_API_KEY este cheia canonică a Model Provider-ului.",
+      "modelField": "TINFOIL_MODEL — identificatorul modelului Tinfoil pe care ar trebui să îl folosească Sage (de exemplu: glm-5-2).",
+      "overviewDesc": "Acest prototip folosește Sage ca Agent Runtime public și Tinfoil ca transport Model Provider. Configurați Model Provider-ul prin Setările de Deployment LLM_*; stack-ul le mapează către runtime-ul Tinfoil al Sage.",
+      "overviewTitle": "Prezentare generală runtime Sage",
+      "providerField": "LLM_PROVIDER — setat la \"sage\" pentru acest prototip."
+    },
+    "inferenceVerification": {
+      "current": "Actual",
+      "missing": "Lipsă",
+      "expired": "Expirat",
+      "failed": "Eșuat",
+      "success": "Succes",
+      "statusLoadFailed": "Eroare la încărcarea statusului verificării inferenței",
+      "historyLoadFailed": "Eroare la încărcarea istoricului verificării inferenței",
+      "loadFailed": "Eroare la încărcarea verificării inferenței",
+      "manualFailed": "Verificarea manuală a eșuat",
+      "manualSucceeded": "Verificarea manuală a reușit",
+      "detailLoadFailed": "Eroare la încărcarea detaliilor de atestare",
+      "ariaLabel": "Verificarea Inferenței",
+      "title": "Verificarea Inferenței",
+      "summary": "Dovezi disponibile doar pentru admin care confirmă că inferența protejată rulează pe furnizorul de modele așteptat.",
+      "verifyNow": "Verifică acum",
+      "status": "Stare",
+      "checkedAt": "Verificat",
+      "expiresAt": "Expiră",
+      "expectedClaims": "Declarații așteptate",
+      "expectedClaimsValue": "Declarații așteptate: {{fingerprint}}",
+      "providerClaims": "Declarații furnizor",
+      "provider": "Furnizor",
+      "model": "Model",
+      "endpoint": "Punct final",
+      "history": "Istoric Verificare",
+      "emptyHistory": "Nu există încă înregistrări de verificare.",
+      "recordTitle": "Înregistrare #{{id}}",
+      "inspectAttestation": "Inspectare Atestare",
+      "fullAttestation": "Material Complet de Atestare"
+    },
+    "lifecycle": {
+      "notStarted": "Nu a început",
+      "notConfigured": "Necoformate",
+      "plaintextByOperatorChoice": "Text clar prin alegerea operatorului",
+      "allTombstones": "Toate",
+      "allTombstonesLabel": "Toate tombstone-urile",
+      "incompleteTombstonesFilter": "Incomplete",
+      "incompleteTombstonesLabel": "Tombstone-uri incomplete",
+      "completedTombstonesFilter": "Finalizate",
+      "completedTombstonesLabel": "Tombstone-uri finalizate",
+      "title": "Starea Ciclui de Viață al Datelor",
+      "description": "Acoperirea actuală a confidențialității controlate de operator asupra datelor din instanță.",
+      "scopeExcludes": "Exclude: {{excludes}}",
+      "secureEraseStatus": "Ștergere securizată: {{status}}",
+      "readinessStatus": "Pregătire ciclu de viață: {{status}}",
+      "readinessNonBlocking": "Conversațiile utilizatorilor nu sunt blocate de avertismentele de pregătire a ciclului de viață în v1.",
+      "readinessStaleReason": "Motiv: {{reason}}",
+      "contentEncryptionKey": "Cheie de criptare conținut: {{status}}",
+      "artifactEncryptionPosture": "Postură criptare artefacte: {{status}}",
+      "artifactPostureLabel": "Postură criptare artefacte",
+      "artifactPostureRequired": "Necesar",
+      "artifactPostureDisabled": "Dezactivat",
+      "retentionSchedulerStatus": "Programator retenție: {{status}}",
+      "schedulerObservation": "Observație: {{status}}",
+      "schedulerEnabledClasses": "Clase activate în programator: {{classes}}",
+      "schedulerLastRunStatus": "Status ultim rulaj: {{status}}",
+      "schedulerLastRun": "Ultim rulaj: {{trigger}} de către {{actor}}",
+      "previewRetention": "Previzualizare retenție",
+      "runScheduledRetention": "Executare programată",
+      "previewRetentionResult": "Previzualizare: {{conversations}} conversații, {{artifacts}} artefacte document, {{skipped}} clase sărite.",
+      "scheduledRetentionResult": "Rulaj programat: {{status}} cu {{retries}} reîncercări tombstone.",
+      "scheduledRetentionStatus": "Clase programate: {{classes}}",
+      "auditCoverageStatus": "Acoperire audit: {{audited}} auditate, {{exceptions}} excepții, {{missing}} lipsă.",
+      "owner": "Proprietar: {{owner}}",
+      "deletion": "Ștergere: {{status}}",
+      "retention": "Retenție: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Confidențialitate: {{status}}",
+      "incompleteTombstones": "Tombstone-uri incomplete: {{count}}",
+      "completedTombstones": "Tombstone-uri completate: {{count}}",
+      "retentionEnabled": "Activat",
+      "retentionWindow": "Interval",
+      "retentionDays": "zile",
+      "scheduledEnforcement": "Programat",
+      "saveRetentionPolicy": "Salvare politică",
+      "empty": "Statusul ciclului de viață nu este disponibil.",
+      "retentionPolicySaveFailed": "Imposibil de salvat politica de retenție.",
+      "retentionPreviewFailed": "Imposibil de vizualizat previzualizarea retenției.",
+      "scheduledRetentionFailed": "Imposibil de rulat retenția programată.",
+      "artifactPostureFailed": "Imposibil de actualizat postura de criptare a artefactelor.",
+      "unsupportedSurfacesTitle": "Suprafețe de deployment neacceptate",
+      "unsupportedSurfacesDescription": "Aceste urme operaționale sunt dezvăluite aici, dar rămân în afara controlului ciclului de viață al produsului.",
+      "unsupportedSurfaceAckFailed": "Imposibil de actualizat confirmarea.",
+      "acknowledgedSurface": "Confirmat",
+      "acknowledgeSurface": "Confirmă",
+      "tombstonesTitle": "Marcaje de ștergere",
+      "tombstonesDescription": "Reîncercați ștergerile incomplete ale ciclului de viață fără a expune conținutul șters.",
+      "tombstoneStatusFilter": "Filtru status marcaj ștergere",
+      "tombstoneRetryFailed": "Reîncercarea a eșuat.",
+      "tombstonesFetchFailed": "Imposibil de încărcat marcajele de ștergere.",
+      "tombstoneClass": "Clasă: {{className}}",
+      "tombstoneSource": "Sursă: {{source}}",
+      "tombstoneRetries": "Reîncercări: {{count}}",
+      "tombstoneUpdated": "Actualizat: {{updated}}",
+      "retryTombstoneLabel": "Reîncercați ștergerea marcajului {{id}}",
+      "retry": "Reîncearcă",
+      "tombstonesEmpty": "Nu există marcaje de ștergere în așteptare pentru reîncercare."
+    },
+    "runtimeEnv": {
+      "unknown": "Necunoscut",
+      "title": "Alinierea configurației de runtime",
+      "description": "Compară setările de Deployment dorite, mediul Sage generat și starea de rulare observabilă.",
+      "desired": "Dorit",
+      "configuredKeys": "{{count}} din {{total}} chei configurate",
+      "generated": "Generat",
+      "exportedAt": "Exportat {{time}}",
+      "notExported": "Nu a fost înregistrat niciun export de mediu Sage",
+      "running": "În rulare",
+      "runningUnknown": "Starea de rulare nu este încă introspectată direct.",
+      "coreBackend": "Backend Core",
+      "coreBackendHint": "Alinierea mediului de proces backend",
+      "coreDesired": "Core Dorit",
+      "coreConfiguredKeys": "Backend Core: {{count}} din {{total}} chei configurate",
+      "coreGenerated": "Core Generat",
+      "coreNotExported": "Nu a fost înregistrat niciun export de mediu pentru backend-ul core",
+      "coreRunning": "Core în Execuție",
+      "coreRunningUnknown": "Starea de execuție a backend-ului core nu este încă introspectată direct.",
+      "coreExportedTitle": "Mediul core-backend a fost exportat",
+      "coreSensitiveArtifact": "Tratați core-backend.env ca pe un material de deployment sensibil.",
+      "coreExportDoesNotApply": "Exportarea artefactului nu modifică procesul backend aflat în execuție până când un Operator nu îl aplică și repornește core-backend.",
+      "exportedTitle": "Mediul Sage a fost exportat",
+      "sensitiveArtifact": "Tratați sage.env ca pe un material de deployment sensibil.",
+      "exportDoesNotApply": "Exportarea artefactului nu modifică procesul Sage aflat în execuție până când un Operator nu îl aplică și repornește Sage."
+    },
+    "categorySettingsAria": "Setări {{category}}",
+    "exportCoreBackendRuntimeEnv": "Exportați mediul core-backend",
+    "restartCurrent": "Nu este necesară repornirea",
+    "restartCurrentDesc": "Nicio setare de Deployment care necesită repornire nu s-a schimbat de la pornirea serviciului.",
+    "saveError": "Salvare eșuată",
+    "openHelpAria": "Deschideți ajutorul pentru {{label}}"
   },
   "upload": {
     "invalidFileType": "Tip de fișier invalid. Permis: {{extensions}}",
@@ -1139,7 +1951,8 @@
       "processing": "Se procesează",
       "chunked": "Fragmentat",
       "complete": "Complet",
-      "failed": "Eșuat"
+      "failed": "Eșuat",
+      "completedWithErrors": "Finalizat cu erori"
     },
     "chunks": "{{processed}}/{{total}} fragmente",
     "deleteDocument": "Șterge documentul",
@@ -1188,7 +2001,21 @@
     "serverBusy": "Serverul este ocupat",
     "tryRefresh": "Încearcă din nou",
     "uploadedSuccess": "Încărcat cu succes — procesarea a început",
-    "uploadingStatus": "Se încarcă pe server..."
+    "uploadingStatus": "Se încarcă pe server...",
+    "uploadError": "Încărcarea a eșuat",
+    "documentDeletionError": "Eroare la ștergerea documentului",
+    "navigationWarning": "Documentul tău este încă în curs de transfer. Plecați doar după ce procesarea a început, altfel încărcarea s-ar putea să nu fie salvată.",
+    "duplicateInBatch": "Nume document duplicat în acest lot",
+    "documentsSelected": "{{count}} documente",
+    "queueSummary": "{{valid}} gata, {{rejected}} omise",
+    "skipped": "Omis",
+    "uploadedPartialSuccess": "{{count}} în coadă, {{rejected}} omise",
+    "chooseFiles": "Alegeți fișiere",
+    "chooseFolder": "Alegeți folder",
+    "uploadDocuments": "Încărcați documente",
+    "replacingDocument": "Înlocuire {{filename}}",
+    "recentDocumentsShowing": "Se afișează {{shown}} din {{total}} documente",
+    "showMore": "Vezi mai multe"
   },
   "configCategories": {
     "embedding": {
@@ -1230,6 +2057,11 @@
       "description": "Configurați certificatele SSL și setările HTTPS",
       "hint": "Configurați setările TLS și proxy atunci când serviți prin HTTPS. Setările implicite sunt sigure pentru dezvoltarea locală; activați HTTPS numai după ce certificatele sunt montate.",
       "label": "SSL și Securitate"
+    },
+    "llm": {
+      "label": "Mediul de execuție al agentului Sage",
+      "description": "Configurare inferență Sage + Tinfoil",
+      "hint": "Acest prototip direcționează traficul Agent Runtime prin Sage și folosește Tinfoili ca transport pentru Model Provider. Modificările necesită repornire."
     }
   },
   "promptSections": {
@@ -1256,6 +2088,12 @@
       "description": "Cum își structurează AI-ul răspunsurile",
       "hint": "Controlează preferințele de formatare, cum ar fi dacă să folosească puncte, titluri sau paragrafe conversaționale. Aceasta afectează modul în care sunt prezentate vizual răspunsurile.",
       "placeholder": "Folosește puncte pentru liste, titluri pentru secțiuni..."
+    },
+    "prompt_system": {
+      "label": "Prompt Sistem",
+      "description": "Identitate de bază și instrucțiuni de operare pentru AI",
+      "hint": "Utilizați acest câmp pentru identitatea asistentului, misiune și limitele de nivel superior care trebuie să se aplice înainte de ton, reguli, instrumente sau contextul documentului. Modificările afectează noile conversații.",
+      "placeholder": "Ești Sage, un asistent privat pentru această instanță..."
     }
   },
   "parameters": {
@@ -1268,6 +2106,11 @@
       "label": "Adâncimea cunoștințelor",
       "description": "Câte secțiuni de documente să fie referențiate",
       "hint": "Când răspunde la întrebări, AI-ul caută în documentele tale încărcate și extrage secțiuni relevante. Numerele mai mari înseamnă mai mult context dar răspunsuri mai lente. Numerele mai mici sunt mai rapide dar pot rata informații relevante. Implicit: 5"
+    },
+    "max_tokens": {
+      "label": "Max Tokeni",
+      "description": "Lungime maximă pentru fiecare răspuns AI",
+      "hint": "Limitează lungimea unui răspuns. Valorile mai mici mențin răspunsurile scurte și reduc costurile; valorile mai mari permit explicații mai lungi. Implicit: 2048"
     }
   },
   "defaults": {
@@ -1275,6 +2118,21 @@
       "label": "Căutare web",
       "description": "Permite AI-ului să caute pe internet",
       "hint": "Când este activat, AI-ul poate căuta pe web informații actuale care nu sunt în documentele tale. Dezactivează aceasta dacă vrei ca răspunsurile să provină doar din baza ta de cunoștințe încărcată."
+    },
+    "knowledgeSource": {
+      "none": "Niciunul",
+      "selected": "Documente implicite selectate",
+      "all": "Toate documentele disponibile"
+    },
+    "knowledge_source_default": {
+      "label": "Surse de Cunoștințe",
+      "description": "Alegeți care surse de cunoștințe încărcate sunt active în conversațiile utilizatorului",
+      "hint": "Folosiți \"none\" pentru a nu avea cunoștințe încărcate implicit, \"selected\" pentru documentele marcate ca Active by Default, sau \"all\" pentru toate documentele disponibile."
+    },
+    "user_default_tool_ids": {
+      "label": "Seturi de Instrumente Utilizator",
+      "description": "Seturi de instrumente active implicit în conversațiile utilizatorului",
+      "hint": "Tablou JSON folosind oricare dintre \"curated-resources\", \"knowledge-search\" și \"web-search\". Knowledge Search este controlat, de asemenea, de Sursele de Cunoștințe."
     }
   },
   "colors": {
@@ -1453,6 +2311,51 @@
       "description": "URL bază pentru callback-uri Webhook",
       "hint": "URL de bază utilizat pentru a construi callback-urile webhook. Exemplu: https://api.example.com/webhooks. Implicit: http://localhost:8000.",
       "label": "URL Webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "Furnizor de model",
+      "description": "Etichetă Model Provider pentru partea Python",
+      "hint": "Folosiți \"sage\" pentru acest prototip. Această setare de deployment suportă diagnosticul de partea Python și metadatele de verificare."
+    },
+    "LLM_MODEL": {
+      "label": "Nume Model",
+      "description": "Nume/identificator model",
+      "hint": "Identificatorul modelului Tinfoil pe care ar trebui să îl folosească Sage (ex: \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "Endpoint API",
+      "description": "URL de bază API Model Provider",
+      "hint": "URL de bază proxy Tinfoil. Implicit: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "Cheie API",
+      "description": "Cheie API Tinfoil (secret)",
+      "hint": "Lăsați gol pentru a păstra secret Setările de Deployment."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Limită rată Chat",
+      "description": "Cereri de chat pe minut",
+      "hint": "Maxim de cereri /llm/chat pe minut per utilizator stabil, admin, token sau IP client. Necesită restart. Implicit: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Limită rată Interogare Retrieval",
+      "description": "Cereri de interogare retrieval pe minut",
+      "hint": "Maxim de cereri /query pe minut per utilizator stabil, token sau IP client. Necesită restart. Implicit: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Limită rată Încărcare",
+      "description": "Cereri de încărcare documente pe minut",
+      "hint": "Maxim de cerere de încărcare documente pe minut per admin stabil, token sau IP client. Necesită restart. Implicit: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Limită rată Căutare Vectorială",
+      "description": "Cereri de căutare vectorială pe minut",
+      "hint": "Maxim de cereri de căutare vectorială pe minut per utilizator stabil, token sau IP client. Necesită restart. Implicit: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Limită rată Export Configurație",
+      "description": "Exportări configurație Deployment pe oră",
+      "hint": "Maxim de exportări .env pe oră per sesiune admin sau IP client. Necesită restart. Implicit: 5."
     }
   },
   "instanceInitiation": {
@@ -1489,7 +2392,11 @@
       "title": "Pregătit de conectare"
     },
     "subtitle": "Configurează-ți baza de cunoștințe privată în câțiva pași.",
-    "title": "Bine ai venit la Enclave"
+    "title": "Bine ai venit la Enclave",
+    "keySafety": {
+      "title": "Utilizați un cheie Nostr specific Instance-ului",
+      "body": "Nu vă utilizați cheia personală Nostr. Creați sau alegeți o cheie de admin dedicată pentru acest Instance pentru a reduce riscul de supraveghere și pentru a menține accesul operațional separat."
+    }
   },
   "reachout": {
     "errors": {
@@ -1497,7 +2404,8 @@
       "notConfigured": "Această funcție nu este configurată.",
       "rateLimited": "Prea multe mesaje. Vă rugăm să încercați din nou mai târziu.",
       "required": "Mesajul este obligatoriu.",
-      "unavailable": "Contactul nu este disponibil."
+      "unavailable": "Contactul nu este disponibil.",
+      "formErrorLabel": "Eroare formular Reachout"
     },
     "form": {
       "messageLabel": "Mesaj",
@@ -1505,7 +2413,8 @@
       "send": "Trimite"
     },
     "status": {
-      "success": "Mulțumim. Mesajul dumneavoastră a fost trimis."
+      "success": "Mulțumim. Mesajul dumneavoastră a fost trimis.",
+      "successLabel": "Reachout reușit"
     },
     "mode": {
       "feedback": {
@@ -1540,7 +2449,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Backend-ul a returnat o eroare la validarea autentificării. Aceasta nu este tratată ca o deconectare.",
       "unable_to_verify_admin_session_5f87b8": "Nu se poate verifica sesiunea de administrator",
       "verifying_admin_session_87c53b": "Se verifică sesiunea de administrator..."
-    }
+    },
+    "loadingAssistant": "Încărcare asistent admin"
   },
   "initiationGate": {
     "extracted": {
@@ -1754,7 +2664,332 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Verifică un token de link magic și obține informații despre sesiune (sesiune bazată pe cookie).",
       "verify_magic_link_token_183cf5": "Verifică Token Link Magic",
       "view_all_users_manage_approval_status_and_delete_03feec": "Vizualizați toți utilizatorii, gestionați starea aprobării și ștergeți utilizatori.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Vizualizați și actualizați setările de configurare la nivel de instanță."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Vizualizați și actualizați setările de configurare la nivel de instanță.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testează conectivitatea la calea Model Provider configurată."
+    },
+    "labels": {
+      "themePreference": "Preferință temă",
+      "endpointGuidance": "Ghidare endpoint",
+      "healthResponseOutput": "Rezultat răspuns sănătate (health)",
+      "jobs": "Joburi",
+      "chunks": "Fragmente (Chunks)",
+      "rateLimitTestType": "Tip test limită rată",
+      "successfulRequests": "Cereri reușite",
+      "successful": "Reușite",
+      "blockedRequests": "Cereri blocate"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Trascript conversație"
+  },
+  "branding": {
+    "logoAlt": "Logo {{name}}"
+  },
+  "language": {
+    "english": "Engleză",
+    "spanish": "Spaniolă",
+    "french": "Franceză",
+    "german": "Germană",
+    "portuguese": "Portugheză"
+  },
+  "home": {
+    "checkingInstanceStatus": "Se verifică starea instanței..."
+  },
+  "adminGuidedSetup": {
+    "title": "Configurează instanța ta",
+    "subtitle": "Asistentul tău va colecta informațiile de bază într-o singură etapă.",
+    "manual": "Configurează manual în schimb",
+    "finish": "Finalizează și începe testarea",
+    "comingSoon": "Această fază va veni în curând și este construită separat.",
+    "steps": {
+      "initialize": {
+        "label": "Inițializare",
+        "title": "Inițializare",
+        "subtitle": "Să acoperim elementele de bază ale spațiului tău, astfel încât agentul să înceapă cu o bază corectă."
+      },
+      "docs": {
+        "label": "Încarcă documente",
+        "title": "Încarcă ghidul tău de teren",
+        "subtitle": "Adaugă materialul sursă din care răspunde agentul — cărți, ghiduri și documente de referință."
+      },
+      "resources": {
+        "label": "Resurse curate",
+        "title": "Resurse curate",
+        "subtitle": "Adaugă resurse de încredere din lumea reală — contacte cheie, avocați, suport educațional și de sănătate mintală — la care agentul poate trimite oamenii."
+      },
+      "test": {
+        "label": "Testare ca utilizator",
+        "title": "Testare ca utilizator",
+        "subtitle": "În curând — încearcă asistentul ca unul dintre tipurile tale de utilizatori și evaluează răspunsurile."
+      },
+      "feedback": {
+        "label": "Feedback",
+        "title": "Bucla de feedback",
+        "subtitle": "În curând — revizuiește calitatea răspunsurilor și ajustează configurarea."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Testare și Feedback",
+    "subtitle": "Rulează o sesiune de testare utilizator, apoi revizuiește jurnalele beta criptate și feedback-ul din conversațiile salvate.",
+    "tabs": {
+      "test": "Testare ca utilizator",
+      "feedback": "Feedback"
+    },
+    "test": {
+      "pickPersona": "Alege o persoană pentru testare",
+      "pickPersonaBody": "Configurează un utilizator de test pentru unul dintre tipurile tale de utilizatori, apoi comunică în numele acestuia. Sesiunea este salvată ca o probă criptată pe care o poți evalua la Feedback.",
+      "userType": "Tip utilizator",
+      "genericUser": "Utilizator generic (fără tip)",
+      "start": "Începe sesiunea",
+      "admin": "Administrator",
+      "testUserId": "Utilizator de test",
+      "endSave": "Încheie și salvează proba",
+      "previewNotice": "Mod previzualizare — impersonarea reală nu este încă implementată, așa că această conversație rulează sub sesiunea ta de admin. Transcrierea este totuși salvată pentru revizuire.",
+      "chatEmpty": "Trimite un mesaj în numele acestui utilizator pentru a începe proba.",
+      "inputPlaceholder": "Trimite un mesaj asistentului în numele acestui utilizator...",
+      "saved": "Probă salvată (criptată). Revizuiește-o la Feedback.",
+      "startError": "Eroare la pornirea sesiunii de testare",
+      "saveError": "Eroare la salvarea probei",
+      "impersonationUnavailable": "Impersonarea utilizatorului de test nu este disponibilă încă",
+      "sessionTokenError": "Nu s-a putut crea un token de sesiune pentru utilizatorul sintetic",
+      "testingAs": "Testare ca {{persona}}",
+      "authFailed": "Sesiunea de utilizator sintetic nu mai este autorizată.",
+      "discardUnsavedConfirm": "Eliminați rândurile completate care nu au fost salvate?",
+      "workspaceAria": "Spațiu de lucru pentru conversația utilizatorului de test"
+    },
+    "feedback": {
+      "trials": "Jurnale Beta",
+      "untitled": "Conversație fără titlu",
+      "turns": "rânduri",
+      "turn": "Rând",
+      "empty": "Nu există încă jurnale beta salvate. Rulează o Sesiune de Utilizator de Test sau așteaptă conversațiile utilizatorilor.",
+      "selectPrompt": "Selectează un jurnal beta pentru a-i revizui transcrierea și pentru a evalua fiecare rând.",
+      "noNip04": "Conectează o extensie Nostr (Alby, nos2․x) pentru a decripta transcrierile — acestea sunt criptate cu cheia ta de admin.",
+      "sourceUser": "Conversație Utilizator",
+      "sourceTest": "Sesiune de Utilizator de Test",
+      "thumbUp": "Răspuns bun",
+      "thumbDown": "Necesită îmbunătățiri",
+      "notePlaceholder": "Notă opțională (salvată criptat)…",
+      "exportNotDecrypted": "Deschide și decriptează transcrierea înainte de export.",
+      "exportFeedbackNotDecrypted": "Unele comentarii de feedback nu au putut fi decriptate. Redeschide transcrierea și aprobă fiecare cerere de decriptare înainte de export.",
+      "exportNeedsExtension": "Exportul necesită o extensie Nostr. Transcrierea este criptată în repaus, iar extensia ta este cea care o decriptează.",
+      "exportDecrypting": "Se decriptează încă. Exportul va deveni disponibil după ce fiecare cerere este aprobată.",
+      "exportWhyDisabled": "De ce este dezactivat exportul?",
+      "retryDecryption": "Reîncearcă decriptarea",
+      "decryptPendingTitle": "Verifică extensia Nostr",
+      "decryptPendingBody": "Aceasta cere permisiunea pentru a decripta această transcriere. S-ar putea să nu se deschidă singură — dă click pe iconița extensiei dacă nu o vezi. Alege opțiunea de a-ți aminti alegerea pentru ca solicitarea să apară o singură dată.",
+      "decryptProgress": "Decriptat {{done}} din {{total}}.",
+      "loadTrialsError": "Eroare la încărcarea testelor",
+      "loadTranscriptError": "Eroare la încărcarea transcrierii",
+      "saveError": "Feedback-ul nu a putut fi salvat",
+      "deleteError": "Jurnalul sesiunii nu a putut fi șters",
+      "exportError": "Exportul sesiunii a eșuat",
+      "transcriptIntegrityError": "Transcrierea este indisponibilă sau incompletă și nu poate fi exportată.",
+      "decryptTranscriptError": "Nu s-a putut decripta transcrierea. Aprobă cererea de decriptare în extensia ta Nostr."
+    }
+  },
+  "adminResources": {
+    "title": "Director Resurse",
+    "subtitle": "Mențineți manual resursele de trimitere verificate pe care asistentul le poate menționa atunci când o conversație escaladează. Doar resursele \"gata\" sunt afișate utilizatorilor finali.",
+    "add": "Adăugare resursă",
+    "addTitle": "Adăugare resursă",
+    "editTitle": "Editare resursă",
+    "empty": "Nu există încă resurse. Adăugați una manual când aveți o referință verificată.",
+    "verified": "verificat",
+    "missing": "Lipsă pentru lansare",
+    "name": "Nume",
+    "type": "Tip resursă",
+    "languages": "Limbi (coduri ISO separate prin virgulă)",
+    "description": "Descriere",
+    "descriptionHint": "Ce ar trebui să îi spună asistentul persoanei despre această resursă.",
+    "scopeLevel": "Nivel de acoperire",
+    "scopeCode": "Cod de acoperire",
+    "scopeCodeHint": "Țară: cod ISO (NI). Subregiune/regiune: cod UN M49 (013 = America Centrală). Global: lăsați gol.",
+    "helpTypes": "Tipuri de ajutor",
+    "contact": "Metode de contact",
+    "vettedBy": "Verificat de",
+    "sourceNote": "Notă sursă",
+    "markVerified": "Marcare ca verificat (clasat pe prima poziție)",
+    "archive": "Arhivare (ascunde de la utilizatorii finali)",
+    "deleteTitle": "Șterge resursa?",
+    "deleteBody": "Aceasta elimină intrarea din director pentru {{name}}",
+    "coverage": "Acoperire",
+    "coverageHint": "Alegeți un nivel de acoperire, apoi căutați după nume sau cod.",
+    "coverageCodePlaceholder": "Căutare după nume sau cod...",
+    "coverageLevelFirst": "Alegeți mai întâi un nivel de acoperire",
+    "coverageClear": "Ștergeți codul de acoperire",
+    "regionDirectoryUnavailable": "Directorul regiunii nu este disponibil. Introduceți un cod manual.",
+    "level": {
+      "country": "Țară",
+      "subregion": "Subregiune",
+      "region": "Regiune",
+      "global": "Global"
+    },
+    "addPointer": "Adăugare pointer",
+    "addRegion": "Adăugare regiune",
+    "displayOrder": "Ordinea de afișare",
+    "displayOrderHint": "Numerele mai mici apar primele, după relevanță și verificare.",
+    "kind": "Tip",
+    "noSearchResults": "Nu există resurse care să corespundă acestei căutări.",
+    "order": "Ordine",
+    "pointerLabel": "Etichetă pointer {{number}}",
+    "pointerType": "Tip pointer {{number}}",
+    "pointerValue": "Valoare pointer {{number}}",
+    "pointers": "Pointere",
+    "regionNumber": "Regiune {{number}}",
+    "regions": "Regiuni",
+    "removePointer": "Eliminați pointer",
+    "removeRegion": "Eliminați regiune",
+    "search": "Căutare resurse",
+    "searchPlaceholder": "Nume, tip, etichetă, pointer sau descriere",
+    "tags": "Etichete (separate prin virgulă)",
+    "namePlaceholder": "ex. Consiliul pentru Drepturile Omului din America Centrală",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, educație, local",
+    "loadError": "Eroare la încărcarea resurselor",
+    "loadDirectoryError": "Eroare la încărcarea directorului",
+    "saveError": "Eroare la salvarea resursei",
+    "deleteError": "Eroare la ștergerea resursei"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Înapoi la Dashboard Admin",
+    "eyebrow": "Operațiuni Admin",
+    "title": "Manager Utilizatori",
+    "subtitle": "Revizuiți utilizatorii, înțelegeți-le starea și aprobați accesul dintr-un singur panou de control simplu.",
+    "unlockDetails": "Deblocare detalii",
+    "refreshRoster": "Actualizare listă",
+    "exportVisible": "Exportare listă vizibilă",
+    "prepareVisible": "Pregătire listă vizibilă",
+    "downloadPrepared": "Descărcare listă pregătită",
+    "exportPrepared": "Lista completă vizibilă este pregătită. Descărcarea este acum activată.",
+    "rosterTitle": "Listă utilizatori",
+    "rosterShown": "{{shown}} afișați din un total de {{total}}.",
+    "tableLabel": "Listă utilizatori",
+    "tableRowsLabel": "Rânduri listă utilizatori",
+    "loadingLabel": "Încărcare listă utilizatori",
+    "loadingUsers": "Încărcare utilizatori...",
+    "loadRetry": "Lista de utilizatori nu a putut fi încărcată. Folosiți Actualizare listă pentru a încerca din nou.",
+    "emptyNoUsers": "Nu există încă utilizatori. Noii utilizatori autentificați vor apărea aici.",
+    "emptyFiltered": "Nu există utilizatori care să corespundă acestor filtre.",
+    "noUserType": "Fără Tip Utilizator",
+    "unknown": "Necunoscut",
+    "userFallback": "Utilizator #{{id}}",
+    "approvalSuccess": "{{name}} aprobat.",
+    "exportSuccess": "Fișierul cu lista utilizatorilor a fost descărcat.",
+    "metrics": {
+      "total": "Total utilizatori",
+      "totalDetail": "în listă",
+      "pendingApproval": "Așteptare aprobare",
+      "pendingDetail": "{{count}} în așteptare",
+      "approved": "Aprobat",
+      "approvedDetail": "pot intra în chat",
+      "incompleteProfiles": "Profiluri incomplete",
+      "incompleteDetail": "necesită răspunsuri obligatorii"
+    },
+    "callouts": {
+      "loadFailed": "Încărcarea listei de utilizatori a eșuat",
+      "approvalUpdated": "Aprobarea utilizatorului a fost actualizată",
+      "approvalFailed": "Actualizarea aprobării utilizatorului a eșuat",
+      "exportReady": "Exportul listei de utilizatori este gata",
+      "exportFailed": "Exportul listei de utilizatori a eșuat"
+    },
+    "filters": {
+      "search": "Căutare utilizatori",
+      "searchPlaceholder": "Nume, email, cheie publică sau #ID",
+      "approvalStatus": "Stare aprobare",
+      "allApprovalStates": "Toate stările de aprobare",
+      "pendingApproval": "În așteptare pentru aprobare",
+      "approved": "Aprobat",
+      "allUserTypes": "Toate tipurile de utilizatori"
+    },
+    "columns": {
+      "user": "Utilizator",
+      "approval": "Aprobare",
+      "userType": "Tip utilizator",
+      "userProfile": "Profil utilizator",
+      "joined": "Alăturat",
+      "action": "Acțiune"
+    },
+    "status": {
+      "approved": "Aprobat",
+      "pending": "În așteptare"
+    },
+    "actions": {
+      "approve": "Aprobă",
+      "approveUser": "Aprobă {{name}}",
+      "viewUserDetails": "Vezi detaliile pentru {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Fără întrebări",
+      "noQuestionsDetail": "Nu se aplică nicio întrebare de onboarding.",
+      "needsProfile": "Necesită profil",
+      "missingRequiredOne": "Lipsă 1 răspuns obligatoriu",
+      "missingRequiredMany": "Lipsă {{count}} răspunsuri obligatorii",
+      "noProfileYet": "Fără profil încă",
+      "noAnswersSaved": "Niciun răspuns salvat.",
+      "ready": "Profil gata",
+      "answersSavedOne": "1 răspuns salvat",
+      "answersSavedMany": "{{count}} răspunsuri salvate"
+    },
+    "identity": {
+      "decrypting": "Decriptare nume și email...",
+      "failed": "Detaliile criptate nu au putut fi deblocate.",
+      "unavailable": "Detaliile criptate necesită un semnatar de browser.",
+      "locked": "Detaliile criptate sunt blocate."
+    },
+    "errors": {
+      "loadUsers": "Eroare la încărcarea utilizatorilor.",
+      "loadUserTypes": "Eroare la încărcarea tipurilor de utilizatori.",
+      "loadQuestions": "Eroare la încărcarea întrebărilor de onboarding.",
+      "approvalUpdate": "Aprobarea utilizatorului nu a putut fi actualizată.",
+      "decryptUnavailable": "Este necesară o extensie de browser cu decriptare NIP-04 pentru a pregăti această listă.",
+      "decryptRoster": "O valoare criptată din listă nu a putut fi decriptată. Nu a fost creat niciun tabel.",
+      "prepareRequired": "Pregătiți lista vizibilă curentă înainte de descărcare.",
+      "exportAudit": "Exportul listei de utilizatori nu a putut fi auditat.",
+      "exportRoster": "Eroare la exportarea listei de utilizatori."
+    },
+    "detail": {
+      "booleanYes": "Da",
+      "booleanNo": "Nu",
+      "fieldUnlocked": "Răspunsul criptat a fost deblocat în acest browser.",
+      "decryptingField": "Decriptare răspuns...",
+      "encryptedFieldUnavailable": "Răspunsul criptat necesită un semnatar de browser.",
+      "encryptedFieldFailed": "Răspunsul criptat nu a putut fi deblocat.",
+      "encryptedFieldLocked": "Răspunsul criptat este blocat.",
+      "notAnswered": "Nerepunsat",
+      "requiredMissing": "Lipsesc răspunsuri obligatorii.",
+      "backToUserManager": "Înapoi la Manager Utilizatori",
+      "backToRoster": "Înapoi la lista de utilizatori",
+      "eyebrow": "Detalii utilizator",
+      "notFoundTitle": "Utilizator ne găsit",
+      "notFoundBody": "Acest utilizator nu se află în lista curentă de administratori.",
+      "subtitle": "Revizuiți statutul acestui utilizator, răspunsurile din profil și detaliile de acces.",
+      "approvalStatus": "Statut aprobare",
+      "waitingApproval": "așteaptă aprobarea",
+      "identityTitle": "Identitate",
+      "name": "Nume",
+      "nameUnavailable": "Nu este disponibil",
+      "email": "Email",
+      "emailUnavailable": "Nu este disponibil",
+      "userId": "ID utilizator",
+      "publicKey": "Cheie publică",
+      "noPublicKey": "Fără cheie publică",
+      "fieldsTitle": "Câmpuri profil",
+      "fieldsShown_one": "Se aplică {{count}} câmp acestui utilizator.",
+      "fieldsShown_few": "Se aplică {{count}} câmpuri acestui utilizator.",
+      "fieldsShown_other": "Se aplică {{count}} câmpuri acestui utilizator.",
+      "noFields": "Nu se aplică niciun câmp de onboarding acestui utilizator.",
+      "required": "Obligatoriu",
+      "optional": "Opțional",
+      "encrypted": "Criptat",
+      "plain": "Necriptat",
+      "chatContext": "Context chat"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Decriptare {{done}} din {{total}}",
+    "checkExtension": "verifică extensia Nostr",
+    "persistentApproval": "Alege opțiunea de reținere sau de aprobare permanentă pentru a nu mai fi întrebat."
   }
 }

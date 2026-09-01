@@ -76,6 +76,7 @@ export function ConversationSurface({
         hasPersistedSession,
         hasPendingApproval,
         runtimeMessageIdPrefix,
+        translate: t,
       }),
     [
       disabled,
@@ -86,6 +87,7 @@ export function ConversationSurface({
       transportCapabilities,
       turnAccessories,
       turns,
+      t,
     ]
   );
   const handleNew = useCallback(
@@ -105,7 +107,7 @@ export function ConversationSurface({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <section
-        aria-label="Conversation surface"
+        aria-label={t('chat.conversationSurfaceAria', 'Conversation surface')}
         className="flex min-h-0 flex-1 flex-col"
       >
         <AssistantConversationThread

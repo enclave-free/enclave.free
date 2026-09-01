@@ -35,7 +35,6 @@ import { Button, Callout, Card, SelectField } from '../components/ui';
 import {
   CustomField,
   UserType,
-  FieldType,
   STORAGE_KEYS,
 } from '../types/onboarding';
 import { adminFetch, isAdminAuthenticated } from '../utils/adminApi';
@@ -50,17 +49,11 @@ import {
   prepareUserRosterExport,
   type PreparedUserRosterExport,
 } from '../utils/userRosterExportPreparation';
-
-const FIELD_TYPE_VALUES: FieldType[] = [
-  'text',
-  'email',
-  'number',
-  'textarea',
-  'select',
-  'checkbox',
-  'date',
-  'url',
-];
+import {
+  localizedFieldTypes,
+  reachoutModes,
+  type ReachoutMode,
+} from '../i18n/dynamicTranslationFamilies';
 
 type SourceTypeFilter = 'all' | 'untyped' | number;
 
@@ -160,7 +153,7 @@ export function AdminUserConfig() {
   const navigate = useNavigate();
 
   const FIELD_TYPE_LABELS: Record<string, string> = Object.fromEntries(
-    FIELD_TYPE_VALUES.map((type) => [type, t(`admin.fieldTypes.${type}`)])
+    localizedFieldTypes.map((type) => [type, t(`admin.fieldTypes.${type}`)])
   );
   const [fields, setFields] = useState<CustomField[]>([]);
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
@@ -260,9 +253,8 @@ export function AdminUserConfig() {
   // Reachout settings (stored in instance_settings; only reachout_* public keys are exposed via /settings/public)
   const [reachoutLoaded, setReachoutLoaded] = useState(false);
   const [reachoutEnabled, setReachoutEnabled] = useState(false);
-  const [reachoutMode, setReachoutMode] = useState<
-    'feedback' | 'help' | 'support'
-  >('support');
+  const [reachoutMode, setReachoutMode] =
+    useState<ReachoutMode>('support');
   const [reachoutToEmail, setReachoutToEmail] = useState('');
   const [reachoutSubjectPrefix, setReachoutSubjectPrefix] = useState('');
   const [reachoutRateLimitPerHour, setReachoutRateLimitPerHour] = useState('3');
@@ -2800,7 +2792,7 @@ export function AdminUserConfig() {
                   {t('admin.reachout.modeLabel', 'Framing')}
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {(['feedback', 'help', 'support'] as const).map((mode) => (
+                  {reachoutModes.map((mode) => (
                     <button
                       key={mode}
                       type="button"

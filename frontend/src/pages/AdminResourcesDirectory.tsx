@@ -228,17 +228,25 @@ export function AdminResourcesDirectory({
         adminFetch('/admin/resources'),
         regionDataPromise,
       ]);
-      if (!resResources.ok) throw new Error('Failed to load resources');
+      if (!resResources.ok) {
+        throw new Error(
+          t('adminResources.loadError', 'Failed to load resources')
+        );
+      }
       const resourcesData = await resResources.json();
       setResources(resourcesData.resources ?? []);
       // Region taxonomy is best-effort; the coverage picker degrades gracefully.
       setRegionData(nextRegionData);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load directory');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('adminResources.loadDirectoryError', 'Failed to load directory')
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void fetchData();
@@ -396,12 +404,19 @@ export function AdminResourcesDirectory({
       });
       if (!response.ok) {
         const detail = await response.json().catch(() => null);
-        throw new Error(detail?.detail ?? 'Failed to save resource');
+        throw new Error(
+          detail?.detail ??
+            t('adminResources.saveError', 'Failed to save resource')
+        );
       }
       await fetchData();
       closeForm();
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Failed to save resource');
+      setFormError(
+        e instanceof Error
+          ? e.message
+          : t('adminResources.saveError', 'Failed to save resource')
+      );
     } finally {
       setSaving(false);
     }
@@ -415,11 +430,19 @@ export function AdminResourcesDirectory({
         `/admin/resources/${deleteTarget.resource_id}`,
         { method: 'DELETE' }
       );
-      if (!response.ok) throw new Error('Failed to delete resource');
+      if (!response.ok) {
+        throw new Error(
+          t('adminResources.deleteError', 'Failed to delete resource')
+        );
+      }
       await fetchData();
       setDeleteTarget(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete resource');
+      setError(
+        e instanceof Error
+          ? e.message
+          : t('adminResources.deleteError', 'Failed to delete resource')
+      );
     } finally {
       setSaving(false);
     }
@@ -587,7 +610,10 @@ export function AdminResourcesDirectory({
                 label={t('adminResources.name', 'Name')}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Central America Human Rights Counsel"
+                placeholder={t(
+                  'adminResources.namePlaceholder',
+                  'e.g. Central America Human Rights Counsel'
+                )}
               />
 
               <div className="grid gap-4 sm:grid-cols-2">
@@ -617,7 +643,10 @@ export function AdminResourcesDirectory({
                   onChange={(e) =>
                     setForm({ ...form, languages: e.target.value })
                   }
-                  placeholder="es, en"
+                  placeholder={t(
+                    'adminResources.languagesPlaceholder',
+                    'es, en'
+                  )}
                 />
               </div>
 
@@ -625,7 +654,10 @@ export function AdminResourcesDirectory({
                 label={t('adminResources.tags', 'Tags (comma-separated)')}
                 value={form.tags}
                 onChange={(e) => setForm({ ...form, tags: e.target.value })}
-                placeholder="bitcoin, education, local"
+                placeholder={t(
+                  'adminResources.tagsPlaceholder',
+                  'bitcoin, education, local'
+                )}
               />
 
               <TextField

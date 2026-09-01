@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useInstanceConfig } from '../../context/InstanceConfigContext'
 import { DynamicIcon } from './DynamicIcon'
 
 export function InstanceLogo() {
+  const { t } = useTranslation()
   const { config } = useInstanceConfig()
   const [logoError, setLogoError] = useState(false)
   const hasLogoImage = Boolean(config.logoUrl?.trim()) && !logoError
@@ -21,7 +23,7 @@ export function InstanceLogo() {
         {hasLogoImage ? (
           <img
             src={config.logoUrl}
-            alt={`${config.name} logo`}
+            alt={t('branding.logoAlt', '{{name}} logo', { name: config.name })}
             className="w-10 h-10 object-contain"
             onError={() => setLogoError(true)}
           />

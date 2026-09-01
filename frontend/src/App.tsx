@@ -9,6 +9,7 @@ import { HomeRedirect } from './pages/HomeRedirect';
 import { AdminRoute } from './components/shared/AdminRoute';
 import { InitiationGate } from './components/shared/InitiationGate';
 import { DecryptStatus } from './components/shared/DecryptStatus';
+import { useTranslation } from 'react-i18next';
 
 const TestDashboard = lazy(() =>
   import('./pages/TestDashboard').then((module) => ({
@@ -113,13 +114,23 @@ const PendingApproval = lazy(() =>
 );
 
 function PageLoadingFallback() {
+  const { t } = useTranslation();
   return (
     <main
       role="status"
-      aria-label="Loading page"
+      aria-label={t('common.loadingPage', 'Loading page')}
       className="flex min-h-screen items-center justify-center bg-background text-sm text-text-muted"
     >
-      Loading...
+      {t('common.loading')}
+    </main>
+  );
+}
+
+function PageErrorFallback() {
+  const { t } = useTranslation();
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-background text-sm text-text-muted">
+      {t('common.pageLoadError', 'Failed to load page. Please refresh.')}
     </main>
   );
 }
@@ -142,13 +153,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        this.props.fallback ?? (
-          <main className="flex min-h-screen items-center justify-center bg-background text-sm text-text-muted">
-            Failed to load page. Please refresh.
-          </main>
-        )
-      );
+      return this.props.fallback ?? <PageErrorFallback />;
     }
 
     return this.props.children;

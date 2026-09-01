@@ -22,7 +22,8 @@
       "title": "あなたに最も当てはまるのは？",
       "description": "あなたのニーズに最も合うオプションを選択してください",
       "loadError": "ユーザータイプの読み込みに失敗しました。もう一度お試しください。",
-      "selectionLabel": "ユーザータイプの選択"
+      "selectionLabel": "ユーザータイプの選択",
+      "errorLabel": "ユーザータイプの読み込みエラー"
     },
     "language": {
       "selectLabel": "言語を選択",
@@ -65,7 +66,8 @@
       "encryptionBody": "プロフィールフィールドはデフォルトで暗号化されますが、このインスタンスの管理者がフィールドレベルの設定を管理しており、選択されたデータを異なる方法で保存または共有することを許可する場合があります。",
       "adminControlNotice": "データの取り扱いは、暗号化なしで保存される可能性のあるデータやAIツールと共有されるデータを含め、このインスタンスの管理者が設定します。",
       "noWarrantyNotice": "Enclave ソフトウェアは保証なしで現状のまま提供されます。このインスタンスの使用は管理者のポリシーに従います。",
-      "retentionNotice": "データ保持および削除のタイムラインは、このインスタンスの管理者が設定します。アクセス、修正、または削除のリクエストについては、管理者に連絡してください。"
+      "retentionNotice": "データ保持および削除のタイムラインは、このインスタンスの管理者が設定します。アクセス、修正、または削除のリクエストについては、管理者に連絡してください。",
+      "errorLabel": "マジックリンクのリクエストエラー"
     },
     "verify": {
       "verifying": "リンクを確認中...",
@@ -125,20 +127,28 @@
       "databaseName": "データベース",
       "knowledgeGraph": "ナレッジグラフをクエリ",
       "config": "設定",
-      "configName": "設定"
+      "configName": "設定",
+      "knowledgeSearch": "アップロードされたドキュメントとナレッジチャンクを検索します",
+      "knowledgeSearchName": "ナレッジ",
+      "curatedResources": "管理者が確認済みのリファラルリソースや信頼できる組織を探します",
+      "curatedResourcesName": "リソース"
     },
     "documentScope": {
       "title": "ナレッジベース",
       "description": "コンテキストに含めるソースを選択",
       "noSources": "利用可能なソースがありません",
       "clearAll": "すべてクリア",
-      "docsLabel": "ドキュメント"
+      "docsLabel": "ドキュメント",
+      "clearAllSelectedAria": "選択したドキュメントをすべてクリア",
+      "docsLabelWithCount": "ドキュメント {{count}} 件"
     },
     "messages": {
       "searching": "「{{term}}」を検索中...",
       "searchingPrefix": "検索中",
       "searchResults": "「{{term}}」を検索しました：",
-      "newConversation": "新しい会話"
+      "newConversation": "新しい会話",
+      "copy": "メッセージをコピー",
+      "copied": "メッセージをコピーしました"
     },
     "code": {
       "copy": "コピー",
@@ -157,7 +167,87 @@
       "roleUser": "あなた",
       "roleAssistant": "アシスタント",
       "footer": "{{instanceName}}からエクスポート",
-      "exportedOn": "{{timestamp}}にエクスポート"
+      "exportedOn": "{{timestamp}}にエクスポート",
+      "copiedExportNotice": "このエクスポートはアクティブな製品ストレージから離脱し、ダウンロード後は Active Storage ライフサイクルの対象外となります。"
+    },
+    "new": "新しいチャット",
+    "listTitle": "チャット",
+    "contextTitle": "コンテキスト",
+    "messageActions": "メッセージ操作",
+    "actions": {
+      "stop": "回答を停止",
+      "stopDisabled": "停止する回答はありません。",
+      "regenerate": "回答を再生成",
+      "edit": "メッセージを編集",
+      "waitForResponse": "現在の回答が終了するまでお待ちください。",
+      "startConversation": "先に会話を開始または再開してください。",
+      "resolveConfirmation": "履歴を変更する前に、保留中の変更確認を解決してください。"
+    },
+    "composerContextAria": "コンポーザーのコンテキスト",
+    "sessions": {
+      "ariaLabel": "チャットセッション",
+      "current": "現在のチャット",
+      "empty": "空",
+      "messageCount_one": "{{count}} 件のメッセージ",
+      "messageCount_other": "{{count}} 件のメッセージ",
+      "deleteConfirmTitle": "「{{title}}」を削除しますか？",
+      "rename": "{{title}} の名前を変更",
+      "delete": "{{title}} を削除",
+      "resumeInvalid": "会話を読み込めませんでした。",
+      "renameEmpty": "会話のタイトルは必須です。",
+      "renameError": "会話の名前を変更できませんでした。",
+      "deleteError": "会話を削除できませんでした。",
+      "loading": "チャットを読み込み中...",
+      "error": "チャットを読み込めませんでした",
+      "saved": "保存済みのチャット",
+      "deleteConfirmBody": "これにより、保存された会話とそのセッションメモリが削除されます。",
+      "deleteCancel": "会話の削除をキャンセル",
+      "cancel": "キャンセル",
+      "deleteConfirm": "会話を削除",
+      "deleteDeleting": "削除中...",
+      "renameInput": "会話のタイトル",
+      "renameCancel": "会話の名前変更をキャンセル",
+      "renameSave": "会話のタイトルを保存",
+      "renameSaving": "名前を変更中...",
+      "open": "チャットセッションを開く",
+      "close": "チャットセッションを閉じる"
+    },
+    "currentChatAria": "現在のチャット",
+    "newFromCurrent": "新しいチャットを開始",
+    "documentsContextTitle": "ドキュメント",
+    "errors": {
+      "requestLabel": "チャットリクエストエラー"
+    },
+    "trace": {
+      "finalizing": "レスポンスを生成中...",
+      "collapse": "折りたたむ",
+      "expand": "展開",
+      "reasoning": "推論",
+      "thinking": "思考中",
+      "transcript": "{{label}} のトランスクリプト",
+      "reasoningSummaryAria": "推論の要約",
+      "reasoningTranscriptAria": "推論のトランスクリプト",
+      "label": "トレース",
+      "toolCalls": "ツール呼び出し",
+      "retrieval": "検索",
+      "input": "入力",
+      "output": "出力",
+      "retrievedSource": "取得されたソース",
+      "score": "スコア {{score}}",
+      "optionalDetailsAria": "{{label}} の詳細（オプション）"
+    },
+    "conversationMessagesAria": "会話メッセージ",
+    "conversationSurfaceAria": "会話サーフェス",
+    "conversationThreadAria": "会話スレッド",
+    "activity": {
+      "label": "アクティビティ",
+      "summaryAria": "アクティビティの要約",
+      "detailsAria": "アクティビティの詳細",
+      "timelineAria": "アクティビティのタイムライン",
+      "show": "アクティビティを表示",
+      "hide": "アクティビティを非表示",
+      "showOptional": "詳細（オプション）を表示",
+      "hideOptional": "詳細（オプション）を非表示"
     }
   },
   "common": {
@@ -197,7 +287,17 @@
     "retry": "再試行",
     "saved": "保存済み",
     "sending": "送信中...",
-    "gotIt": "了解"
+    "gotIt": "了解",
+    "send": "送信",
+    "backToAdminDashboard": "管理者ダッシュボードに戻る",
+    "loadingPage": "ページを読み込み中",
+    "pageLoadError": "ページの読み込みに失敗しました。再読み込みしてください。",
+    "export": "エクスポート",
+    "reset": "リセット",
+    "exit": "終了",
+    "none": "なし",
+    "all": "すべて",
+    "warning": "警告"
   },
   "settings": {
     "title": "設定",
@@ -220,8 +320,23 @@
       "deploymentConfig": "デプロイメント設定",
       "deploymentConfigDesc": "サービス、SMTP、ストレージ",
       "userConfig": "ユーザー設定",
-      "userConfigDesc": "ユーザータイプとオンボーディングの質問"
-    }
+      "userConfigDesc": "ユーザータイプとオンボーディングの質問",
+      "guidedSetup": "ガイド付きセットアップ",
+      "guidedSetupDesc": "セットアップ、ドキュメント、リソース、およびテストを順を追って進めます。",
+      "guides": "管理者ガイド",
+      "guidesDesc": "管理者が何をどこで設定するかを確認できます。",
+      "testUserSession": "ユーザーセッションのテスト",
+      "testUserSessionDesc": "シミュレーションユーザーとしてチャットし、ベータ版のフィードバックを確認します。",
+      "diagnostics": "診断",
+      "diagnosticsDesc": "問題の調査中にスモークテストを実行します。",
+      "resourceDirectory": "リソースディレクトリ",
+      "resourceDirectoryDesc": "信頼できる参照リソースを手動でキュレートします。"
+    },
+    "diagnostics": "診断",
+    "adminWorkflows": "管理者ワークフロー",
+    "settingsSection": "設定",
+    "dataAndContent": "データとコンテンツ",
+    "operations": "オペレーション"
   },
   "admin": {
     "confirmDelete": "このレコードを削除してもよろしいですか？",
@@ -263,7 +378,12 @@
       "instanceSectionTitle": "インスタンス設定",
       "onboardingFieldsHint": "オンボーディング中にユーザーが回答する質問を作成します。",
       "userSectionDesc": "ユーザータイプと、オンボーディング中にユーザーが回答する質問を設定します。",
-      "userSectionTitle": "ユーザー設定"
+      "userSectionTitle": "ユーザー設定",
+      "fieldScopeFilterLabel": "ユーザータイプ別に質問をフィルタリング",
+      "noFieldsForScope": "このユーザータイプに適用される質問はまだありません。",
+      "reorderNeedsAllScope": "並べ替えるためにすべての質問を表示する",
+      "fieldScopeGlobalHint": "ユーザーのタイプに関わらず、すべてのユーザーが回答する質問。",
+      "fieldScopeTypeHint": "このユーザータイプに提示されるすべての内容：全員が回答する共通の質問と、そのユーザー専用の質問。"
     },
     "database": {
       "backToSetup": "管理設定に戻る",
@@ -348,7 +468,14 @@
       "nip07Unavailable": "Nostr拡張機能が検出されませんでした",
       "plaintextFieldIcon": "プレーンテキストフィールド",
       "primaryKeyIcon": "主キー",
-      "unlockDecryption": "復号化のロック解除"
+      "unlockDecryption": "復号化のロック解除",
+      "safeQueryResults": "安全なクエリ結果",
+      "queryError": "クエリエラー",
+      "writeResult": "データベース書き込み結果",
+      "emptyQueryResult": "クエリ結果が空です",
+      "readOnly": "読み取り専用",
+      "tableLoadError": "テーブルの読み込みエラー",
+      "readOnlyHint": "データベースの直接編集は無効化されています。変更を行うには、監査ログが残る管理者フローを使用してください。"
     },
     "fields": {
       "nameRequired": "フィールド名は必須です",
@@ -438,7 +565,11 @@
       "removeFieldFailed": "フィールドの削除に失敗しました",
       "reorderFailed": "フィールドの並び替えに失敗しました",
       "loadUsersFailed": "ユーザーの読み込みに失敗しました",
-      "updateTypeFailed": "ユーザータイプの更新に失敗しました"
+      "updateTypeFailed": "ユーザータイプの更新に失敗しました",
+      "loadSettingsFailed": "設定の読み込みに失敗しました",
+      "externalConfigConflict": "編集中にSageまたは他の管理者がこれらの設定を変更しました。新しい値を上書きしないよう、保存する前にこのページを再読み込みしてください。",
+      "externalSettingsConflict": "編集中にSageまたは他の管理者がこれらの設定を変更しました。保存する前にこのページを再読み込みしてください。",
+      "externalUserConfigConflict": "編集中にSageまたは他の管理者がユーザータイプまたはオンボーディングの質問を変更しました。下書きを保存する前にこのページを再読み込みしてください。"
     },
     "userMigration": {
       "title": "ユーザータイプの移行",
@@ -473,7 +604,10 @@
       "emailEncryptedHint": "メール（暗号化済み）",
       "nameEncryptedHint": "名前（暗号化済み）",
       "noUsersHint": "上記のフィルターを変更するか、更新してみてください。",
-      "pubkeyPresent": "Nostr公開鍵が存在します"
+      "pubkeyPresent": "Nostr公開鍵が存在します",
+      "usersErrorLabel": "ユーザータイプ移行のエラー",
+      "errorLabel": "ユーザータイプ移行エラー",
+      "summaryLabel": "ユーザータイプ移行の概要"
     },
     "configAssistant": {
       "openAria": "管理アシスタントを開く",
@@ -511,8 +645,40 @@
         "restartRequiredFor": "再起動が必要: {{keys}}。",
         "restartRequiredNo": "再起動は不要です。",
         "restartCheckFailedHttp": "再起動要否チェックに失敗しました（HTTP {{status}}）。",
-        "restartCheckFailedNetwork": "再起動要否チェックに失敗しました（ネットワークエラー）。"
-      }
+        "restartCheckFailedNetwork": "再起動要否チェックに失敗しました（ネットワークエラー）。",
+        "pageRefreshRecommended": "テーマの更新を反映するには、このページを更新してください。"
+      },
+      "onboardingWelcome": "ようこそ — スペースのセットアップを始めましょう。以下の項目について、わかる範囲で1つのメッセージにまとめて回答してください（番号を振り、不明なものはスキップして構いません）:\n\n1. **名前** — このスペースを何と呼びますか？（ヘッダーとブラウザのタブに表示されます）\n2. **説明** — 何のためのスペースか、一言で（プライベートなメモであり、ユーザーには表示されません）\n3. **アシスタント名** — AIヘルパーの名前は何にしますか？\n4. **アクセントカラー** — ボタンやリンクの強調色（blue/teal などの名前、または #3B82F6 のような16進数）\n5. **テーマ** — ライト、ダーク、またはシステム（デバイスに合わせる）？\n6. **デフォルト言語** — 例：日本語、英語、スペイン語など（任意）\n7. **キャッチフレーズ** — ヘッダー用の短いフレーズ（任意）\n8. **新規ユーザー** — すぐに許可しますか、それとも一人ずつ承認しますか？\n9. **ユーザータイプ** — 管理者以外のどのようなユーザーが利用しますか？（例：教師、生徒） — それぞれ作成します\n\n例: \"9. 教師と生徒\"。すべて一度に保存されます。手動設定への切り替えはいつでも可能です。",
+      "collapseSidebar": "アシスタントのサイドバーを閉じる",
+      "expandSidebar": "管理アシスタントのサイドバーを開く",
+      "resize": "管理アシスタントパネルのサイズを変更",
+      "railLabel": "アシスタント",
+      "shareSecretsHint": "デフォルトではオフです。先に設定ツールを有効にしてください。有効にすると、シークレット展開の構成値がクライアント側に公開され、このプロトタイプフローでは Sage に送信されます。",
+      "applyIntentUsePanel": "下の保留中の変更パネルを使用し、「適用」をクリックしてこれらの構成更新を確定してください。",
+      "applyIntentNoPending": "適用する保留中の構成変更はありません。まずアシスタントに変更案の提示を依頼してください。",
+      "startNewConversation": "新しいアシスタントとの会話を開始",
+      "reducedContextNoticeLabel": "コンテキスト削減のお知らせ",
+      "sessionMemoryNoticeLabel": "セッションメモリ圧縮のお知らせ",
+      "sessionMemoryNotice": "会話を継続するために、古いコンテキストが要約されました。",
+      "reducedContextNotice": "モデルプロバイダーの予算（{{sections}}）に収めるため、一部のコンテキストが削減されました。新しいアシスタントとの会話を開始するまで、回答が不完全になる場合があります。",
+      "reducedContextSections": {
+        "recentConversation": "直近の会話履歴"
+      },
+      "approvalCardTitle": "設定変更を承認する",
+      "applying": "適用中",
+      "applied": "適用済み",
+      "rejected": "拒否済み",
+      "failed": "失敗",
+      "superseded": "上書き済み",
+      "hideDetails": "詳細を非表示",
+      "reviewDetails": "詳細を確認",
+      "reject": "拒否",
+      "approve": "承認",
+      "applyErrorLabel": "設定適用のエラー",
+      "onboardingTitle": "ガイド付きセットアップチャット",
+      "onboardingContext": "集中型セットアップ会話",
+      "directShareSecretsHint": "任意：この会話のコンテキストに保存済みのデプロイ用シークレット値を含めます。シークレットの直接読み取りにはこれは不要です。",
+      "directWritePrompt": "管理者設定について質問してください。Sageは設定を検査し、会話内でユーザーに確認した後、サポートされている変更を直接適用できます。"
     },
     "reachout": {
       "badgeDefault": "デフォルト",
@@ -679,7 +845,16 @@
       "typographyTitle": "タイポグラフィ",
       "userIconLabel": "ユーザーアイコン",
       "userLabelLabel": "ユーザーラベル",
-      "userLabelPlaceholder": "例：あなた"
+      "userLabelPlaceholder": "例：あなた",
+      "publicEmailDisplayNameLabel": "公開メール表示名 (任意)",
+      "publicEmailDisplayNameHint": "マジックリンクによるサインインメールで使用されます。空欄にするとインスタンス名が使用されます。",
+      "defaultsTitle": "インスタンスのデフォルト設定",
+      "defaultsDesc": "ローカルのブラウザ設定が適用される前の、基本となる言語とテーマを設定します。",
+      "defaultLanguageLabel": "デフォルト言語",
+      "defaultThemeLabel": "デフォルトテーマ",
+      "themeSystem": "システム設定",
+      "themeLight": "ライトモード",
+      "themeDark": "ダークモード"
     },
     "userConfig": {
       "subtitle": "ユーザータイプと、オンボーディング中にユーザーが回答する質問を設定します。",
@@ -687,6 +862,55 @@
       "typeDescription": "説明",
       "typeIcon": "タイプアイコン",
       "typeName": "タイプ名"
+    },
+    "userApproval": {
+      "updateFailed": "ユーザー承認の更新に失敗しました。",
+      "approvedUser": "ユーザー #{{id}} を承認しました。",
+      "revokedUser": "ユーザー #{{id}} を保留状態に戻しました。",
+      "title": "ユーザー承認",
+      "subtitle": "認証済みの新規ユーザーが、すぐにチャットに参加できるか、管理者の承認を待つかを選択します。",
+      "requireManualLabel": "新規ユーザーに手動承認を必要とする",
+      "requireManualHint": "有効にすると、管理者が承認するまで、新規ユーザーは承認待ち画面に留まります。",
+      "loadingHint": "読み込み中...",
+      "saveButton": "ユーザー承認を保存",
+      "savedCalloutLabel": "ユーザー承認を保存しました",
+      "errorCalloutLabel": "ユーザー承認エラー",
+      "pendingTitle": "承認待ち",
+      "pendingCount_zero": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "pendingCount_one": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "pendingCount_two": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "pendingCount_few": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "pendingCount_many": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "pendingCount_other": "チャットへのアクセスには、{{count}}名のユーザーの承認が必要です。",
+      "nonePending": "承認待ちのユーザーはいません。",
+      "actionSavedCalloutLabel": "ユーザー承認を更新しました",
+      "actionErrorCalloutLabel": "ユーザー承認の更新に失敗しました",
+      "loadingUsers": "ユーザーを読み込み中...",
+      "emptyState": "手動承認が必要な場合、承認待ちの新規ユーザーがここに表示されます。",
+      "emailOnFile": "登録済みのメールアドレス",
+      "nameOnFile": "登録済みの名前",
+      "approveButton": "承認",
+      "revokeButton": "取り消し"
+    },
+    "userRosterExport": {
+      "auditFailed": "ユーザーリストのエクスポート監査に失敗しました。スプレッドシートはダウンロードされませんでした。",
+      "decryptUnavailable": "このリストを作成するには、NIP-04復号に対応したブラウザ拡張機能が必要です。",
+      "decryptFailed": "暗号化されたリストの値を復号できませんでした。スプレッドシートは作成されませんでした。",
+      "prepared": "リストの準備が完了しました。ダウンロードが可能になりました。",
+      "prepareRequired": "ダウンロードする前に、現在のリストを準備してください。",
+      "prepareButton": "ユーザーリストを準備",
+      "downloadButton": "準備されたリストをダウンロード",
+      "success": "ユーザーリストのスプレッドシートをダウンロードしました。",
+      "failed": "ユーザー名簿のエクスポートに失敗しました。",
+      "button": "ユーザーをエクスポート",
+      "successLabel": "ユーザー名簿のエクスポートの準備ができました",
+      "errorLabel": "ユーザー名簿のエクスポートに失敗しました"
+    },
+    "userIdentity": {
+      "decrypting": "名前/メールアドレスを復号中...",
+      "decryptFailed": "名前/メールアドレスを復号できませんでした",
+      "unlockDetails": "名前/メールアドレスを表示するにはロックを解除してください",
+      "unlockButton": "詳細をロック解除"
     }
   },
   "adminOnboarding": {
@@ -711,7 +935,9 @@
     "legalResponsibilityNotice": "このインスタンスの適法な設定、ユーザーへの開示、およびデータ取り扱いポリシーについては、あなたが責任を負います。",
     "extracted": {
       "change_language_789b14": "言語を変更"
-    }
+    },
+    "statusError": "インスタンスの状態確認に失敗しました",
+    "connectionError": "接続に失敗しました"
   },
   "errors": {
     "requestFailed": "リクエストに失敗しました",
@@ -745,11 +971,228 @@
     "adminSessionExpired": "管理者セッションの有効期限が切れました",
     "authenticationFailed": "認証に失敗しました",
     "noNostrExtension": "Nostr拡張機能が見つかりません",
-    "exportFailed": "エクスポートに失敗しました"
+    "exportFailed": "エクスポートに失敗しました",
+    "failedToRetryDeletionTombstone": "削除タムストーンの再試行に失敗しました",
+    "failedToAcknowledgeUnsupportedSurface": "サポートされていないデプロイメントサーフェスの確認に失敗しました",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "サポートされていないデプリメントサーフェスカテゴリの確認に失敗しました",
+    "failedToPreviewRetention": "保持ポリシーのプレビューに失敗しました",
+    "failedToUpdateRetentionPolicy": "保持ポリシーの更新に失敗しました",
+    "failedToRunScheduledRetention": "スケジュールされた保持処理の実行に失敗しました",
+    "failedToUpdateArtifactEncryptionPosture": "アーティファクトの暗号化体制の更新に失敗しました",
+    "queryExecutionFailed": "クエリの実行に失敗しました"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "管理者ができること"
+    },
+    "summary": {
+      "brand": {
+        "title": "インスタンスのブランディング",
+        "body": "名前、ロゴ、テーマ、アシスタントのアイデンティティ、および公開メールアドレスの表示設定。"
+      },
+      "people": {
+        "title": "ユーザー管理",
+        "body": "ユーザータイプ、オンボーディングの質問、承認、移行、およびアクセス権限。"
+      },
+      "agent": {
+        "title": "Sageのカスタマイズ",
+        "body": "プロンプトのルール、レスポンス設定、ドキュメントへのアクセス、およびツールのデフォルト設定。"
+      },
+      "launch": {
+        "title": "安全な立ち上げ",
+        "body": "メール、ドメイン、CORS、HTTPS、モデルのルーティング、ヘルスチェック、および実行環境。"
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "ブランド",
+        "title": "アイデンティティと外観",
+        "body": "インスタンスを自組織らしいものにカスタマイズします。",
+        "detail1": "名前、キャッチフレーズ、アシスタント名、およびユーザーラベル。",
+        "detail2": "ロゴ、ファビコン、アイコン、アクセントカラー、テーマ、タイポグラフィ、およびチャットスタイル。",
+        "detail3": "デフォルト言語と公開用メールアドレスの表示名。",
+        "link": "インスタンス設定を開く"
+      },
+      "people": {
+        "eyebrow": "アクセス権",
+        "title": "ユーザーとアクセス権",
+        "body": "誰がインスタンスを使用するか、およびどのような情報を求めるかを決定します。",
+        "detail1": "スタッフ、メンバー、クライアントなどのグループごとのユーザータイプ。",
+        "detail2": "オンボーディング項目、必須の質問、オプション、プレースホルダー、およびタイプ別のフィールド。",
+        "detail3": "手動承認、ユーザー移行、アクセス権の取り消し、および削除。",
+        "link": "ユーザー設定を開く"
+      },
+      "agent": {
+        "eyebrow": "振る舞い",
+        "title": "エージェントの振る舞い",
+        "body": "Sage の回答方法や、デフォルトで有効にするツールを定義します。",
+        "detail1": "プロンプトテンプレート、振る舞いのルール、禁止トピック、および応答設定。",
+        "detail2": "Knowledge、Resources、Web、Config、および Database ツールのデフォルト機能。",
+        "detail3": "グローバル設定およびユーザータイプごとの上書き設定。",
+        "link": "エージェント設定を開く"
+      },
+      "docs": {
+        "eyebrow": "ナレッジ",
+        "title": "ドキュメントナレッジ",
+        "body": "エージェントが検索可能なソース資料を提供します。",
+        "detail1": "PDF、ポリシー、FAQ、ハンドブック、およびガイドのアップロード。",
+        "detail2": "ドキュメントはチャンク化、埋め込みされ、検索可能になります。",
+        "detail3": "ドキュメントアクセスにより、デフォルトで選択または有効にできるものを制御します。",
+        "link": "ドキュメントアップロードを開く"
+      },
+      "resources": {
+        "eyebrow": "リファレンス",
+        "title": "検証済みリソース",
+        "body": "エージェントが推奨できる信頼できる紹介先を追加します。",
+        "detail1": "名前、説明、リソースタイプ、言語、対象範囲、およびヘルプの種類。",
+        "detail2": "電話番号、メールアドレス、URL、セキュアな通信チャネル、住所、および備考。",
+        "detail3": "認証済みのリソースが優先的に表示されます。アーカイブされたリソースはユーザーから非表示になります。",
+        "link": "リソースディレクトリを開く"
+      },
+      "ops": {
+        "eyebrow": "オペレーション",
+        "title": "オペレーションとランタイム",
+        "body": "インスタンスの接続、到達可能性、および健全性を維持します。",
+        "detail1": "メール用マジックリンクのSMTP、ドメイン、CORS、HTTPS、および公開URL。",
+        "detail2": "モデルプロバイダー、埋め込みモデル、検索、ストレージ、およびサービスの健全性。",
+        "detail3": "ランタイム環境のエクスポート、レディネス、古い設定、および管理者キーの移行。",
+        "link": "デプロイ設定を開く"
+      },
+      "title": "管理者が設定できる内容",
+      "body": "これらは主要なコントロールサーフェスです。ページを直接操作するか、Admin Assistantに設定変更の準備を依頼できます。"
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "質問する",
+        "title": "管理者アシスタント",
+        "body": "現在の設定に関する質問や、設定変更の依頼ができます。",
+        "detail1": "設定の読み取りは、推測ではなく実際のインスタンスの状態を検査します。",
+        "detail2": "提案された変更は、レビューのためにステージングされます。",
+        "detail3": "適用（Apply）を実行すると、追加のモデルのやり取りなしで承認済みの管理者エンドポイントが実行されます。",
+        "link": "Admin Assistantを開く",
+        "directWriteDetail2": "Sageは、サポートされている書き込み操作の前に、対話による確認を求めます。",
+        "directWriteDetail3": "確認後、Sageは直接的な設定ツールを呼び出し、実際の結果を報告します。"
+      },
+      "guided": {
+        "eyebrow": "開始",
+        "title": "ガイド付きセットアップ",
+        "body": "ガイド付きチャットを使用して、有用な初期設定を作成します。",
+        "detail1": "アイデンティティ、アシスタント、言語、アクセス権限、ユーザータイプ、質問、および動作ルール。",
+        "detail2": "その後、ドキュメントをアップロードし、リソースを追加してテストを行います。",
+        "link": "ガイド付きセットアップを開く"
+      },
+      "test": {
+        "eyebrow": "検証",
+        "title": "テストとフィードバック",
+        "body": "リリース前に、ユーザーの視点からエージェントを試用してください。",
+        "detail1": "ユーザータイプを選択し、テストセッションを開始して、トライアルを保存します。",
+        "detail2": "暗号化されたベータログを確認し、回答を評価します。",
+        "link": "テストユーザーセッションを開く"
+      },
+      "database": {
+        "eyebrow": "調査",
+        "title": "データベースエクスプローラー",
+        "body": "デバッグ時に保存されたSQLiteデータを調査します。",
+        "detail1": "調査には読み取り専用のSELECTクエリを使用してください。",
+        "detail2": "製品のデータを変更するパスとして使用しないでください。",
+        "link": "データベースエクスプローラーを開く"
+      },
+      "title": "一般的な管理者ワークフロー",
+      "body": "セットアップ、品質チェック、またはデータの調査を行う際に使用します。"
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "ランタイム",
+        "title": "単一の会話ランタイム",
+        "body": "Knowledge、Resources、Web、Config、Databaseは可視化されたツールセットであり、個別のチャットシステムではありません。",
+        "detail1": "モデルは、有効化されているツールが役立つ場合にそれらを呼び出すことができます。",
+        "detail2": "ConfigとDatabaseは、サーバーで検証された管理者に対してのみ表示されます。"
+      },
+      "auth": {
+        "eyebrow": "サインイン",
+        "title": "異なるサインインパス",
+        "body": "管理者はNIP-07を使用します。ユーザーはメールのマジックリンクを使用します。",
+        "detail1": "管理者の秘密鍵はブラウザの署名機能内に保持されます。",
+        "detail2": "本番環境では、ユーザーのマジックリンクが機能する前にSMTPが動作している必要があります。"
+      },
+      "data": {
+        "eyebrow": "プライバシー",
+        "title": "データの境界の重要性",
+        "body": "暗号化されたプロファイルフィールドは、チャットのコンテキストには含まれません。",
+        "detail1": "暗号化されていないフィールドのみ、AIチャットのコンテキストとしてマークできます。",
+        "detail2": "デプロイメントのシークレットは暗号化されて保存され、デフォルトではマスクされて表示されます。"
+      },
+      "ops": {
+        "eyebrow": "運用",
+        "title": "一部の変更にはオペレーターが必要です",
+        "body": "アプリは希望するランタイム設定を保存できますが、サービスをサイレントに再起動することはありません。",
+        "detail1": "provider、origin、CORS、またはsearchの変更後は、ランタイムのenvをエクスポートしてください。",
+        "detail2": "実際に何が実行されているかを確認するには、readinessとservice healthを使用してください。"
+      },
+      "title": "覚えておくべき製品の仕様",
+      "body": "これらのルールは、セットアップの整合性を保ち、意図しない権限の逸脱を防ぎます。"
+    },
+    "ask": {
+      "prompt1": "このインスタンスをユーザーに公開するにあたって、まだ不足しているものは何ですか？",
+      "prompt2": "現在のユーザータイプ、オンボーディングの質問、ドキュメント、およびリソースを確認してください。",
+      "prompt3": "レビュー用の変更を準備します：アシスタントのトーンとデフォルト言語を設定します。",
+      "title": "Admin Assistantへの質問例",
+      "body": "変更を依頼する前に、まずはレビューを依頼してください。セットアップの確認や、変更セットの準備が可能です。",
+      "directWriteBody": "Sageに、サポートされている設定の確認や変更を依頼してください。書き込みを行う前に、意図した変更内容について確認が行われます。",
+      "directWritePrompt3": "アシスタントのトーンとデフォルト言語を設定してください。ただし、まずは私に意図した変更内容を確認させてください。"
+    },
+    "hero": {
+      "eyebrow": "管理者コントロールマップ",
+      "shortVersion": {
+        "title": "短縮版",
+        "body": "管理者は、アイデンティティ、ユーザー、ナレッジ、ツール、および起動設定を設定します。一部の実行時設定の変更には、オペレーターによる再起動が必要です。"
+      }
+    },
+    "title": "管理者ガイド",
+    "subtitle": "管理者が設定できる内容、製品の機能、および公開前に注意すべき事項の簡易マップです。",
+    "quickStart": {
+      "title": "ここから始める",
+      "body": "まずは、小さく有用なセットアップから行いましょう。実際の質問でテストした後に、内容をブラッシュアップしてください。"
+    },
+    "safety": {
+      "title": "安全性の基本",
+      "body": "管理者は、アクセス、データ、動作、および実行時設定を制御します。リスクのある変更は慎重に行ってください。",
+      "items": {
+        "0": "管理者はNIP-07でサインインします。ユーザーはメールのマジックリンクでサインインします。",
+        "1": "ユーザーフィールドはデフォルトで暗号化されています。チャットと共有できるのはプレーンテキストのフィールドのみです。",
+        "2": "シークレットは、現在の管理者セッションで共有しない限り、マスクされたまま保持されます。",
+        "3": "アシスタントによる変更は「提案」です。最終的な確認と「適用」のクリックは、あなた自身が行います。",
+        "4": "デプロイ設定には、希望する実行時値が保存されます。オペレーターは、必要に応じてenvの書き出しやサービスの再起動を行います。"
+      },
+      "directItems": {
+        "0": "管理者はNIP-07でサインインします。ユーザーはメールのマジックリンクでサインインします。",
+        "1": "ユーザーフィールドはデフォルトで暗号化されています。チャットと共有できるのはプレーンテキストのフィールドのみです。",
+        "2": "シークレットは、現在の管理者セッションで共有しない限り、マスクされたまま保持されます。",
+        "3": "Sageはチャットを通じて設定変更の確認を行い、その後、サポートされている変更を直接適用します。",
+        "4": "デプロイ設定には、希望する実行時値が保存されます。オペレーターは、必要に応じてenvの書き出しやサービスの再起動を行います。"
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "管理者としてサインイン",
+        "body": "管理用のNIP-07キーを使用してください。秘密に保ってください。"
+      },
+      "1": {
+        "title": "基本設定を行う",
+        "body": "インスタンスに名前を付け、外観を選択し、アシスタントのアイデンティティを設定します。"
+      },
+      "2": {
+        "title": "ユーザーを定義する",
+        "body": "ユーザータイプ、オンボーディングの質問、および承認ルールを作成します。"
+      },
+      "3": {
+        "title": "信頼できるナレッジの追加",
+        "body": "ドキュメントをアップロードし、検証済みのリソースを追加します。"
+      },
+      "4": {
+        "title": "リリース前のテスト",
+        "body": "ユーザーとしてチャットし、フィードバックを確認してから、実際のユーザーを招待します。"
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1229,55 @@
     "securityStep3Primary": "設定検証を実行",
     "securityStep3Secondary": "保存データを確認",
     "user": "ユーザー設定",
-    "userDesc": "ユーザーの種類とオンボーディングの質問を定義する"
+    "userDesc": "ユーザーの種類とオンボーディングの質問を定義する",
+    "subtitleSimple": "このインスタンスで作業する場所を選択してください。",
+    "workflowsSectionLabel": "管理者ワークフロー",
+    "adminAssistant": "管理者アシスタント",
+    "adminAssistantDesc": "設定のヘルプや変更内容の確認には、管理者チャットを使用してください。",
+    "guidedSetup": "ガイド付きセットアップ",
+    "guidedSetupDesc": "セットアップ、ドキュメント、リソース、およびテストの手順を確認します。",
+    "guides": "管理者ガイド",
+    "guidesDesc": "管理者が何をどこで設定するのかを理解します。",
+    "testUserSession": "テストユーザーセッション",
+    "testUserSessionDesc": "シミュレーションユーザーとしてチャットし、保存されたベータログを確認します。",
+    "aiSetupTitle": "AIアシスタントによるセットアップ",
+    "aiSetupBody": "アシスタントにインスタンスの命名と設定の基本事項を一度にまとめて行わせることができます。手動セットアップへの切り替えはいつでも可能です。",
+    "aiSetupAction": "ガイド付きセットアップを開始",
+    "readinessTitle": "デプロイの準備状況",
+    "readinessDesc": "ユーザーを招待する前に準備状況を確認します。ブロッカー、警告、再起動が必要な変更、およびリカバリ体制を1か所でチェックできます。",
+    "readinessPrimary": "準備状況の確認を開く",
+    "firstRunPathTitle": "管理者の初回実行パス",
+    "firstRunStep1Title": "インスタンスのベースライン設定",
+    "firstRunStep1Body": "確認の前に、ブランディング、言語、テーマ、ユーザーフィールド、および Agent Settings を設定します。",
+    "firstRunStep1Action": "インスタンス設定を開く",
+    "firstRunStep2Title": "デプロイの準備状況を確認",
+    "firstRunStep2Body": "ユーザーを招待する前に、ブロッカー、警告、再起動が必要な変更、およびリカバリ体制を確認します。",
+    "firstRunStep2Action": "デプロイウィザードを開く",
+    "firstRunStep3Title": "診断機能は調査時のみ使用してください",
+    "firstRunStep3Body": "スモークテストや診断機能を、製品の主要なパスにせず、いつでも利用可能な状態にしておきます。",
+    "firstRunStep3Action": "診断機能を開く",
+    "instanceDescSimple": "名前、公開メールアドレス、テーマ、およびブランドのコントロール。",
+    "aiDescSimple": "プロンプト、モデルの動作、およびドキュメントのデフォルト設定。",
+    "deploymentDescSimple": "実行時設定、ヘルス、およびレディネスの詳細。",
+    "resources": "リソースディレクトリ",
+    "resourcesDesc": "信頼できる弁護士、NGO、および紹介リソースを管理します",
+    "resourcesDescSimple": "信頼できる紹介リソースを手動で管理します。",
+    "testFeedback": "テストとフィードバック",
+    "testFeedbackDesc": "テストユーザーとしてチャットし、回答を評価して設定を改善します",
+    "diagnosticsSectionLabel": "診断",
+    "operationsSectionLabel": "運用",
+    "testDashboard": "診断",
+    "testDashboardDesc": "開発用スモークテストの実行と診断モジュールの検査",
+    "testDashboardDescSimple": "問題の調査時にスモークテストを実行します。",
+    "iaChecklistTitle": "管理者用情報アーキテクチャ・レビュー・チェックリスト",
+    "iaChecklistBody": "目視レビューの際は、デプロイ設定、インスタンス設定、エージェント設定、ライフサイクル・レディネス、デプロイ・レディネス、および診断インターフェースを明確に区別してください。",
+    "humanReviewTitle": "目視レビューへの引き継ぎ",
+    "humanReviewStatus": "ホワイトグローブ・デプロイメント・サポートが必要です",
+    "humanReviewBody": "実行時環境の適用は明示的に行います：アーティファクトのエクスポート、オペレーターによる適用、影響を受けるサービスの再起動、およびレディネスのエビデンス確認。",
+    "humanReviewAction": "デプロイ・レディネスを確認する",
+    "settingsSectionLabel": "設定",
+    "userManager": "ユーザーマネージャー",
+    "userManagerDesc": "ユーザーの確認、ステータスのチェック、名簿のエクスポート、およびアクセスの承認。"
   },
   "adminAI": {
     "title": "AI設定",
@@ -871,7 +1362,18 @@
       "userInfoPlaceholder": "{user_info} — 利用可能な場合、現在のユーザーのプロフィールフィールドに置き換えられます"
     },
     "revert": "元に戻す",
-    "revertToGlobal": "グローバル設定に戻す"
+    "revertToGlobal": "グローバル設定に戻す",
+    "knowledgeSearchDisabledLabel": "ナレッジ検索はオフです",
+    "knowledgeSearchDisabledMessage": "ナレッジソースが「選択されたデフォルトドキュメント」または「利用可能なすべてのドキュメント」に設定されるまで、アクティブなデフォルトドキュメントは使用されません。",
+    "assembledPromptOutput": "組み立てられたプロンプトの出力",
+    "saveError": "保存に失敗しました",
+    "revertError": "元に戻すのに失敗しました",
+    "toggleError": "切り替えに失敗しました",
+    "loadErrorLabel": "エージェント設定の読み込みエラー",
+    "previewErrorLabel": "エージェント設定のプレビューエラー",
+    "documentToggleErrorLabel": "エージェント設定のドキュメント切り替えエラー",
+    "documentDefaultsHintV2": "「利用可能」とマークされたドキュメントは、ナレッジ検索で使用できます。「デフォルトでアクティブ」とマークされたドキュメントは、ナレッジソースが「選択されたデフォルトドキュメント」に設定されている場合に含まれます。",
+    "externalChangeConflict": "編集中に Sage または他の管理者がこの設定を変更しました。保存する前に、キャンセルしてエディターを再度開いてください。"
   },
   "adminDeployment": {
     "title": "デプロイ設定",
@@ -969,7 +1471,9 @@
       "unknown": "不明",
       "usersMigrated": "移行済みユーザー",
       "usersToMigrate": "移行するユーザー",
-      "warning": "これは上級者向けの操作です。不正な移行を行うと、暗号化データにアクセスできなくなる可能性があります。影響を理解した上でのみ続行してください。"
+      "warning": "これは上級者向けの操作です。不正な移行を行うと、暗号化データにアクセスできなくなる可能性があります。影響を理解した上でのみ続行してください。",
+      "inputWarningLabel": "管理者キー移行の警告",
+      "destructiveWarningLabel": "管理者キー移行の破壊的変更に関する警告"
     },
     "revealFailed": "値の表示に失敗しました。Nostr拡張機能の接続を確認してください。",
     "searchHelp": {
@@ -1000,7 +1504,8 @@
       "overviewDesc": "セキュリティ設定は、認証、セッション処理、開発用のショートカットを制御します。デフォルトはローカル開発用に構成されています。",
       "overviewNote": "本番環境では、シミュレーションフラグがオフであり、FRONTEND_URLが実際のドメインと一致していることを確認してください。",
       "overviewTitle": "セキュリティの概要",
-      "overviewWhen": "公開サーバーにデプロイする前にこれらの設定を確認してください。"
+      "overviewWhen": "公開サーバーにデプロイする前にこれらの設定を確認してください。",
+      "devNote": "ローカルのメールテストには MOCK_EMAIL を使用してください。ユーザーおよび管理者セッションには、引き続き通常の検証フローが必要です。"
     },
     "sslHelp": {
       "ariaLabel": "SSLとHTTPS設定のヘルプ",
@@ -1101,7 +1606,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "アップロードフォルダ",
       "vector_database_eb5526": "ベクトルデータベース"
-    }
+    },
+    "exportSageRuntimeEnv": "Sage 環境をエクスポート",
+    "readiness": {
+      "title": "デプロイの準備状況",
+      "statusTitle": "デプロイの準備状況: {{status}}",
+      "description": "このシングルインスタンス・デプロイが通常の運用準備が整う前に、必要なエビデンスを確認してください。",
+      "openWizard": "準備状況の確認を開く",
+      "blockerCount": "{{count}} 件のブロッカー",
+      "warningCount": "{{count}} 件の警告",
+      "readyCount": "{{count}} 件が準備完了",
+      "empty": "デプロイメントの準備状況チェックはまだありません。",
+      "conversationBlocking": "通常の会話をブロックします",
+      "blocker": "ブロッカー",
+      "warning": "警告",
+      "ready": "準備完了",
+      "reviewInferenceVerification": "推論検証の確認",
+      "reviewDataLifecycleStatus": "データライフサイクルステータスの確認",
+      "reviewDeploymentValidation": "デプロイメント設定の確認",
+      "reviewRestartRequired": "再起動の必要性を確認",
+      "reviewOperationalReadiness": "運用準備状況の確認",
+      "reviewServiceHealth": "サービスヘルス状況の確認",
+      "reviewRuntimeEnv": "ランタイム環境エクスポートの確認",
+      "deployment_settings_validation": {
+        "label": "デプロイメント設定の検証",
+        "status": {
+          "invalid": {
+            "summary": "デプロイメント設定の検証に、修正が必要なエラーがあります。",
+            "nextAction": "デプロイメント設定の検証エラーを確認してください。"
+          },
+          "warnings": {
+            "summary": "デプロイメント設定の検証に、アドバイザリ警告があります。",
+            "nextAction": "デプロキメント設定の検証警告を確認してください。"
+          },
+          "valid": {
+            "summary": "デプロイメント設定の検証に、エラーや警告はありません。",
+            "nextAction": "対応は不要です。"
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "検証可能な推論",
+        "status": {
+          "current": {
+            "summary": "設定されたモデルプロバイダーには、現在の推論検証レコードがあります。",
+            "nextAction": "対応は不要です。プロバイダーの主張が変更された際に、現在の推論検証レコードを確認してください。"
+          },
+          "deferred_missing": {
+            "summary": "設定されたモデルプロバイダーに対して、暗号化および検証可能な推論は現在検証されていません。",
+            "nextAction": "デプロイメントの準備完了とみなす前に、サポートされているモデルプロバイダーを設定し、推論検証を実行してください。"
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "データライフサイクル確認",
+        "status": {
+          "needs_review": {
+            "summary": "データライフサイクル確認には管理者による確認が必要です。",
+            "nextAction": "アクティブストレージのライフサイクル状況を確認し、データライフサイクル確認の結果を記録してください。"
+          },
+          "stale": {
+            "summary": "サポートされているライフサイクルの変更が行われたため、記録されたデータライフサイクル確認の内容が古くなっています。",
+            "nextAction": "現在のアクティブストレージのライフサイクル状況を確認し、新しいデータライフサイクル確認の結果を記録してください。"
+          },
+          "reviewed": {
+            "summary": "データライフサイクルレビューが完了しました。",
+            "nextAction": "サポートされているライフサイクル体制に変更がない限り、対応は不要です。"
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "デプロイメントサーフェスの確認事項",
+        "status": {
+          "acknowledged": {
+            "summary": "サポートされていないデプロイメントサーフェスのカテゴリが確認されました。",
+            "nextAction": "対応は不要です。"
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — サポートされていないデプロイメントサーフェスのカテゴリについて、オペレーターによる確認が必要です。",
+            "nextAction": "リストされているデプロイメントサーフェスのカテゴリを確認し、デプロイメントの準備完了とみなす前に、それぞれを確認してください。"
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "バックアップおよび復元訓練",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "オペレーターによる最近のバックアップおよび復元訓練の記録が必要です。",
+            "nextAction": "このデプロイメントのバックアップおよび復元訓練を実施し、記録してください。"
+          }
+        }
+      },
+      "restart_required": {
+        "label": "再起動が必要",
+        "status": {
+          "current": {
+            "summary": "サービス開始以降、再起動が必要なデプロイメント設定の変更はありません。",
+            "nextAction": "対応は不要です。"
+          },
+          "restart_required": {
+            "summary": "サービス開始後に、再起動が必要なデプロイメント設定が変更されました。 ({{changedSettings}})",
+            "nextAction": "希望するデプロイメント設定を適用し、現在の設定として扱う前に、影響を受けるサービスを再起動してください。"
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage ランタイム設定",
+        "status": {
+          "not_generated": {
+            "summary": "デプロイメント設定から Sage ランタイム環境がまだ生成されていません。",
+            "nextAction": "デプロイメント設定が Sage に適用されたとみなす前に、Sage ランタイム環境をエクスポートしてください。"
+          },
+          "matches_desired": {
+            "summary": "実行中の Sage ランタイム設定は、希望するデプロイメント設定と一致しています。",
+            "nextAction": "対応は不要です。"
+          },
+          "drifted": {
+            "summary": "実行中の Sage ランタイム設定が、希望するデプロイメント設定と異なります。",
+            "nextAction": "Sage ランタイム設定の乖離を調査し、生成された Sage 環境を適用して、Sage を再起動してください。"
+          },
+          "current": {
+            "summary": "現在のデプロイメント設定から Sage ランタイム環境が生成されました。",
+            "nextAction": "生成されたアーティファクトがデプロイメントに適用されていない限り、対応は不要です。"
+          },
+          "stale": {
+            "summary": "Sage ランタイム環境の生成後に、デプロキメント設定が変更されました。",
+            "nextAction": "新しい Sage ランタイム環境をエクスポートし、デプロイメントの再起動プロセスを通じて適用してください。"
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "コアバックエンド ランタイム設定",
+        "status": {
+          "not_generated": {
+            "summary": "デプロイメント設定からコアバックエンドのランタイム環境がまだ生成されていません。",
+            "nextAction": "デプロイメント設定がコアバックエンドに適用されたとみなす前に、コアバックエンドのランタイム環境をエクスポートしてください。"
+          },
+          "matches_desired": {
+            "summary": "実行中のコアバックエンド ランタイム設定は、希望するデプロイメント設定と一致しています。",
+            "nextAction": "対応は不要です。"
+          },
+          "drifted": {
+            "summary": "実行中のコアバックエンド ランタイム設定が、希望するデプロイメント設定と異なります。",
+            "nextAction": "core-backend のランタイム設定のドリフトを調査し、生成された core-backend の環境を適用して、core-backend を再起動してください。"
+          },
+          "current": {
+            "summary": "現在の Deployment Settings から core-backend のランタイム環境が生成されました。",
+            "nextAction": "生成されたアーティファクトが Deployment に適用されていない場合を除き、アクションは不要です。"
+          },
+          "stale": {
+            "summary": "core-backend のランタイム環境の生成後に Deployment Settings が変更されました。",
+            "nextAction": "新しい core-backend のランtaim環境をエクスポートし、Deployment の再起動プロセスを通じて適用してください。"
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "デプロイメント ウィザード",
+      "step": "{{current}} / {{total}} ステップ"
+    },
+    "operationalReadiness": {
+      "title": "運用準備状況",
+      "description": "通常の運用を開始する前に、バックアップ、復元、モニタリング、およびリカバリの訓練を確認してください。"
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — ローカルプロキシ用の Tinfoil API キーです。",
+      "apiKeyLabel": "Tinfoil API キー",
+      "ariaLabel": "Sage ランタイム設定ヘルプ",
+      "exampleConfig": "設定例",
+      "goToPage": "ページへ移動",
+      "sageExtra": "LLM_API_KEY に {{tinfoilSignupUrl}} から取得した Tinfoil キーを設定してください。スタックによって Sage およびローカルの Tinfoil プロキシにマッピングされます。",
+      "sageHint": "このプロトタイプは、Agent Runtime のトラフィックを Sage と Tinfoil を経由してルーティングします。LLM_API_KEY は、標準的なモデルプロバイダーのキーとなります。",
+      "modelField": "TINFOIL_MODEL — Sage が使用する Tinfoil モデルの識別子です（例: glm-5-2）。",
+      "overviewDesc": "このプロトタイプでは、パブリックな Agent Runtime として Sage を、モデルプロバイダーのトランスポートとして Tinfoil を使用します。LLM_* Deployment Settings を通じてモデルプロバイダーを設定してください。スタックによって Sage の Tinfoil ランタイムにマッピングされます。",
+      "overviewTitle": "Sage ランタイムの概要",
+      "providerField": "LLM_PROVIDER — このプロトタイプでは \"sage\" に設定してください。"
+    },
+    "inferenceVerification": {
+      "current": "現在",
+      "missing": "不足",
+      "expired": "期限切れ",
+      "failed": "失敗",
+      "success": "成功",
+      "statusLoadFailed": "推論検証ステータスの読み込みに失敗しました",
+      "historyLoadFailed": "推論検証履歴の読み込みに失敗しました",
+      "loadFailed": "推論検証の読み込みに失敗しました",
+      "manualFailed": "手動検証に失敗しました",
+      "manualSucceeded": "手動検証に成功しました",
+      "detailLoadFailed": "アテステーションの詳細の読み込みに失敗しました",
+      "ariaLabel": "推論検証",
+      "title": "推論検証",
+      "summary": "保護された推論が、期待されるModel Provider上で実行されていることを示す、管理者専用のエビデンスです。",
+      "verifyNow": "今すぐ検証",
+      "status": "ステータス",
+      "checkedAt": "確認日時",
+      "expiresAt": "有効期限",
+      "expectedClaims": "期待されるクレーム",
+      "expectedClaimsValue": "期待されるクレーム: {{fingerprint}}",
+      "providerClaims": "プロバイダーのクレーム",
+      "provider": "プロバイダー",
+      "model": "モデル",
+      "endpoint": "エンドポイント",
+      "history": "検証履歴",
+      "emptyHistory": "検証記録はありません。",
+      "recordTitle": "レコード #{{id}}",
+      "inspectAttestation": "アテステーションを検査",
+      "fullAttestation": "アテステーションの詳細情報"
+    },
+    "lifecycle": {
+      "notStarted": "開始前",
+      "notConfigured": "未設定",
+      "plaintextByOperatorChoice": "オペレーターの選択によるプレーンテキスト",
+      "allTombstones": "すべて",
+      "allTombstonesLabel": "すべてのtombstone",
+      "incompleteTombstonesFilter": "不完全",
+      "incompleteTombstonesLabel": "不完全なtombstone",
+      "completedTombstonesFilter": "完了",
+      "completedTombstonesLabel": "完了したtombstone",
+      "title": "データライフサイクルのステータス",
+      "description": "インスタンスデータ全体における、現在のオペレーター制御によるプライバシー保護の範囲。",
+      "scopeExcludes": "除外対象: {{excludes}}",
+      "secureEraseStatus": "セキュア消去: {{status}}",
+      "readinessStatus": "ライフサイクル準備状況: {{status}}",
+      "readinessNonBlocking": "v1では、ライフサイクルの準備状況に関する警告によってユーザーの会話がブロックされることはありません。",
+      "readinessStaleReason": "理由: {{reason}}",
+      "contentEncryptionKey": "コンテンツ暗号化キー: {{status}}",
+      "artifactEncryptionPosture": "アーティファクト暗号化状態: {{status}}",
+      "artifactPostureLabel": "アーティファクト暗号化状態",
+      "artifactPostureRequired": "必須",
+      "artifactPostureDisabled": "無効",
+      "retentionSchedulerStatus": "保持スケジューラ: {{status}}",
+      "schedulerObservation": "観測結果: {{status}}",
+      "schedulerEnabledClasses": "有効なスケジューラクラス: {{classes}}",
+      "schedulerLastRunStatus": "前回の実行ステータス: {{status}}",
+      "schedulerLastRun": "前回の実行: {{actor}} による {{trigger}}",
+      "previewRetention": "保持プレビュー",
+      "runScheduledRetention": "スケジュール実行",
+      "previewRetentionResult": "プレビュー: 会話 {{conversations}} 件、ドキュメントアーティファクト {{artifacts}} 件、スキップされたクラス {{skipped}} 件。",
+      "scheduledRetentionResult": "スケジュール実行結果: {{retries}} 回のtombstoneリトライを経て {{status}}。",
+      "scheduledRetentionStatus": "スケジュールされたクラス: {{classes}}",
+      "auditCoverageStatus": "監査範囲: 監査済み {{audited}} 件、例外 {{exceptions}} 件、不足 {{missing}} 件。",
+      "owner": "所有者: {{owner}}",
+      "deletion": "削除: {{status}}",
+      "retention": "保持: {{status}}",
+      "audit": "監査: {{status}}",
+      "confidentiality": "機密性: {{status}}",
+      "incompleteTombstones": "未完了のtombstone: {{count}}",
+      "completedTombstones": "完了したtombstone: {{count}}",
+      "retentionEnabled": "有効",
+      "retentionWindow": "期間",
+      "retentionDays": "日",
+      "scheduledEnforcement": "スケジュール済み",
+      "saveRetentionPolicy": "ポリシーを保存",
+      "empty": "ライフサイクルステータスは利用できません。",
+      "retentionPolicySaveFailed": "保持ポリシーを保存できませんでした。",
+      "retentionPreviewFailed": "保持のプレビューができませんでした。",
+      "scheduledRetentionFailed": "スケジュールされた保持処理を実行できませんでした。",
+      "artifactPostureFailed": "アーティファクトの暗号化ポスチャを更新できませんでした。",
+      "unsupportedSurfacesTitle": "サポートされていないデプロイメントサーフェス",
+      "unsupportedSurfacesDescription": "これらの運用トレースはここに表示されますが、製品のライフサイクル管理の対象外です。",
+      "unsupportedSurfaceAckFailed": "確認ステータスの更新に失敗しました。",
+      "acknowledgedSurface": "確認済み",
+      "acknowledgeSurface": "確認する",
+      "tombstonesTitle": "削除タムストーン",
+      "tombstonesDescription": "削除されたコンテンツを公開することなく、未完了のライフサイクル削除を再試行します。",
+      "tombstoneStatusFilter": "タムストーンのステータスフィルタ",
+      "tombstoneRetryFailed": "再試行に失敗しました。",
+      "tombstonesFetchFailed": "削除タムストーンを読み込めませんでした。",
+      "tombstoneClass": "クラス: {{className}}",
+      "tombstoneSource": "ソース: {{source}}",
+      "tombstoneRetries": "再試行回数: {{count}}",
+      "tombstoneUpdated": "更新日時: {{updated}}",
+      "retryTombstoneLabel": "削除タムストーン {{id}} の再試行",
+      "retry": "再試行",
+      "tombstonesEmpty": "再試行待ちの削除タムストーンはありません。"
+    },
+    "runtimeEnv": {
+      "unknown": "不明",
+      "title": "ランタイム構成の整合性",
+      "description": "希望するデプロイメント設定、生成された Sage 環境、および観測可能な実行状態を比較します。",
+      "desired": "希望値",
+      "configuredKeys": "構成済みキー: {{total}} 中 {{count}}",
+      "generated": "生成済み",
+      "exportedAt": "エクスポート日時: {{time}}",
+      "notExported": "Sage 環境のエクスポート記録はありません",
+      "running": "実行中",
+      "runningUnknown": "実行状態はまだ直接的に調査されていません。",
+      "coreBackend": "コアバックエンド",
+      "coreBackendHint": "バックエンドプロセスの環境変数の一致",
+      "coreDesired": "コア希望値",
+      "coreConfiguredKeys": "Core backend: {{count}} / {{total}} 個のキーが設定済み",
+      "coreGenerated": "コア生成値",
+      "coreNotExported": "Core backendの環境変数エクスポート履歴なし",
+      "coreRunning": "コア稼働値",
+      "coreRunningUnknown": "Core backendの実行状態はまだ直接確認できません。",
+      "coreExportedTitle": "Core-backendの環境変数をエクスポート済み",
+      "coreSensitiveArtifact": "core-backend.env は機密性の高いデプロイ用資材として扱ってください。",
+      "coreExportDoesNotApply": "アーティファクトをエクスポートしても、オペレーターが適用してcore-backendを再起動するまで、実行中のバックエンドプロセスには変更されません。",
+      "exportedTitle": "Sageの環境変数をエクスポート済み",
+      "sensitiveArtifact": "sage.env は機密性の高いデプロイ用資材として扱ってください。",
+      "exportDoesNotApply": "アーティファクトをエクスポートしても、オペレーターが適用してSageを再起動するまで、実行中のSageプロセスには変更されません。"
+    },
+    "categorySettingsAria": "{{category}} 設定",
+    "exportCoreBackendRuntimeEnv": "core-backendの環境変数をエクスポート",
+    "restartCurrent": "再起動は不要です",
+    "restartCurrentDesc": "サービス開始以降、再起動を必要とするデプロイ設定の変更はありません。",
+    "saveError": "保存に失敗しました",
+    "openHelpAria": "{{label}} のヘルプを開く"
   },
   "upload": {
     "invalidFileType": "無効なファイルタイプです。許可: {{extensions}}",
@@ -1123,7 +1934,8 @@
       "processing": "処理中",
       "chunked": "チャンク化済み",
       "complete": "完了",
-      "failed": "失敗"
+      "failed": "失敗",
+      "completedWithErrors": "エラーが発生しましたが完了しました"
     },
     "chunks": "{{processed}}/{{total}} チャンク",
     "deleteDocument": "ドキュメントを削除",
@@ -1172,7 +1984,21 @@
     "serverBusy": "サーバーがビジー状態です",
     "tryRefresh": "再試行",
     "uploadedSuccess": "アップロードに成功しました — 処理を開始しました",
-    "uploadingStatus": "サーバーにアップロード中..."
+    "uploadingStatus": "サーバーにアップロード中...",
+    "uploadError": "アップロードに失敗しました",
+    "documentDeletionError": "ドキュメントの削除エラー",
+    "navigationWarning": "ドキュメントはまだ転送中です。処理が開始された後にのみページを離れてください。そうしないと、アップロードが保存されない可能性があります。",
+    "duplicateInBatch": "このバッチ内に重複するドキュメント名があります",
+    "documentsSelected": "{{count}} 件のドキュメント",
+    "queueSummary": "準備完了: {{valid}}、スキップ: {{rejected}}",
+    "skipped": "スキップ済み",
+    "uploadedPartialSuccess": "キューに追加済み: {{count}}、スキップ: {{rejected}}",
+    "chooseFiles": "ファイルを選択",
+    "chooseFolder": "フォルダを選択",
+    "uploadDocuments": "ドキュメントをアップロード",
+    "replacingDocument": "{{filename}} を置換しています",
+    "recentDocumentsShowing": "{{total}} 件中 {{shown}} 件のドキュメントを表示中",
+    "showMore": "もっと見る"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2040,11 @@
       "description": "SSL証明書とHTTPS設定を構成する",
       "hint": "HTTPS経由で提供する場合のTLSおよびプロキシ設定を構成します。デフォルトはローカル開発では安全です。証明書がマウントされた後にのみHTTPSを有効にしてください。",
       "label": "SSLとセキュリティ"
+    },
+    "llm": {
+      "label": "Sage エージェントランタイム",
+      "description": "Sage + Tinfoil の推論設定",
+      "hint": "このプロトタイプは、Agent Runtime のトラフィックを Sage 経由でルーティングし、Model Provider のトランスポートとして Tinfoil を使用します。変更を適用するには再起動が必要です。"
     }
   },
   "promptSections": {
@@ -1240,6 +2071,12 @@
       "description": "AIが応答を構成する方法",
       "hint": "箇条書き、見出し、会話調の段落を使用するかなどのフォーマット設定を制御します。これは回答の視覚的な表示方法に影響します。",
       "placeholder": "リストには箇条書き、セクションには見出しを使用..."
+    },
+    "prompt_system": {
+      "label": "システムプロンプト",
+      "description": "AI の核となるアイデンティティと動作指示",
+      "hint": "アシスタントのアイデンティティ、ミッション、およびトーン、ルール、ツール、ドキュメントのコンテキストよりも優先される最上位の境界条件の設定に使用します。変更は新しい会話に適用されます。",
+      "placeholder": "あなたは Sage です。このインスタンス専用のプライベートアシスタントです..."
     }
   },
   "parameters": {
@@ -1252,6 +2089,11 @@
       "label": "知識の深さ",
       "description": "参照するドキュメントセクションの数",
       "hint": "質問に回答する際、AIはアップロードされたドキュメントを検索し、関連するセクションを取り込みます。数値が高いとコンテキストが増えますが応答が遅くなります。数値が低いと高速ですが、関連情報を見逃す可能性があります。デフォルト：5"
+    },
+    "max_tokens": {
+      "label": "最大トークン数",
+      "description": "AI の各レスポンスの最大長",
+      "hint": "レスポンスの長さを制限します。値を小さくすると回答が簡潔になりコストを抑えられます。値を大きくするとより詳細な説明が可能になります。デフォルト: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2101,21 @@
       "label": "ウェブ検索",
       "description": "AIがインターネットを検索することを許可",
       "hint": "有効にすると、AIはドキュメントにない最新の情報をウェブで検索できます。アップロードされたナレッジベースからのみ回答させたい場合は無効にしてください。"
+    },
+    "knowledgeSource": {
+      "none": "なし",
+      "selected": "選択されたデフォルトドキュメント",
+      "all": "利用可能なすべてのドキュメント"
+    },
+    "knowledge_source_default": {
+      "label": "ナレッジソース",
+      "description": "ユーザーとの会話において、アップロードされたどのナレッジソースを有効にするかを選択します",
+      "hint": "デフォルトでアップロードされたナレッジを使用しない場合は \"none\"、 「デフォルトで有効」とマークされたドキュメントを使用する場合は \"selected\"、利用可能なすべてのドキュメントを使用する場合は \"all\" を指定してください。"
+    },
+    "user_default_tool_ids": {
+      "label": "ユーザーツールセット",
+      "description": "ユーザーとの会話において、デフォルトで有効になるツールセット",
+      "hint": "\"curated-resources\"、\"knowledge-search\"、\"web-search\" のいずれかを使用した JSON 配列です。Knowledge Search は Knowledge Sources によっても制御されます。"
     }
   },
   "colors": {
@@ -1437,6 +2294,51 @@
       "description": "WebhookコールバックベースURL",
       "hint": "Webhookコールバックを構築するために使用されるベースURL。例: https://api.example.com/webhooks。デフォルト: http://localhost:8000。",
       "label": "ウェブフック URL"
+    },
+    "LLM_PROVIDER": {
+      "label": "モデルプロバイダー",
+      "description": "Python 側の Model Provider ラベル",
+      "hint": "このプロトタイプでは \"sage\" を使用してください。このデプロイ設定は、Python 側の診断および検証メタデータをサポートしています。"
+    },
+    "LLM_MODEL": {
+      "label": "モデル名",
+      "description": "モデル名/識別子",
+      "hint": "Sage が使用する Tinfoil のモデル識別子 (例: \"glm-5-2\")"
+    },
+    "LLM_API_URL": {
+      "label": "API エンドポイント",
+      "description": "Model Provider API のベース URL",
+      "hint": "Tinfoil プロキシのベース URL。デフォルト: http://tinfoil-proxy:8089/v1"
+    },
+    "LLM_API_KEY": {
+      "label": "API キー",
+      "description": "Tinfoil APIキー (シークレット)",
+      "hint": "現在のデプロイ設定を非公開のままにするには、空欄のままにしてください。"
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "チャットレートリミット",
+      "description": "1分あたりのチャットリクエスト数",
+      "hint": "特定のユーザー、管理者、トークン、またはクライアントIPごとの1分あたりの最大 /llm/chat リクエスト数。再起動が必要です。デフォルト: 120。"
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "検索クエリレートリミット",
+      "description": "1分あたりの検索クエリリクエスト数",
+      "hint": "特定のユーザー、トークン、またはクライアントIPごとの1分あたりの最大 /query リクエスト数。再起動が必要です。デフォルト: 90。"
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "アップロードレートリミット",
+      "description": "1分あたりのドキュメントアップロードリクエスト数",
+      "hint": "特定の管理者、トークン、またはクライアントIPごとの1分あたりの最大ドキュメントアップロードリクエスト数。再起動が必要です。デフォルト: 20。"
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "ベクトル検索レートリミット",
+      "description": "1分あたりのベクトル検索リクエスト数",
+      "hint": "特定のユーザー、トークン、またはクライアントIPごとの1分あたりの最大ベクトル検索リクエスト数。再起動が必要です。デフォルト: 30。"
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "設定エクスポートレートリミット",
+      "description": "1時間あたりのデプロイ設定エクスポート数",
+      "hint": "管理者セッションまたはクライアントIPごとの1時間あたりの最大 .env エクスポート数。再起動が必要です。デフォルト: 5。"
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2375,11 @@
       "title": "接続準備完了"
     },
     "subtitle": "いくつかのステップでプライベートナレッジベースを設定しましょう。",
-    "title": "Enclaveへようこそ"
+    "title": "Enclaveへようこそ",
+    "keySafety": {
+      "title": "インスタンス専用の Nostr キーを使用する",
+      "body": "個人の Nostr キーは使用しないでください。監視リスクを軽減し、運用アクセスを分離するために、このインスタンス専用の管理者キーを作成または選択してください。"
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2387,8 @@
       "notConfigured": "この機能は構成されていません。",
       "rateLimited": "メッセージが多すぎます。後でもう一度お試しください。",
       "required": "メッセージは必須です。",
-      "unavailable": "リーチアウトは利用できません。"
+      "unavailable": "リーチアウトは利用できません。",
+      "formErrorLabel": "Reachout フォームエラー"
     },
     "form": {
       "messageLabel": "メッセージ",
@@ -1489,7 +2396,8 @@
       "send": "送信"
     },
     "status": {
-      "success": "ありがとうございます。メッセージが送信されました。"
+      "success": "ありがとうございます。メッセージが送信されました。",
+      "successLabel": "Reachout 成功"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2432,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "バックエンドが認証の検証中にエラーを返しました。これはログアウトとして扱われません。",
       "unable_to_verify_admin_session_5f87b8": "管理者セッションを検証できません",
       "verifying_admin_session_87c53b": "管理者セッションを検証中..."
-    }
+    },
+    "loadingAssistant": "管理者アシスタントを読み込み中"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2647,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— マジックリンクトークンを検証し、セッション情報（クッキーベースのセッション）を取得します。",
       "verify_magic_link_token_183cf5": "マジックリンクトークンを検証",
       "view_all_users_manage_approval_status_and_delete_03feec": "すべてのユーザーを表示、承認ステータスを管理、ユーザーを削除します。",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "インスタンス全体の構成設定を表示および更新します。"
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "インスタンス全体の構成設定を表示および更新します。",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "設定されたモデルプロバイダーのパスへの接続をテストします。"
+    },
+    "labels": {
+      "themePreference": "テーマ設定",
+      "endpointGuidance": "エンドポイントガイダンス",
+      "healthResponseOutput": "ヘルスレスポンス出力",
+      "jobs": "ジョブ",
+      "chunks": "チャンク",
+      "rateLimitTestType": "レートリミットテストタイプ",
+      "successfulRequests": "成功したリクエスト",
+      "successful": "成功",
+      "blockedRequests": "ブロックされたリクエスト"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "会話のトレース"
+  },
+  "branding": {
+    "logoAlt": "{{name}} ロゴ"
+  },
+  "language": {
+    "english": "英語",
+    "spanish": "スペイン語",
+    "french": "フランス語",
+    "german": "ドイツ語",
+    "portuguese": "ポルトガル語"
+  },
+  "home": {
+    "checkingInstanceStatus": "インスタンスのステータスを確認中..."
+  },
+  "adminGuidedSetup": {
+    "title": "インスタンスのセットアップ",
+    "subtitle": "アシスタントが基本情報を一括で収集します。",
+    "manual": "手動で設定する",
+    "finish": "完了してテストを開始",
+    "comingSoon": "このフェーズは近日公開予定であり、別途開発中です。",
+    "steps": {
+      "initialize": {
+        "label": "初期化",
+        "title": "初期化",
+        "subtitle": "エージェントが適切な基盤から開始できるよう、スペースの基本事項を確認しましょう。"
+      },
+      "docs": {
+        "label": "ドキュメントをアップロード",
+        "title": "フィールドガイドをアップロード",
+        "subtitle": "エージェントの回答のソースとなる資料（書籍、ガイド、参照ドキュメントなど）を追加してください。"
+      },
+      "resources": {
+        "label": "キュレーション済みリソース",
+        "title": "キュレーション済みリソース",
+        "subtitle": "エージェントが参照できる、信頼できる実世界の外部リソース（主要な連絡先、弁護士、教育・メンタルヘルス支援など）を追加してください。"
+      },
+      "test": {
+        "label": "ユーザーとしてテスト",
+        "title": "ユーザーとしてテスト",
+        "subtitle": "近日公開 — 特定のユーザータイプとしてアシスタントを試し、回答を評価できます。"
+      },
+      "feedback": {
+        "label": "フィードバック",
+        "title": "フィードバックループ",
+        "subtitle": "近日公開 — 回答の品質を確認し、設定を改善できます。"
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "テストとフィードバック",
+    "subtitle": "テストユーザーセッションを実行し、暗号化されたベータログと保存された会話のフィードバックを確認します。",
+    "tabs": {
+      "test": "ユーザーとしてテスト",
+      "feedback": "フィードバック"
+    },
+    "test": {
+      "pickPersona": "テストするペルソナを選択",
+      "pickPersonaBody": "特定のユーザータイプに対してテストユーザーをプロビジョニングし、そのユーザーとしてチャットします。セッションは暗号化された試行として保存され、「フィードバック」から評価できます。",
+      "userType": "ユーザータイプ",
+      "genericUser": "一般ユーザー（タイプなし）",
+      "start": "セッションを開始",
+      "admin": "管理者",
+      "testUserId": "テストユーザー",
+      "endSave": "終了して試行を保存",
+      "previewNotice": "プレビューモード — 完全ななりすまし機能はまだ実装されていないため、このチャットは管理者セッションとして実行されます。トランスクリプトは確認用に保存されます。",
+      "chatEmpty": "試行を開始するには、このユーザーとしてメッセージを送信してください。",
+      "inputPlaceholder": "このユーザーとしてアシスタントにメッセージを送信...",
+      "saved": "試行を保存しました（暗号化済み）。「フィードバック」から確認できます。",
+      "startError": "テストセッションの開始に失敗しました",
+      "saveError": "試行の保存に失敗しました",
+      "impersonationUnavailable": "テストユーザーのなりすまし機能はまだ利用できません",
+      "sessionTokenError": "合成ユーザーセッション・トークンの作成に失敗しました",
+      "testingAs": "{{persona}} としてテスト中",
+      "authFailed": "合成ユーザーセッションの認証が失効しました。",
+      "discardUnsavedConfirm": "保存されていない完了済みのターンを破棄しますか？",
+      "workspaceAria": "テストユーザー会話ワークスペース"
+    },
+    "feedback": {
+      "trials": "ベータログ",
+      "untitled": "無題の会話",
+      "turns": "ターン数",
+      "turn": "ターン",
+      "empty": "保存されたベータログはまだありません。Test User Sessionを実行するか、ユーザーの会話を待ってください。",
+      "selectPrompt": "ベータログを選択して、トランスクリプトの確認と各ターンの評価を行ってください。",
+      "noNip04": "Nostr拡張機能（Alby, nos2x）を接続してトランスクリプトを復号してください。これらは管理者のキーで暗号化されています。",
+      "sourceUser": "ユーザーの会話",
+      "sourceTest": "テストユーザーセッション",
+      "thumbUp": "良い回答",
+      "thumbDown": "改善が必要",
+      "notePlaceholder": "任意のメモ（暗号化して保存されます）…",
+      "exportNotDecrypted": "エクスポートする前に、トランスクリプトを開いて復号してください。",
+      "exportFeedbackNotDecrypted": "一部のフィードバックコメントが復号できませんでした。エクスポートする前に、トランスクリプトを再度開き、すべての復号リクエストを承認してください。",
+      "exportNeedsExtension": "エクスポートにはNostr拡張機能が必要です。トランスクリプトは保存時に暗号化されており、拡張機能を使用して復号します。",
+      "exportDecrypting": "復号中です。すべてのリクエストが承認されると、エクスポートが可能になります。",
+      "exportWhyDisabled": "エクスポートが無効な理由",
+      "retryDecryption": "復号を再試行",
+      "decryptPendingTitle": "Nostr拡張機能を確認してください",
+      "decryptPendingBody": "このトランスクリプトを復号するための許可が求められています。自動的に開かない場合は、拡張機能のアイコンをクリックしてください。一度きりの確認にするには、選択内容を記憶するオプションを選んでください。",
+      "decryptProgress": "復号済み: {{done}} / {{total}}",
+      "loadTrialsError": "トライアルの読み込みに失敗しました",
+      "loadTranscriptError": "トランスクリプトの読み込みに失敗しました",
+      "saveError": "フィードバックを保存できませんでした",
+      "deleteError": "セッションログを削除できませんでした",
+      "exportError": "セッションのエクスポートに失敗しました",
+      "transcriptIntegrityError": "トランスクリプトが利用できないか、不完全なためエクスポートできません。",
+      "decryptTranscriptError": "トランスクリプトを復号できませんでした。Nostr拡張機能で復号リクエストを承認してください。"
+    }
+  },
+  "adminResources": {
+    "title": "リソースディレクトリ",
+    "subtitle": "会話がエスカレーションした際にアシスタントが言及できる、審査済みの紹介リソースを手動で維持管理します。エンドユーザーには「準備完了」状態のリソースのみが表示されます。",
+    "add": "リソースを追加",
+    "addTitle": "リソースを追加",
+    "editTitle": "リソースを編集",
+    "empty": "リソースはまだありません。審査済みの紹介先が決まり次第、手動で追加してください。",
+    "verified": "確認済み",
+    "missing": "公開までに不足しています",
+    "name": "名前",
+    "type": "リソースタイプ",
+    "languages": "言語（カンマ区切りのISOコード）",
+    "description": "説明",
+    "descriptionHint": "アシスタントがこのリソースについてユーザーに伝える内容。",
+    "scopeLevel": "カバー範囲レベル",
+    "scopeCode": "カバー範囲コード",
+    "scopeCodeHint": "国: ISOコード (NI)。小地域/地域: UN M49コード (013 = 中央アメリカ)。グローバル: 空欄のままにする。",
+    "helpTypes": "ヘルプの種類",
+    "contact": "連絡方法",
+    "vettedBy": "審査者",
+    "sourceNote": "出典メモ",
+    "markVerified": "認証済みとしてマーク（最優先表示）",
+    "archive": "アーカイブ（エンドユーザーから非表示）",
+    "deleteTitle": "リソースを削除しますか？",
+    "deleteBody": "これにより {{name}} のディレクトリエントリが削除されます",
+    "coverage": "カバー範囲",
+    "coverageHint": "カバー範囲レベルを選択してから、名前またはコードで検索してください。",
+    "coverageCodePlaceholder": "名前またはコードで検索…",
+    "coverageLevelFirst": "先にカバー範囲レベルを選択してください",
+    "coverageClear": "カバー範囲コードをクリア",
+    "regionDirectoryUnavailable": "地域ディレクトリが利用できません。手動でコードを入力してください。",
+    "level": {
+      "country": "国",
+      "subregion": "小地域",
+      "region": "地域",
+      "global": "グローバル"
+    },
+    "addPointer": "ポインターを追加",
+    "addRegion": "地域を追加",
+    "displayOrder": "表示順",
+    "displayOrderHint": "数値が小さいほど、関連度と認証の次に優先して表示されます。",
+    "kind": "種類",
+    "noSearchResults": "一致するリソースが見つかりませんでした。",
+    "order": "順序",
+    "pointerLabel": "ポインター {{number}} ラベル",
+    "pointerType": "ポインター {{number}} タイプ",
+    "pointerValue": "ポインター {{number}} の値",
+    "pointers": "ポインター",
+    "regionNumber": "リージョン {{number}}",
+    "regions": "リージョン",
+    "removePointer": "ポインターを削除",
+    "removeRegion": "リージョンを削除",
+    "search": "リソースを検索",
+    "searchPlaceholder": "名前、種類、タグ、ポインター、または説明",
+    "tags": "タグ（カンマ区切り）",
+    "namePlaceholder": "例：Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "リソースの読み込みに失敗しました",
+    "loadDirectoryError": "ディレクトリの読み込みに失敗しました",
+    "saveError": "リソースの保存に失敗しました",
+    "deleteError": "リソースの削除に失敗しました"
+  },
+  "adminUserManager": {
+    "backToAdmin": "管理者ダッシュボードに戻る",
+    "eyebrow": "管理者操作",
+    "title": "ユーザー管理",
+    "subtitle": "ユーザーを確認し、ステータスを把握し、一つのシンプルなダッシュボードからアクセスを承認できます。",
+    "unlockDetails": "詳細を表示",
+    "refreshRoster": "名簿を更新",
+    "exportVisible": "表示中の名簿をエクスポート",
+    "prepareVisible": "表示中の名簿を準備",
+    "downloadPrepared": "準備された名簿をダウンロード",
+    "exportPrepared": "表示中の名簿の準備が完了しました。ダウンロードが可能になりました。",
+    "rosterTitle": "ユーザー名簿",
+    "rosterShown": "全 {{total}} 名中 {{shown}} 名を表示中",
+    "tableLabel": "ユーザー名簿",
+    "tableRowsLabel": "ユーザー名簿の行数",
+    "loadingLabel": "ユーザー名簿を読み込み中",
+    "loadingUsers": "ユーザーを読み込み中...",
+    "loadRetry": "ユーザー名簿を読み込めませんでした。「名簿を更新」して再度お試しください。",
+    "emptyNoUsers": "ユーザーがいません。認証された新しいユーザーがここに表示されます。",
+    "emptyFiltered": "一致するユーザーがいません。",
+    "noUserType": "ユーザータイプなし",
+    "unknown": "不明",
+    "userFallback": "ユーザー #{{id}}",
+    "approvalSuccess": "{{name}} を承認しました。",
+    "exportSuccess": "ユーザー名簿のスプレッドシートをダウンロードしました。",
+    "metrics": {
+      "total": "総ユーザー数",
+      "totalDetail": "名簿内",
+      "pendingApproval": "承認待ち",
+      "pendingDetail": "保留中: {{count}}",
+      "approved": "承認済み",
+      "approvedDetail": "チャットへの参加が可能",
+      "incompleteProfiles": "プロフィールの未完了",
+      "incompleteDetail": "必須回答が必要です"
+    },
+    "callouts": {
+      "loadFailed": "ユーザー名簿の読み込みに失敗しました",
+      "approvalUpdated": "ユーザーの承認が更新されました",
+      "approvalFailed": "ユーザーの承認更新に失敗しました",
+      "exportReady": "ユーザー名簿のエクスポート準備が完了しました",
+      "exportFailed": "ユーザー名簿のエクスポートに失敗しました"
+    },
+    "filters": {
+      "search": "ユーザーを検索",
+      "searchPlaceholder": "名前、メールアドレス、公開鍵、または #ID",
+      "approvalStatus": "承認ステータス",
+      "allApprovalStates": "すべての承認状態",
+      "pendingApproval": "承認待ち",
+      "approved": "承認済み",
+      "allUserTypes": "すべてのユーザータイプ"
+    },
+    "columns": {
+      "user": "ユーザー",
+      "approval": "承認",
+      "userType": "ユーザータイプ",
+      "userProfile": "ユーザープロフィール",
+      "joined": "参加日",
+      "action": "アクション"
+    },
+    "status": {
+      "approved": "承認済み",
+      "pending": "保留中"
+    },
+    "actions": {
+      "approve": "承認",
+      "approveUser": "{{name}} を承認",
+      "viewUserDetails": "{{name}} の詳細を表示"
+    },
+    "profile": {
+      "noQuestions": "質問なし",
+      "noQuestionsDetail": "適用されるオンボーディングの質問はありません。",
+      "needsProfile": "プロフィール設定が必要",
+      "missingRequiredOne": "必須回答が1件不足しています",
+      "missingRequiredMany": "必須回答が {{count}} 件不足しています",
+      "noProfileYet": "プロフィール未設定",
+      "noAnswersSaved": "回答が保存されていません。",
+      "ready": "プロフィール準備完了",
+      "answersSavedOne": "1 件の回答が保存済み",
+      "answersSavedMany": "{{count}} 件の回答が保存済み"
+    },
+    "identity": {
+      "decrypting": "名前とメールアドレスを復号中...",
+      "failed": "暗号化された詳細をロック解除できませんでした。",
+      "unavailable": "暗号化された詳細の復号にはブラウザ署名者が必要です。",
+      "locked": "暗号化された詳細はロックされています。"
+    },
+    "errors": {
+      "loadUsers": "ユーザーの読み込みに失敗しました。",
+      "loadUserTypes": "ユーザータイプの読み込みに失敗しました。",
+      "loadQuestions": "オンボーディング質問の読み込みに失敗しました。",
+      "approvalUpdate": "ユーザーの承認を更新できませんでした。",
+      "decryptUnavailable": "この名簿を準備するには、NIP-04復号に対応したブラウザ拡張機能が必要です。",
+      "decryptRoster": "暗号化された名簿の値を復号できませんでした。スプレッドシートは作成されませんでした。",
+      "prepareRequired": "ダウンロードする前に、現在表示されている名簿を準備してください。",
+      "exportAudit": "ユーザー名簿のエクスポートを監査できませんでした。",
+      "exportRoster": "ユーザー名簿のエクスポートに失敗しました。"
+    },
+    "detail": {
+      "booleanYes": "はい",
+      "booleanNo": "いいえ",
+      "fieldUnlocked": "このブラウザで暗号化された回答のロックを解除しました。",
+      "decryptingField": "回答を復号中...",
+      "encryptedFieldUnavailable": "暗号化された回答の復号にはブラウザ署名者が必要です。",
+      "encryptedFieldFailed": "暗号化された回答をロック解除できませんでした。",
+      "encryptedFieldLocked": "暗号化された回答はロックされています。",
+      "notAnswered": "未回答",
+      "requiredMissing": "必須の回答がありません。",
+      "backToUserManager": "ユーザーマネージャーに戻る",
+      "backToRoster": "ユーザー名簿に戻る",
+      "eyebrow": "ユーザー詳細",
+      "notFoundTitle": "ユーザーが見つかりません",
+      "notFoundBody": "このユーザーは現在の管理者名簿に含まれていません。",
+      "subtitle": "このユーザーのステータス、プロフィールの回答、およびアクセス詳細を確認します。",
+      "approvalStatus": "承認ステータス",
+      "waitingApproval": "承認待ち",
+      "identityTitle": "アイデンティティ",
+      "name": "名前",
+      "nameUnavailable": "利用不可",
+      "email": "メールアドレス",
+      "emailUnavailable": "利用不可",
+      "userId": "ユーザーID",
+      "publicKey": "公開鍵",
+      "noPublicKey": "公開鍵なし",
+      "fieldsTitle": "プロフィール項目",
+      "fieldsShown_one": "このユーザーに適用される項目は {{count}} 件です。",
+      "fieldsShown_other": "このユーザーに適用される項目は {{count}} 件です。",
+      "noFields": "このユーザーに適用されるオンボーディング項目はありません。",
+      "required": "必須",
+      "optional": "任意",
+      "encrypted": "暗号化済み",
+      "plain": "平文",
+      "chatContext": "チャットコンテキスト"
+    }
+  },
+  "decryptStatus": {
+    "progress": "復号中: {{done}} / {{total}}",
+    "checkExtension": "Nostr 拡張機能を確認してください",
+    "persistentApproval": "「次回から表示しない」または「常に許可」を選択すると、確認が一度だけで済みます。"
   }
 }

@@ -48,20 +48,6 @@ const USER_DEFAULT_TOOL_IDS = [
   'web-search',
 ] as const;
 const USER_DEFAULT_TOOL_ID_SET = new Set<string>(USER_DEFAULT_TOOL_IDS);
-const USER_DEFAULT_TOOL_LABEL_KEYS: Record<
-  (typeof USER_DEFAULT_TOOL_IDS)[number],
-  { key: string; fallback: string }
-> = {
-  'curated-resources': {
-    key: 'chat.tools.curatedResourcesName',
-    fallback: 'Resources',
-  },
-  'knowledge-search': {
-    key: 'chat.tools.knowledgeSearchName',
-    fallback: 'Knowledge',
-  },
-  'web-search': { key: 'chat.tools.webSearchName', fallback: 'Web Search' },
-};
 
 function parseUserDefaultToolIds(value: string): string[] {
   try {
@@ -158,14 +144,20 @@ export function AdminAIConfig() {
   const translateMaybeKey = (value: string | null) =>
     value && i18n.exists(value) ? fixedT(value) : value;
   const userDefaultToolOptions = useMemo(
-    () =>
-      USER_DEFAULT_TOOL_IDS.map((id) => ({
-        id,
-        label: t(
-          USER_DEFAULT_TOOL_LABEL_KEYS[id].key,
-          USER_DEFAULT_TOOL_LABEL_KEYS[id].fallback
-        ),
-      })),
+    () => [
+      {
+        id: 'curated-resources',
+        label: t('chat.tools.curatedResourcesName', 'Resources'),
+      },
+      {
+        id: 'knowledge-search',
+        label: t('chat.tools.knowledgeSearchName', 'Knowledge'),
+      },
+      {
+        id: 'web-search',
+        label: t('chat.tools.webSearchName', 'Web Search'),
+      },
+    ],
     [t]
   );
   const knowledgeSourceDefaultOptions = useMemo(
@@ -311,7 +303,7 @@ export function AdminAIConfig() {
       setEditValue('');
       editBaseValueRef.current = null;
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to save');
+      setSaveError(err instanceof Error ? err.message : t('adminAI.saveError'));
     } finally {
       setSaving(false);
     }
@@ -324,7 +316,9 @@ export function AdminAIConfig() {
     try {
       await revertAIConfigOverride(key);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Failed to revert');
+      setSaveError(
+        err instanceof Error ? err.message : t('adminAI.revertError')
+      );
     } finally {
       setSaving(false);
     }
@@ -372,7 +366,9 @@ export function AdminAIConfig() {
         await updateDocument(doc.job_id, { [field]: !doc[field] });
       }
     } catch (err) {
-      setToggleError(err instanceof Error ? err.message : 'Toggle failed');
+      setToggleError(
+        err instanceof Error ? err.message : t('adminAI.toggleError')
+      );
     }
   };
 
@@ -382,7 +378,9 @@ export function AdminAIConfig() {
     try {
       await revertDocOverride(jobId);
     } catch (err) {
-      setToggleError(err instanceof Error ? err.message : 'Revert failed');
+      setToggleError(
+        err instanceof Error ? err.message : t('adminAI.revertError')
+      );
     }
   };
 

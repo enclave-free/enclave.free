@@ -10,6 +10,11 @@ export default defineConfig({
     fileParallelism: false,
   },
   server: {
+    // Localization contract tests read the backend's accepted locale codes as
+    // raw source so frontend/backend drift fails without importing node:fs.
+    fs: {
+      allow: ['..'],
+    },
     host: '0.0.0.0',
     port: 5173,
     allowedHosts: [

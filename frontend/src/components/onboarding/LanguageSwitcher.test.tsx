@@ -56,4 +56,25 @@ describe('LanguageSwitcher', () => {
 
     expect(changeLanguage).toHaveBeenCalledWith('es');
   });
+
+  it('renders the persisted explicit User locale and direction over browser detection', async () => {
+    vi.spyOn(window.navigator, 'language', 'get').mockReturnValue('en-US');
+    localStorage.setItem('enclave_language', 'ar');
+    localStorage.setItem('enclave_language_explicit', '1');
+    expect(i18n.options.detection?.order).toEqual([
+      'localStorage',
+      'navigator',
+    ]);
+    expect(i18n.options.detection?.caches).toEqual([]);
+    expect(i18n.options.detection?.lookupLocalStorage).toBe('enclave_language');
+    const detectedLocale = i18n.services.languageDetector?.detect()?.[0];
+    expect(detectedLocale).toBe('ar');
+
+    await i18n.changeLanguage(detectedLocale ?? 'en');
+    render(<LanguageSwitcher />);
+
+    expect(screen.getByRole('button')).toHaveTextContent('العربية');
+    expect(document.documentElement.lang).toBe('ar');
+    expect(document.documentElement.dir).toBe('rtl');
+  });
 });

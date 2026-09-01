@@ -91,7 +91,9 @@ export function AppHeader({
                 {hasLogoImage ? (
                   <img
                     src={config.logoUrl}
-                    alt={`${config.name} logo`}
+                    alt={t('branding.logoAlt', '{{name}} logo', {
+                      name: config.name,
+                    })}
                     className="w-5 h-5 object-contain"
                     onError={() => setLogoError(true)}
                   />

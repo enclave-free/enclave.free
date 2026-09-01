@@ -22,7 +22,8 @@
       "title": "Sizi en iyi ne tanımlar?",
       "description": "İhtiyaçlarınıza en uygun seçeneği seçin",
       "loadError": "Kullanıcı türleri yüklenemedi. Lütfen tekrar deneyin.",
-      "selectionLabel": "Kullanıcı türü seçimi"
+      "selectionLabel": "Kullanıcı türü seçimi",
+      "errorLabel": "Kullanıcı tipi yükleme hatası"
     },
     "language": {
       "selectLabel": "Bir dil seçin",
@@ -65,7 +66,8 @@
       "encryptionBody": "Profil alanları varsayılan olarak şifrelenir, ancak bu örneğin yöneticisi alan düzeyinde ayarları kontrol eder ve seçili verilerin farklı şekilde saklanmasına veya paylaşılmasına izin verebilir.",
       "adminControlNotice": "Veri işleme bu örneğin yöneticisi tarafından yapılandırılır; bu, nelerin şifrelenmeden saklanabileceğini veya yapay zeka araçlarıyla paylaşılabileceğini de kapsar.",
       "noWarrantyNotice": "Enclave yazılımı olduğu gibi, herhangi bir garanti olmaksızın sunulmaktadır. Bu örneğin kullanımı yönetici politikalarına tabidir.",
-      "retentionNotice": "Veri saklama ve silme süreleri bu örnek yöneticisi tarafından belirlenir. Erişim, düzeltme veya silme istekleri için onlarla iletişime geçin."
+      "retentionNotice": "Veri saklama ve silme süreleri bu örnek yöneticisi tarafından belirlenir. Erişim, düzeltme veya silme istekleri için onlarla iletişime geçin.",
+      "errorLabel": "Sihirli bağlantı isteği hatası"
     },
     "verify": {
       "verifying": "Bağlantınız doğrulanıyor...",
@@ -125,20 +127,28 @@
       "databaseName": "Veritabanı",
       "knowledgeGraph": "Bilgi grafiğini sorgula",
       "config": "Yapılandırma",
-      "configName": "Yapılandırma"
+      "configName": "Yapılandırma",
+      "knowledgeSearch": "Yüklenen belgelerde ve bilgi parçalarında arama yapın",
+      "knowledgeSearchName": "Bilgi",
+      "curatedResources": "Yönetici onaylı referans kaynaklarını ve güvenilir kuruluşları bulun",
+      "curatedResourcesName": "Kaynaklar"
     },
     "documentScope": {
       "title": "Bilgi Tabanları",
       "description": "Bağlama dahil edilecek kaynakları seçin",
       "noSources": "Kaynak mevcut değil",
       "clearAll": "Tümünü temizle",
-      "docsLabel": "Belgeler"
+      "docsLabel": "Belgeler",
+      "clearAllSelectedAria": "Seçili tüm belgelerin seçimini kaldır",
+      "docsLabelWithCount": "Belgeler {{count}}"
     },
     "messages": {
       "searching": "\"{{term}}\" aranıyor...",
       "searchingPrefix": "Aranıyor",
       "searchResults": "Sizin için \"{{term}}\" aradım:",
-      "newConversation": "Yeni sohbet"
+      "newConversation": "Yeni sohbet",
+      "copy": "Mesajı kopyala",
+      "copied": "Mesaj kopyalandı"
     },
     "code": {
       "copy": "Kopyala",
@@ -157,7 +167,87 @@
       "roleUser": "Sen",
       "roleAssistant": "Asistan",
       "footer": "{{instanceName}} üzerinden dışa aktarıldı",
-      "exportedOn": "{{timestamp}} tarihinde dışa aktarıldı"
+      "exportedOn": "{{timestamp}} tarihinde dışa aktarıldı",
+      "copiedExportNotice": "Bu dışa aktarma, aktif ürün depolama alanından ayrılır ve indirme işleminden sonra Aktif Depolama Yaşam Döngüsü dışında kalır."
+    },
+    "new": "Yeni sohbet",
+    "listTitle": "Sohbetler",
+    "contextTitle": "Bağlam",
+    "messageActions": "Mesaj işlemleri",
+    "actions": {
+      "stop": "Yanıtı durdur",
+      "stopDisabled": "Durdurulacak bir yanıt yok.",
+      "regenerate": "Yanıtı yeniden oluştur",
+      "edit": "Mesajı düzenle",
+      "waitForResponse": "Önce mevcut yanıtın bitmesini bekleyin.",
+      "startConversation": "Önce bir Sohbet başlatın veya devam ettirin.",
+      "resolveConfirmation": "Geçmişi değiştirmeden önce bekleyen Değişiklik Onayını çözün."
+    },
+    "composerContextAria": "Yazıcı bağlamı",
+    "sessions": {
+      "ariaLabel": "Sohbet oturumları",
+      "current": "Mevcut sohbet",
+      "empty": "Boş",
+      "messageCount_one": "{{count}} mesaj",
+      "messageCount_other": "{{count}} mesaj",
+      "deleteConfirmTitle": "\"{{title}}\" silinsin mi?",
+      "rename": "{{title}} adını değiştir",
+      "delete": "{{title}} sil",
+      "resumeInvalid": "Bu sohbet yüklenemedi.",
+      "renameEmpty": "Sohbet başlığı gerekli.",
+      "renameError": "Sohbet adı değiştirilemedi.",
+      "deleteError": "Sohbet silinemedi.",
+      "loading": "Sohbetler yükleniyor...",
+      "error": "Sohbetler yüklenemedi",
+      "saved": "Kaydedilmiş sohbet",
+      "deleteConfirmBody": "Bu işlem, kaydedilen sohbeti ve Oturum Belleğini siler.",
+      "deleteCancel": "Sohbet silme işlemini iptal et",
+      "cancel": "İptal",
+      "deleteConfirm": "Sohbeti sil",
+      "deleteDeleting": "Siliniyor...",
+      "renameInput": "Sohbet başlığı",
+      "renameCancel": "Sohbet adı değiştirme işlemini iptal et",
+      "renameSave": "Sohbet başlığını kaydet",
+      "renameSaving": "Ad değiştiriliyor...",
+      "open": "Sohbet oturumlarını aç",
+      "close": "Sohbet oturumlarını kapat"
+    },
+    "currentChatAria": "Mevcut sohbet",
+    "newFromCurrent": "Yeni bir sohbet başlat",
+    "documentsContextTitle": "Belgeler",
+    "errors": {
+      "requestLabel": "Sohbet isteği hatası"
+    },
+    "trace": {
+      "finalizing": "Yanıt tamamlanıyor...",
+      "collapse": "Daralt",
+      "expand": "Genişlet",
+      "reasoning": "Akıl Yürütme",
+      "thinking": "Düşünülüyor",
+      "transcript": "{{label}} dökümü",
+      "reasoningSummaryAria": "Akıl yürütme özeti",
+      "reasoningTranscriptAria": "Akıl yürütme dökümü",
+      "label": "İzleme",
+      "toolCalls": "Araç çağrıları",
+      "retrieval": "Veri Getirme",
+      "input": "Giriş",
+      "output": "Çıkış",
+      "retrievedSource": "Getirilen kaynak",
+      "score": "puan {{score}}",
+      "optionalDetailsAria": "{{label}} isteğe bağlı ayrıntılar"
+    },
+    "conversationMessagesAria": "Konuşma mesajları",
+    "conversationSurfaceAria": "Konuşma alanı",
+    "conversationThreadAria": "Konuşma dizisi",
+    "activity": {
+      "label": "Etkinlik",
+      "summaryAria": "Etkinlik özeti",
+      "detailsAria": "Etkinlik ayrıntıları",
+      "timelineAria": "Etkinlik zaman çizelgesi",
+      "show": "Etkinliği Göster",
+      "hide": "Etkinliği Gizle",
+      "showOptional": "İsteğe bağlı ayrıntıları göster",
+      "hideOptional": "İsteğe bağlı ayrıntıları gizle"
     }
   },
   "common": {
@@ -197,7 +287,17 @@
     "retry": "Tekrar Dene",
     "saved": "Kaydedildi",
     "sending": "Gönderiliyor...",
-    "gotIt": "Anlaşıldı"
+    "gotIt": "Anlaşıldı",
+    "send": "Gönder",
+    "backToAdminDashboard": "Yönetici Paneline Dön",
+    "loadingPage": "Sayfa yükleniyor",
+    "pageLoadError": "Sayfa yüklenemedi. Lütfen yenileyin.",
+    "export": "Dışa Aktar",
+    "reset": "Sıfırla",
+    "exit": "Çıkış",
+    "none": "Hiçbiri",
+    "all": "Tümü",
+    "warning": "Uyarı"
   },
   "settings": {
     "title": "Ayarlar",
@@ -220,8 +320,23 @@
       "deploymentConfig": "Dağıtım Yapılandırması",
       "deploymentConfigDesc": "Servisler, SMTP, depolama",
       "userConfig": "Kullanıcı Yapılandırması",
-      "userConfigDesc": "Kullanıcı türleri ve ilk katılım soruları"
-    }
+      "userConfigDesc": "Kullanıcı türleri ve ilk katılım soruları",
+      "guidedSetup": "Kılavuzlu Kurulum",
+      "guidedSetupDesc": "Kurulum, belgeler, kaynaklar ve test adımlarını takip edin.",
+      "guides": "Yönetici Kılavuzları",
+      "guidesDesc": "Yöneticilerin neleri, nerede yapılandırdığını anlayın.",
+      "testUserSession": "Kullanıcı Oturumunu Test Et",
+      "testUserSessionDesc": "Simüle edilmiş bir kullanıcı olarak sohbet edin ve beta geri bildirimlerini inceleyin.",
+      "diagnostics": "Tanılama",
+      "diagnosticsDesc": "Sorunları incelerken temel kontrolleri (smoke checks) çalıştırın.",
+      "resourceDirectory": "Kaynak Dizini",
+      "resourceDirectoryDesc": "Güvenilir referans kaynaklarını manuel olarak düzenleyin."
+    },
+    "diagnostics": "Tanılama",
+    "adminWorkflows": "Yönetici İş Akışları",
+    "settingsSection": "Ayarlar",
+    "dataAndContent": "Veri ve İçerik",
+    "operations": "Operasyonlar"
   },
   "admin": {
     "confirmDelete": "Bu kaydı silmek istediğinizden emin misiniz?",
@@ -263,7 +378,12 @@
       "instanceSectionTitle": "Örnek Yapılandırması",
       "onboardingFieldsHint": "Kullanıcıların kayıt sırasında yanıtlayacağı soruları oluşturun.",
       "userSectionDesc": "Kullanıcı türlerini ve kullanıcıların kayıt sırasında yanıtlayacağı soruları yapılandırın.",
-      "userSectionTitle": "Kullanıcı Yapılandırması"
+      "userSectionTitle": "Kullanıcı Yapılandırması",
+      "fieldScopeFilterLabel": "Soruları kullanıcı tipine göre filtrele",
+      "noFieldsForScope": "Bu kullanıcı tipi için henüz uygun soru bulunmuyor.",
+      "reorderNeedsAllScope": "Yeniden sıralamak için tüm soruları göster",
+      "fieldScopeGlobalHint": "Türü ne olursa olsun her kullanıcının yanıtladığı sorular.",
+      "fieldScopeTypeHint": "Bu kullanıcı tipine sorulan her şey: herkesin yanıtladığı genel sorular ve kendilerine özel sorular."
     },
     "database": {
       "backToSetup": "Yönetici Kurulumuna Dön",
@@ -348,7 +468,14 @@
       "nip07Unavailable": "Nostr uzantısı algılanmadı",
       "plaintextFieldIcon": "Düz metin alanı",
       "primaryKeyIcon": "Birincil anahtar",
-      "unlockDecryption": "Şifre Çözmeyi Aç"
+      "unlockDecryption": "Şifre Çözmeyi Aç",
+      "safeQueryResults": "Güvenli sorgu sonuçları",
+      "queryError": "Sorgu hatası",
+      "writeResult": "Veritabanı yazma sonucu",
+      "emptyQueryResult": "Boş sorgu sonucu",
+      "readOnly": "Salt okunur",
+      "tableLoadError": "Tablo yükleme hatası",
+      "readOnlyHint": "Doğrudan veritabanı düzenlemeleri devre dışı bırakıldı; değişiklik yapmak için denetlenen yönetici akışlarını kullanın."
     },
     "fields": {
       "nameRequired": "Alan adı gerekli",
@@ -438,7 +565,11 @@
       "removeFieldFailed": "Alan kaldırılamadı",
       "reorderFailed": "Alan sıralaması değiştirilemedi",
       "loadUsersFailed": "Kullanıcılar yüklenemedi",
-      "updateTypeFailed": "Kullanıcı türü güncellenemedi"
+      "updateTypeFailed": "Kullanıcı türü güncellenemedi",
+      "loadSettingsFailed": "Ayarlar yüklenemedi",
+      "externalConfigConflict": "Siz düzenleme yaparken Sage veya başka bir yönetici bu ayarları değiştirdi. Daha yeni değerlerin üzerine yazmamak için kaydetmeden önce bu sayfayı yeniden yükleyin.",
+      "externalSettingsConflict": "Siz düzenleme yaparken Sage veya başka bir yönetici bu ayarları değiştirdi. Kaydetmeden önce bu sayfayı yeniden yükleyin.",
+      "externalUserConfigConflict": "Siz düzenleme yaparken Sage veya başka bir yönetici Kullanıcı Tiplerini veya Onboarding Sorularını değiştirdi. Taslağınızı kaydetmeden önce bu sayfayı yeniden yükleyin."
     },
     "userMigration": {
       "title": "Kullanıcı Türü Geçişi",
@@ -473,7 +604,10 @@
       "emailEncryptedHint": "E-posta (şifreli)",
       "nameEncryptedHint": "Ad (şifreli)",
       "noUsersHint": "Yukarıdaki filtreyi değiştirmeyi veya yenilemeyi deneyin.",
-      "pubkeyPresent": "Nostr ortak anahtarı mevcut"
+      "pubkeyPresent": "Nostr ortak anahtarı mevcut",
+      "usersErrorLabel": "Kullanıcı tipi taşıma kullanıcı hatası",
+      "errorLabel": "Kullanıcı tipi taşıma hatası",
+      "summaryLabel": "Kullanıcı tipi taşıma özeti"
     },
     "configAssistant": {
       "openAria": "Yönetici asistanını aç",
@@ -511,8 +645,40 @@
         "restartRequiredFor": "Şunlar için yeniden başlatma gerekli: {{keys}}.",
         "restartRequiredNo": "Yeniden başlatma gerekli: hayır.",
         "restartCheckFailedHttp": "Yeniden başlatma gereksinimi kontrolü başarısız oldu (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Yeniden başlatma gereksinimi kontrolü başarısız oldu (ağ hatası)."
-      }
+        "restartCheckFailedNetwork": "Yeniden başlatma gereksinimi kontrolü başarısız oldu (ağ hatası).",
+        "pageRefreshRecommended": "Tema güncellemelerini görmek için bu sayfayı yenileyin."
+      },
+      "onboardingWelcome": "Hoş geldiniz — alanınızı kuralım. Bunlardan dilediğiniz kadarını tek bir mesajda yanıtlayın (numaralandırın ve emin olmadığınız şeyleri atlayın):\n\n1. **İsim** — bu alana ne ad vermeliyordur? (başlıkta ve tarayıcı sekmesinde görünür)\n2. **Açıklama** — ne için olduğuna dair tek bir cümle (özel bir nottur, kullanıcılara gösterilmez)\n3. **Asistan adı** — AI yardımcısının adı ne olmalı?\n4. **Vurgu rengi** — butonlar ve bağlantılar için vurgu rengi (mavi/turkuaz gibi bir isim veya #3B82F6 gibi bir hex kodu)\n5. **Tema** — açık, koyu veya sistem (cihazla uyumlu)?\n6. **Varsayılan dil** — örn. İngilizce veya İspanyolca (isteğe bağlı)\n7. **Slogan** — başlık için kısa bir satır (isteğe bağlı)\n8. **Yeni kullanıcılar** — hemen giriş yapabilsinler mi, yoksa her kişiyi onaylayacak mısınız?\n9. **Kullanıcı tipleri** — bunu hangi tür admin olmayan kişiler kullanacak? (örn. Öğretmen ve Öğrenci) — her birini sizin için oluşturacağım\n\nÖrnek: \"9. Öğretmen ve Öğretren\". Her şeyi tek bir adımda kaydedeceğim — ve istediğiniz zaman manuel kuruluma geçebilirsiniz.",
+      "collapseSidebar": "Asistan yan panelini daralt",
+      "expandSidebar": "Yönetici asistanı yan panelini aç",
+      "resize": "Yönetici asistanı panelini yeniden boyutlandır",
+      "railLabel": "Asistan",
+      "shareSecretsHint": "Varsayılan olarak kapalıdır. Önce Yapılandırma aracını etkinleştirin. Etkinleştirildiğinde, gizli dağıtım yapılandırma değerleri istemci tarafında görünür hale gelir ve bu prototip akışı için Sage'e gönderilir.",
+      "applyIntentUsePanel": "Aşağıdaki bekleyen değişiklikler panelini kullanın ve bu yapılandırma güncellemelerini onaylamak için Uygula'ya tıklayın.",
+      "applyIntentNoPending": "Uygulanacak bekleyen bir yapılandırma değişikliği yok. Önce asistanın bir değişiklik seti önermesini isteyin.",
+      "startNewConversation": "Yeni asistan görüşmesi başlat",
+      "reducedContextNoticeLabel": "Azaltılmış bağlam bildirimi",
+      "sessionMemoryNoticeLabel": "Oturum Belleği sıkıştırma bildirimi",
+      "sessionMemoryNotice": "Bu görüşmeyi sürdürebilmek için eski bağlam özetlendi.",
+      "reducedContextNotice": "Model Sağlayıcı bütçesine ({{sections}}) uyması için bazı bağlamlar azaltıldı. Yeni bir asistan görüşmesi başlatana kadar yanıtlar daha eksik olabilir.",
+      "reducedContextSections": {
+        "recentConversation": "son görüşme geçmişi"
+      },
+      "approvalCardTitle": "Yapılandırma değişikliklerini onayla",
+      "applying": "Uygulanıyor",
+      "applied": "Uygulandı",
+      "rejected": "Reddedildi",
+      "failed": "Hata oluştu",
+      "superseded": "Geçersiz kılındı",
+      "hideDetails": "Detayları gizle",
+      "reviewDetails": "Detayları incele",
+      "reject": "Reddet",
+      "approve": "Onayla",
+      "applyErrorLabel": "Yapılandırma uygulama hatası",
+      "onboardingTitle": "Rehberli Kurulum Sohbeti",
+      "onboardingContext": "Odaklanmış kurulum görüşmesi",
+      "directShareSecretsHint": "İsteğe bağlı: Bu görüşmenin bağlamına saklanan dağıtım gizli değerlerini dahil edin. Doğrudan gizli veri okuma işlemleri için buna gerek yoktur.",
+      "directWritePrompt": "Yönetici yapılandırması hakkında soru sorun. Sage ayarları inceleyebilir ve görüşme sırasında sizinle onaylaştıktan sonra desteklenen değişiklikleri doğrudan uygulayabilir."
     },
     "reachout": {
       "badgeDefault": "Varsayılan",
@@ -679,7 +845,16 @@
       "typographyTitle": "Tipografi",
       "userIconLabel": "Kullanıcı simgesi",
       "userLabelLabel": "Kullanıcı etiketi",
-      "userLabelPlaceholder": "örn., Sen"
+      "userLabelPlaceholder": "örn., Sen",
+      "publicEmailDisplayNameLabel": "Genel e-posta görünen adı (isteğe bağlı)",
+      "publicEmailDisplayNameHint": "Sihirli bağlantılı (magic-link) giriş e-postalarında kullanılır. Instance adını kullanmak için boş bırakın.",
+      "defaultsTitle": "Instance Varsayılanları",
+      "defaultsDesc": "Yerel tarayıcı kontrolleri uygulanmadan önce kullanılacak temel dil ve temayı ayarlayın.",
+      "defaultLanguageLabel": "Varsayılan dil",
+      "defaultThemeLabel": "Varsayılan tema",
+      "themeSystem": "Sistem",
+      "themeLight": "Açık",
+      "themeDark": "Koyu"
     },
     "userConfig": {
       "subtitle": "Kullanıcı türlerini ve kullanıcıların kayıt sırasında yanıtlayacağı soruları yapılandırın.",
@@ -687,6 +862,55 @@
       "typeDescription": "Açıklama",
       "typeIcon": "Tip Simgesi",
       "typeName": "Tür Adı"
+    },
+    "userApproval": {
+      "updateFailed": "Kullanıcı onayı güncellenemedi.",
+      "approvedUser": "Kullanıcı #{{id}} onaylandı.",
+      "revokedUser": "Kullanıcı #{{id}} bekleme durumuna geri döndürüldü.",
+      "title": "Kullanıcı Onayı",
+      "subtitle": "Yeni kimliği doğrulanmış Kullanıcıların sohbete hemen girebileceğini veya Admin onayını bekleyeceğini seçin.",
+      "requireManualLabel": "Yeni kullanıcılar için manuel onay gerektir",
+      "requireManualHint": "Etkinleştirildiğinde, yeni Kullanıcılar bir Admin onları onaylayana kadar beklemede olan onay ekranında kalır.",
+      "loadingHint": "Yükleniyor...",
+      "saveButton": "Kullanıcı onayını kaydet",
+      "savedCalloutLabel": "Kullanıcı onayı kaydedildi",
+      "errorCalloutLabel": "Kullanıcı onayı hatası",
+      "pendingTitle": "Bekleyen onaylar",
+      "pendingCount_zero": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "pendingCount_one": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "pendingCount_two": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "pendingCount_few": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "pendingCount_many": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "pendingCount_other": "Sohbet erişimi için {{count}} kullanıcının onaya ihtiyacı var.",
+      "nonePending": "Onay bekleyen kullanıcı yok.",
+      "actionSavedCalloutLabel": "Kullanıcı onayı güncellendi",
+      "actionErrorCalloutLabel": "Kullanıcı onayı güncelleme başarısız",
+      "loadingUsers": "Kullanıcılar yükleniyor...",
+      "emptyState": "Manuel onay gerektiğinde, onay bekleyen yeni Kullanıcılar burada görünecektir.",
+      "emailOnFile": "Kayıtlı e-posta",
+      "nameOnFile": "Kayıtlı isim",
+      "approveButton": "Onayla",
+      "revokeButton": "İptal Et"
+    },
+    "userRosterExport": {
+      "auditFailed": "Kullanıcı listesi dışa aktarımı denetlenemedi. E-tablo indirilmedi.",
+      "decryptUnavailable": "Bu listeyi hazırlamak için NIP-04 şifre çözme özelliğine sahip bir tarayıcı eklentisi gereklidir.",
+      "decryptFailed": "Şifrelenmiş bir liste değeri çözülemedi. E-tablo oluşturulmadı.",
+      "prepared": "Tam liste hazırlandı. İndirme artık etkin.",
+      "prepareRequired": "İndirmeden önce mevcut listeyi hazırlayın.",
+      "prepareButton": "Kullanıcı listesini hazırla",
+      "downloadButton": "Hazırlanan listeyi indir",
+      "success": "Kullanıcı listesi e-tablosu indirildi.",
+      "failed": "Kullanıcı listesi dışa aktarılamadı.",
+      "button": "Kullanıcıları dışa aktar",
+      "successLabel": "Kullanıcı listesi dışa aktarımı hazır",
+      "errorLabel": "Kullanıcı listesi dışa aktarımı başarıs<0xC2><0xA0>sız oldu"
+    },
+    "userIdentity": {
+      "decrypting": "İsim/e-posta çözülüyor...",
+      "decryptFailed": "İsim/e-posta çözülemedi",
+      "unlockDetails": "İsim/e-postayı göstermek için kilidi açın",
+      "unlockButton": "Detayların kilidini aç"
     }
   },
   "adminOnboarding": {
@@ -711,7 +935,9 @@
     "legalResponsibilityNotice": "Bu örneğin yasal yapılandırması, kullanıcı bildirimleri ve veri işleme politikalarından siz sorumlusunuz.",
     "extracted": {
       "change_language_789b14": "Dili değiştir"
-    }
+    },
+    "statusError": "Örnek durumu kontrol edilemedi",
+    "connectionError": "Bağlantı kurulamadı"
   },
   "errors": {
     "requestFailed": "İstek başarısız oldu",
@@ -745,11 +971,228 @@
     "adminSessionExpired": "Yönetici oturumu sona erdi",
     "authenticationFailed": "Kimlik doğrulama başarısız",
     "noNostrExtension": "Nostr uzantısı bulunamadı",
-    "exportFailed": "Dışa Aktarma Başarısız"
+    "exportFailed": "Dışa Aktarma Başarısız",
+    "failedToRetryDeletionTombstone": "Silme işaretçisi (tombstone) yeniden denemesi başarısız oldu",
+    "failedToAcknowledgeUnsupportedSurface": "Desteklenmeyen dağıtım yüzeyi onaylanamadı",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Desteklenmeyen dağıtım yüzeyi kategorisi onaylanamadı",
+    "failedToPreviewRetention": "Saklama politikasını önizleme başarısız oldu",
+    "failedToUpdateRetentionPolicy": "Saklama politikasını güncelleme başarısız oldu",
+    "failedToRunScheduledRetention": "Zamanlanmış saklama işlemi çalıştırma başarısız oldu",
+    "failedToUpdateArtifactEncryptionPosture": "Artefakt şifreleme durumunu güncelleme başarısız oldu",
+    "queryExecutionFailed": "Sorgu yürütme başarısız oldu"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Yöneticiler şunları yapabilir"
+    },
+    "summary": {
+      "brand": {
+        "title": "Örneği markalaştır",
+        "body": "İsim, logo, tema, asistan kimliği ve herkese açık e-posta gösterimi."
+      },
+      "people": {
+        "title": "Kullanıcıları yönet",
+        "body": "Kullanıcı türleri, katılım soruları, onaylar, taşıma ve erişim."
+      },
+      "agent": {
+        "title": "Sage'i şekillendir",
+        "body": "Komut kuralları, yanıt ayarları, belge erişimi ve araç varsayılanları."
+      },
+      "launch": {
+        "title": "Güvenli bir şekilde başlatın",
+        "body": "E-posta, alan adları, CORS, HTTPS, model yönlendirme, sağlık durumu ve çalışma zamanı ortamı."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Marka",
+        "title": "Kimlik ve görünüm",
+        "body": "Örneği kuruluşunuzun bir parçası gibi hissettirin.",
+        "detail1": "İsim, slogan, asistan adı ve kullanıcı etiketi.",
+        "detail2": "Logo, favicon, simge, vurgu rengi, tema, tipografi ve sohbet stili.",
+        "detail3": "Varsayılan dil ve herkese açık e-posta görüntüleme adı.",
+        "link": "Örnek Ayarlarını Aç"
+      },
+      "people": {
+        "eyebrow": "Erişim",
+        "title": "Kişiler ve erişim",
+        "body": "Örneği kimlerin kullanacağına ve onlardan neler isteyeceğinize karar verin.",
+        "detail1": "Personel, üyeler veya müşteriler gibi gruplar için kullanıcı türleri.",
+        "detail2": "Katılım alanları, zorunlu sorular, seçenekler, yer tutucular ve tür bazlı alanlar.",
+        "detail3": "Manuel onay, kullanıcı taşıma, erişim yetkisini geri alma ve silme.",
+        "link": "Kullanıcı Ayarlarını Aç"
+      },
+      "agent": {
+        "eyebrow": "Davranış",
+        "title": "Ajan davranışı",
+        "body": "Sage'in nasıl yanıt vereceğini ve hangi araçların varsayılan olarak açık olacağını belirleyin.",
+        "detail1": "İstem şablonu, davranış kuralları, yasaklı konular ve yanıt ayarları.",
+        "detail2": "Bilgi, Kaynaklar, Web, Yapılandırma ve Veritabanı araçları için varsayılan özellikler.",
+        "detail3": "Global ayarlar ve kullanıcı türüne göre özelleştirmeler.",
+        "link": "Ajan Ayarlarını Aç"
+      },
+      "docs": {
+        "eyebrow": "Bilgi",
+        "title": "Doküman bilgisi",
+        "body": "Ajanın arama yapabileceği kaynak materyaller sağlayın.",
+        "detail1": "PDF'ler, politikalar, SSS'ler, el kitapları ve kılavuzlar yükleyin.",
+        "detail2": "Dokümanlar parçalara ayrılır, gömülür ve aranabilir hale getirilir.",
+        "detail3": "Doküman Erişimi, varsayılan olarak nelerin seçilebileceğini veya aktif olabileceğini kontrol eder.",
+        "link": "Doküman Yüklemeyi Aç"
+      },
+      "resources": {
+        "eyebrow": "Referanslar",
+        "title": "Doğrulanmış kaynaklar",
+        "body": "Ajanın önerebileceği güvenilir yönlendirmeler ekleyin.",
+        "detail1": "İsimler, açıklamalar, kaynak türü, diller, kapsam ve yardım türleri.",
+        "detail2": "Telefon, e-posta, URL, güvenli kanal, adres ve notlar.",
+        "detail3": "Doğrulanmış kaynaklar ilk sırada yer alır. Arşivlenen kaynaklar kullanıcılardan gizlenir.",
+        "link": "Kaynak Dizini'ni Aç"
+      },
+      "ops": {
+        "eyebrow": "Operasyonlar",
+        "title": "Operasyonlar ve çalışma zamanı",
+        "body": "Örneği bağlantıda, erişilebilir ve sağlıklı tutun.",
+        "detail1": "E-posta sihirli bağlantıları için SMTP, alan adları, CORS, HTTPS ve genel URL'ler.",
+        "detail2": "Model sağlayıcı, gömme modeli, arama, depolama ve hizmet sağlığı.",
+        "detail3": "Çalışma zamanı env dışa aktarma, hazır olma durumu, güncel olmayan ayarlar ve yönetici anahtarı taşıma.",
+        "link": "Dağıtım Ayarlarını Aç"
+      },
+      "title": "Yöneticilerin yapılandırdığı alanlar",
+      "body": "Bunlar ana kontrol yüzeyleridir. Sayfaları doğrudan kullanabilir veya değişiklikleri hazırlaması için Yönetici Asistanı'na danışabilirsiniz."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Sorun",
+        "title": "Yönetici Asistanı",
+        "body": "Mevcut kurulum hakkında sorular sorun ve yapılandırma değişiklikleri talep edin.",
+        "detail1": "Yapılandırma okumaları, tahmin yürütmek yerine gerçek örnek durumunu inceler.",
+        "detail2": "Önerilen değişiklikler inceleme için hazır bekletilir.",
+        "detail3": "Uygula komutu, onaylanan yönetici uç noktalarını başka bir model adımına gerek kalmadan çalıştırır.",
+        "link": "Yönetici Asistanı'nı Aç",
+        "directWriteDetail2": "Sage, desteklenen bir yazma işlemi öncesinde konuşma yoluyla onay ister.",
+        "directWriteDetail3": "Siz onayladıktan sonra Sage, doğrudan yapılandırma Araçlarını çağırır ve gerçek sonucu bildirir."
+      },
+      "guided": {
+        "eyebrow": "Başlat",
+        "title": "Kılavuzlu Kurulum",
+        "body": "Faydalı bir ilk yapılandırma oluşturmak için bir kılavuzlu sohbet kullanın.",
+        "detail1": "Kimlik, asistan, dil, erişim politikası, kullanıcı türleri, sorular ve davranış kuralları.",
+        "detail2": "Ardından belgeleri yükleyin, kaynakları ekleyin ve test edin.",
+        "link": "Kılavuzlu Kurulumu Aç"
+      },
+      "test": {
+        "eyebrow": "Doğrulayın",
+        "title": "Test ve geri bildirim",
+        "body": "Yayına almadan önce ajanı bir kullanıcı gözüyle deneyin.",
+        "detail1": "Bir kullanıcı tipi seçin, bir test oturumu başlatın ve denemeyi kaydedin.",
+        "detail2": "Şifrelenmiş beta günlüklerini inceleyin ve yanıtları değerlendirin.",
+        "link": "Test Kullanıcı Oturumunu Aç"
+      },
+      "database": {
+        "eyebrow": "İncele",
+        "title": "Veritabanı Gezgini",
+        "body": "Hata ayıklama sırasında depolanan SQLite verilerini inceleyin.",
+        "detail1": "İnceleme için yalnızca salt okunur SELECT sorguları kullanın.",
+        "detail2": "Bunu bir ürün mutasyon yolu olarak kullanmayın.",
+        "link": "Veritabanı Gezgini'ni Aç"
+      },
+      "title": "Yaygın yönetici iş akışları",
+      "body": "Kurulum yaparken, kaliteyi kontrol ederken veya verileri araştırırken bunları kullanın."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Çalışma Zamanı",
+        "title": "Tek bir sohbet çalışma zamanı",
+        "body": "Knowledge, Resources, Web, Config ve Database görünür araç setleridir, ayrı sohbet sistemleri değildir.",
+        "detail1": "Model, yardımcı olduklarında etkinleştirilmiş araçları çağırabilir.",
+        "detail2": "Config ve Database yalnızca sunucu tarafından doğrulanmış yöneticiler için görünür."
+      },
+      "auth": {
+        "eyebrow": "Giriş Yap",
+        "title": "Farklı giriş yolları",
+        "body": "Yöneticiler NIP-07 kullanır. Kullanıcılar e-posta sihirli bağlantılarını kullanır.",
+        "detail1": "Yönetici özel anahtarları tarayıcı imzalayıcısında kalır.",
+        "detail2": "Üretim ortamında kullanıcı sihirli bağlantılarının çalışması için SMTP'nin çalışıyor olması gerekir."
+      },
+      "data": {
+        "eyebrow": "Gizlilik",
+        "title": "Veri sınırları önemlidir",
+        "body": "Şifrelenmiş profil alanları sohbet bağlamının dışında tutulur.",
+        "detail1": "Yalnızca şifrelenmemiş alanlar yapay zeka sohbet bağlamı için işaretlenebilir.",
+        "detail2": "Dağıtım sırları şifreli olarak saklanır ve varsayılan olarak maskelenmiş şekilde gösterilir."
+      },
+      "ops": {
+        "eyebrow": "Operasyon",
+        "title": "Bazı değişiklikler operatör gerektirir",
+        "body": "Uygulama istenen çalışma zamanı ayarlarını kaydedebilir; hizmetleri sessizce yeniden başlatmaz.",
+        "detail1": "Provider, origin, CORS veya arama değişikliklerinden sonra çalışma zamanı ortamını dışa aktarın.",
+        "detail2": "Neyin gerçekten çalıştığını onaylamak için hazır olma durumunu ve hizmet sağlığını kullanın."
+      },
+      "title": "Unutulmaması gereken ürün gerçekleri",
+      "body": "Bu kurallar kurulumun dürüst kalmasını sağlar ve kazara yetki aşımını önler."
+    },
+    "ask": {
+      "prompt1": "Bu örnek kullanıcılar için hazır hale gelmeden önce hala eksik olan nedir?",
+      "prompt2": "Mevcut kullanıcı türlerini, katılım sorularını, belgeleri ve kaynakları gözden geçirin.",
+      "prompt3": "İnceleme için değişiklikleri hazırlayın: asistan tonunu ve varsayılan dili ayarlayın.",
+      "title": "Admin Asistanına sorulabilecek iyi şeyler",
+      "body": "Değişiklik istemeden önce bir inceleme isteyin. Kurulumu denetleyebilir ve bir değişiklik seti hazırlayabilir.",
+      "directWriteBody": "Desteklenen yapılandırmayı incelemesi veya değiştirmesi için Sage'den isteyin. Yazmadan önce planlanan değişikliği sizinle onaylayacaktır.",
+      "directWritePrompt3": "Asistan tonunu ve varsayılan dili ayarlayın ve planlanan değişikliği önce benimle onaylayın."
+    },
+    "hero": {
+      "eyebrow": "Admin kontrol haritası",
+      "shortVersion": {
+        "title": "Kısa versiyon",
+        "body": "Yöneticiler kimliği, kullanıcıları, bilgileri, araçları ve başlatma ayarlarını belirler. Bazı çalışma zamanı değişiklikleri hala bir operatör yeniden başlatması gerektirir."
+      }
+    },
+    "title": "Admin Rehberleri",
+    "subtitle": "Yöneticilerin neleri yapılandırdığı, ürünün neler yapabileceği ve lansman öncesi nelerin dikkat gerektirdiğine dair basit bir harita.",
+    "quickStart": {
+      "title": "Buradan başlayın",
+      "body": "Önce küçük ve yararlı kurulumları yapın. Gerçek sorularla test ettikten sonra iyileştirin."
+    },
+    "safety": {
+      "title": "Güvenlik temelleri",
+      "body": "Yöneticiler erişimi, verileri, davranışı ve çalışma zamanı ayarlarını kontrol eder. Riskli değişikliklerde yavaş ilerleyin.",
+      "items": {
+        "0": "Yöneticiler NIP-07 ile giriş yapar. Kullanıcılar e-posta sihirli bağlantıları ile giriş yapar.",
+        "1": "Kullanıcı alanları varsayılan olarak şifrelenmiştir. Sadece düz metin alanları sohbet ile paylaşılabilir.",
+        "2": "Gizli bilgiler, mevcut admin oturumu için paylaşmadığınız sürece maskelenmiş kalır.",
+        "3": "Asistan değişiklikleri öneri niteliğindedir. Hala siz inceler ve Uygula butonuna basarsınız.",
+        "4": "Dağıtım Ayarları istenen çalışma zamanı değerlerini saklar. Operatörler gerektiğinde hala env dışa aktarır ve servisleri yeniden başlatır."
+      },
+      "directItems": {
+        "0": "Yöneticiler NIP-07 ile giriş yapar. Kullanıcılar e-posta sihirli bağlantıları ile giriş yapar.",
+        "1": "Kullanıcı alanları varsayılan olarak şifrelenmiştir. Sadece düz metin alanları sohbet ile paylaşılabilir.",
+        "2": "Gizli bilgiler, mevcut admin oturumu için paylaşmadığınız sürece maskelenmiş kalır.",
+        "3": "Sage, yapılandırma değişikliklerini sohbet üzerinden sizinle onaylar, ardından desteklenen değişiklikleri doğrudan uygular.",
+        "4": "Dağıtım Ayarları istenen çalışma zamanı değerlerini saklar. Operatörler gerektiğinde hala env dışa aktarır ve servisleri yeniden başlatır."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Admin olarak giriş yapın",
+        "body": "Admin NIP-07 anahtarını kullanın. Gizli tutun."
+      },
+      "1": {
+        "title": "Temelleri ayarlayın",
+        "body": "Örneğe isim verin, görünümü seçin ve asistan kimliğini belirleyin."
+      },
+      "2": {
+        "title": "Kullanıcılarınızı tanımlayın",
+        "body": "Kullanıcı türleri, katılım soruları ve onay kuralları oluşturun."
+      },
+      "3": {
+        "title": "Güvenilir bilgi ekleyin",
+        "body": "Belgeleri yükleyin ve doğrulanmış kaynaklar ekleyin."
+      },
+      "4": {
+        "title": "Yayından önce test edin",
+        "body": "Bir kullanıcı gibi sohbet edin, geri bildirimleri inceleyin ve ardından gerçek kişileri davet edin."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1229,55 @@
     "securityStep3Primary": "Yapılandırma doğrulamasını çalıştır",
     "securityStep3Secondary": "Saklanan verileri incele",
     "user": "Kullanıcı Yapılandırması",
-    "userDesc": "Kullanıcı türlerini ve kayıt sorularını tanımlayın"
+    "userDesc": "Kullanıcı türlerini ve kayıt sorularını tanımlayın",
+    "subtitleSimple": "Bu örnek üzerinde nerede çalışmak istediğinizi seçin.",
+    "workflowsSectionLabel": "Yönetici İş Akışları",
+    "adminAssistant": "Yönetici Asistanı",
+    "adminAssistantDesc": "Yapılandırma yardımı ve değişiklik incelemesi için yönetici sohbetini kullanın.",
+    "guidedSetup": "Kılavuzlu Kurulum",
+    "guidedSetupDesc": "Kurulum, belgeler, kaynaklar ve test adımlarını takip edin.",
+    "guides": "Yönetici Kılavuzları",
+    "guidesDesc": "Yöneticilerin neleri, nerede yapılandırdığını anlayın.",
+    "testUserSession": "Test Kullanıcı Oturumu",
+    "testUserSessionDesc": "Simüle edilmiş bir kullanıcı olarak sohbet edin ve kaydedilen beta günlüklerini inceleyin.",
+    "aiSetupTitle": "Yapay zeka asistanı ile kurulum yapın",
+    "aiSetupBody": "Asistanın, örneğinizi adlandırmak ve yapılandırmak için temel bilgileri tek seferde toplamasını sağlayın. İstediğiniz zaman manuel kuruluma geçebilirsiniz.",
+    "aiSetupAction": "Kılavuzlu kurulumu başlat",
+    "readinessTitle": "Dağıtım Hazırlığı",
+    "readinessDesc": "Kullanıcıları davet etmeden önce hazırlığı inceleyin. Engelleyicileri, uyarıları, yeniden başlatma gerektiren değişiklikleri ve kurtarma durumunu tek bir yerden kontrol edin.",
+    "readinessPrimary": "Hazırlık İncelemesini Aç",
+    "firstRunPathTitle": "Yönetici ilk çalıştırma yolu",
+    "firstRunStep1Title": "Örnek Temel Ayarlarını Yapılandır",
+    "firstRunStep1Body": "İncelemeden önce markalama, dil, tema, kullanıcı alanları ve Agent Ayarlarını belirleyin.",
+    "firstRunStep1Action": "Örnek Ayarlarını Aç",
+    "firstRunStep2Title": "Dağıtım Hazırlığını İnceleyin",
+    "firstRunStep2Body": "Kullanıcıları davet etmeden önce engelleyicileri, uyarıları, yeniden başlatma gerektiren değişiklikleri ve kurtarma durumunu kontrol edin.",
+    "firstRunStep2Action": "Dağıtım Sihirbazını Aç",
+    "firstRunStep3Title": "Tanılama araçlarını yalnızca inceleme yaparken kullanın",
+    "firstRunStep3Body": "Duman testlerini ve tanılama araçlarını, ana ürün yolu haline getirmeden erişilebilir tutun.",
+    "firstRunStep3Action": "Tanılama Araçlarını Aç",
+    "instanceDescSimple": "İsim, herkese açık e-posta kimliği, tema ve marka kontrolleri.",
+    "aiDescSimple": "İstemler, model davranışı ve belge varsayılanları.",
+    "deploymentDescSimple": "Çalışma zamanı ayarları, sağlık ve hazır olma detayları.",
+    "resources": "Kaynak Dizini",
+    "resourcesDesc": "Güvenilir avukatlar, STK'lar ve yönlendirme kaynaklarını düzenleyin",
+    "resourcesDescSimple": "Güvenilir yönlendirme kaynaklarını manuel olarak düzenleyin.",
+    "testFeedback": "Test & Geri Bildirim",
+    "testFeedbackDesc": "Kurulumunuzu iyileştirmek için bir test kullanıcısı olarak sohbet edin ve yanıtları değerlendirin",
+    "diagnosticsSectionLabel": "Tanılama",
+    "operationsSectionLabel": "Operasyonlar",
+    "testDashboard": "Tanılama",
+    "testDashboardDesc": "Geliştirme duman testlerini çalıştırın ve tanı modüllerini inceleyin",
+    "testDashboardDescSimple": "Bir sorunu incelerken duman testlerini çalıştırın.",
+    "iaChecklistTitle": "Yönetici bilgi mimarisi inceleme kontrol listesi",
+    "iaChecklistBody": "İnsan incelemesi sırasında Dağıtım Ayarları, Örnek Ayarları, Ajan Ayarları, Yaşam Döngüsü Hazırlığı, Dağıtım Hazırlığı ve tanı yüzeylerini ayrı tutun.",
+    "humanReviewTitle": "İnsan incelemesine devretme",
+    "humanReviewStatus": "Özel destekli dağıtım desteği gerekiyor",
+    "humanReviewBody": "Çalışma zamanı ortamı uygulaması açık kalır: çıktıları dışa aktarın, operatör desteğiyle uygulayın, etkilenen hizmetleri yeniden başlatın ve hazır olma kanıtlarını doğrulayın.",
+    "humanReviewAction": "Dağıtım Hazırlığını İncele",
+    "settingsSectionLabel": "Ayarlar",
+    "userManager": "Kullanıcı Yöneticisi",
+    "userManagerDesc": "Kullanıcıları inceleyin, durumu kontrol edin, listeleri dışa aktarın ve erişimi onaylayın."
   },
   "adminAI": {
     "title": "Yapay Zeka Yapılandırması",
@@ -871,7 +1362,18 @@
       "userInfoPlaceholder": "{user_info} — varsa mevcut kullanıcının profil alanlarıyla değiştirilir"
     },
     "revert": "Geri Al",
-    "revertToGlobal": "Genel Ayarlara Geri Dön"
+    "revertToGlobal": "Genel Ayarlara Geri Dön",
+    "knowledgeSearchDisabledLabel": "Bilgi Araması kapalı",
+    "knowledgeSearchDisabledMessage": "Bilgi Kaynakları seçili varsayılan belgelere veya tüm mevcut belgelere ayarlanana kadar aktif varsayılan belgeler kullanılmayacaktır.",
+    "assembledPromptOutput": "Birleştirilmiş istem çıktısı",
+    "saveError": "Kaydedilemedi",
+    "revertError": "Geri alınamadı",
+    "toggleError": "Değiştirme başarısız oldu",
+    "loadErrorLabel": "Agent Ayarları yükleme hatası",
+    "previewErrorLabel": "Agent Ayarları önizleme hatası",
+    "documentToggleErrorLabel": "Agent Ayarları belge değiştirme hatası",
+    "documentDefaultsHintV2": "\"Kullanılabilir\" olarak işaretlenen belgeler Bilgi Araması tarafından kullanılabilir. \"Varsayılan Olarak Aktif\" olarak işaretlenen belgeler, Bilgi Kaynakları seçili varsayılan belgelere ayarlandığında dahil edilir.",
+    "externalChangeConflict": "Siz düzenleme yaparken Sage veya başka bir yönetici bu ayarı değiştirdi. Kaydetmeden önce iptal edin ve düzenleyiciyi yeniden açın."
   },
   "adminDeployment": {
     "title": "Dağıtım Yapılandırması",
@@ -969,7 +1471,9 @@
       "unknown": "Bilinmiyor",
       "usersMigrated": "Taşınan kullanıcılar",
       "usersToMigrate": "Taşınacak kullanıcılar",
-      "warning": "Bu gelişmiş bir işlemdir. Yanlış taşıma, şifrelenmiş verilere erişiminizi kaybetmenize neden olabilir. Yalnızca sonuçlarını anlıyorsanız devam edin."
+      "warning": "Bu gelişmiş bir işlemdir. Yanlış taşıma, şifrelenmiş verilere erişiminizi kaybetmenize neden olabilir. Yalnızca sonuçlarını anlıyorsanız devam edin.",
+      "inputWarningLabel": "Admin anahtar taşıma uyarısı",
+      "destructiveWarningLabel": "Admin anahtar taşıma yıkıcı uyarı"
     },
     "revealFailed": "Değer gösterilemedi. Nostr uzantısı bağlantınızı kontrol edin.",
     "searchHelp": {
@@ -1000,7 +1504,8 @@
       "overviewDesc": "Güvenlik ayarları kimlik doğrulamayı, oturum yönetimini ve geliştirme kısayollarını kontrol eder. Varsayılanlar yerel geliştirme için yapılandırılmıştır.",
       "overviewNote": "Üretimde, simülasyon bayraklarının kapalı olduğundan ve FRONTEND_URL'nin gerçek alan adınızla eşleştiğinden emin olun.",
       "overviewTitle": "Güvenlik Genel Bakış",
-      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin."
+      "overviewWhen": "Halka açık bir sunucuya dağıtmadan önce bu ayarları gözden geçirin.",
+      "devNote": "Yerel e-posta testi için MOCK_EMAIL kullanın; kullanıcı ve admin oturumları hala normal doğrulama akışını gerektirir."
     },
     "sslHelp": {
       "ariaLabel": "SSL ve HTTPS yapılandırma yardımı",
@@ -1101,7 +1606,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Yüklemeler Klasörü",
       "vector_database_eb5526": "Vektör Veritabanı"
-    }
+    },
+    "exportSageRuntimeEnv": "Sage ortamını dışa aktar",
+    "readiness": {
+      "title": "Dağıtım Hazırlığı",
+      "statusTitle": "Dağıtım Hazırlığı: {{status}}",
+      "description": "Bu Tekil Örnek Dağıtımı normal operasyona hazır hale gelmeden önce gereken kanıtları inceleyin.",
+      "openWizard": "Hazırlık İncelemesini Aç",
+      "blockerCount": "{{count}} engelleyici",
+      "warningCount": "{{count}} uyarı",
+      "readyCount": "{{count}} hazır",
+      "empty": "Henüz hazırda bekleyen bir Dağıtım Hazırlık kontrolü bulunmuyor.",
+      "conversationBlocking": "Normal Sohbetleri engeller",
+      "blocker": "Engelleyici",
+      "warning": "Uyarı",
+      "ready": "Hazır",
+      "reviewInferenceVerification": "Çıkarım Doğrulamasını İncele",
+      "reviewDataLifecycleStatus": "Veri Yaşam Döngüsü Durumunu İncele",
+      "reviewDeploymentValidation": "Dağıtım Ayarlarını İncele",
+      "reviewRestartRequired": "Yeniden Başlatma Gereksinimini İncele",
+      "reviewOperationalReadiness": "Operasyonel Hazırlığı İncele",
+      "reviewServiceHealth": "Servis Sağlığını İncele",
+      "reviewRuntimeEnv": "Çalışma Zamanı Ortamı Dışa Aktarımını İncele",
+      "deployment_settings_validation": {
+        "label": "Dağıtım Ayarları Doğrulaması",
+        "status": {
+          "invalid": {
+            "summary": "Dağıtım Ayarları doğrulamasında düzeltilmesi gereken hatalar var.",
+            "nextAction": "Dağıtım Ayarları doğrulama hatalarını inceleyin."
+          },
+          "warnings": {
+            "summary": "Dağıtım Ayarları doğrulamasında bilgilendirme amaçlı uyarılar var.",
+            "nextAction": "Dağıtım Ayarları doğrulama uyarılarını inceleyin."
+          },
+          "valid": {
+            "summary": "Dağıtım Ayarları doğrulamasında hata veya uyarı bulunmuyor.",
+            "nextAction": "Herhangi bir işlem gerekmiyor."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Doğrulanabilir Çıkarım",
+        "status": {
+          "current": {
+            "summary": "Yapılandırılan Model Sağlayıcının güncel bir Çıkarım Doğrulama Kaydı bulunuyor.",
+            "nextAction": "Herhangi bir işlem gerekmiyor. Sağlayıcı iddiaları değiştiğinde güncel Çıkarım Doğrulama Kaydını inceleyin."
+          },
+          "deferred_missing": {
+            "summary": "Şifrelenmiş ve Doğrulanabilir Çıkarım, yapılandırılan Model Sağlayıcı için şu anda doğrulanmış değil.",
+            "nextAction": "Dağıtım Hazırlığını tamamlanmış saymadan önce desteklenen bir Model Sağlayıcı yapılandırın ve Çıkarım Doğrulamasını çalıştırın."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Veri Yaşam Döngüsü İncelemesi",
+        "status": {
+          "needs_review": {
+            "summary": "Veri Yaşam Döngüsü İncelemesi, Yönetici incelemesi gerektiriyor.",
+            "nextAction": "Aktif Depolama Yaşam Döngüsü durumunu inceleyin ve Veri Yaşam Döngüsü İncelemesini kaydedin."
+          },
+          "stale": {
+            "summary": "Kaydedilen Veri Yaşam Döngüsü İncelemesi, desteklenen bir yaşam döngüsü değişikliğinden sonra güncelliğini yitirdi.",
+            "nextAction": "Güncel Aktif Depolama Yaşam Döngüsü durumunu inceleyin ve yeni bir Veri Yaşam Döngüsü İncelemesi kaydedin."
+          },
+          "reviewed": {
+            "summary": "Veri Yaşam Döngüsü İncelemesi tamamlandı.",
+            "nextAction": "Desteklenen yaşam döngüsü durumu değişmediği sürece herhangi bir işlem gerekmiyor."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Dağıtım Yüzeyi Onayları",
+        "status": {
+          "acknowledged": {
+            "summary": "Desteklenmeyen Dağıtım Yüzeyi kategorileri onaylandı.",
+            "nextAction": "Herhangi bir işlem gerekmiyor."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Desteklenmeyen Dağıtım Yüzeyi kategorilerinin Operatör tarafından onaylanması gerekiyor.",
+            "nextAction": "Listelenen Dağıtım Yüzeyi kategorilerini inceleyin ve Dağıtım Hazırlığını tamamlanmış saymadan önce her birini onaylayın."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Yedekleme ve Geri Yükleme Tatbikatı",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Güncel bir Operatör Yedekleme ve Geri Yükleme Tatbikatı kaydı gerekiyor.",
+            "nextAction": "Bu Dağıtım için bir Yedekleme ve Geri Yükleme Tatbikatı gerçekleştirin ve kaydedin."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Yeniden Başlatma Gerekli",
+        "status": {
+          "current": {
+            "summary": "Servis başlatıldığından beri yeniden başlatma gerektiren herhangi bir Dağıtım Ayarı değişmedi.",
+            "nextAction": "Herhangi bir işlem gerekmiyor."
+          },
+          "restart_required": {
+            "summary": "Yeniden başlatma gerektiren Dağıtım Ayarları servis başlatıldıktan sonra değiştirildi. ({{changedSettings}})",
+            "nextAction": "İlgili servisleri güncel saymadan önce istenen Dağıtım Ayarlarını uygulayın ve etkilenen servisleri yeniden başlatın."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage Çalışma Zamanı Yapılandırması",
+        "status": {
+          "not_generated": {
+            "summary": "Sage çalışma zamanı ortamı henüz Dağıtım Ayarlarından oluşturulmadı.",
+            "nextAction": "Dağıtım Ayarlarını Sage için uygulanmış saymadan önce Sage çalışma zamanı ortamını dışa aktarın."
+          },
+          "matches_desired": {
+            "summary": "Çalışan Sage çalışma zamanı yapılandırması istenen Dağıtım Ayarları ile eşleşiyor.",
+            "nextAction": "Herhangi bir işlem gerekmiyor."
+          },
+          "drifted": {
+            "summary": "Çalışan Sage çalışma zamanı yapılandırması istenen Dağıtım Ayarlarından farklı.",
+            "nextAction": "Sage çalışma zamanı yapılandırması sapmasını inceleyin, oluşturulan Sage ortamını uygulayın ve Sage'i yeniden başlatın."
+          },
+          "current": {
+            "summary": "Sage çalışma zamanı ortamı mevcut Dağıtım Ayarlarından oluşturuldu.",
+            "nextAction": "Oluşturulan yapıt Dağıtıma uygulanmadığı sürece herhangi bir işlem gerekmiyor."
+          },
+          "stale": {
+            "summary": "Sage çalışma zamanı ortamı oluşturulduktan sonra Dağıtım Ayarları değiştirildi.",
+            "nextAction": "Yeni bir Sage çalışma zamanı ortamı dışa aktarın ve Dağıtım yeniden başlatma yoluyla uygulayın."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Çekirdek Arka Uç Çalışma Zamanı Yapılandırması",
+        "status": {
+          "not_generated": {
+            "summary": "Çekirdek arka uç çalışma zamanı ortamı henüz Dağıtım Ayarlarından oluşturulmadı.",
+            "nextAction": "Dağıtım Ayarlarını çekirdek arka uç için uygulanmış saymadan önce çekirdek arka uç çalışma zamanı ortamını dışa aktarın."
+          },
+          "matches_desired": {
+            "summary": "Çalışan çekirdek arka uç çalışma zamanı yapılandırması istenen Dağıtım Ayarları ile eşleşiyor.",
+            "nextAction": "Herhangi bir işlem gerekmiyor."
+          },
+          "drifted": {
+            "summary": "Çalışan çekirdek arka uç çalışma zamanı yapılandırması istenen Dağıtım Ayarlarından farklı.",
+            "nextAction": "core-backend çalışma zamanı yapılandırma sapmasını inceleyin, oluşturulan core-backend ortamını uygulayın ve core-backend'i yeniden başlatın."
+          },
+          "current": {
+            "summary": "Core-backend çalışma zamanı ortamı, mevcut Dağıtım Ayarlarından oluşturuldu.",
+            "nextAction": "Oluşturulan yapıt Dağıtıma uygulanmadığı sürece herhangi bir işlem gerekmez."
+          },
+          "stale": {
+            "summary": "Dağıtım Ayarları, core-backend çalışma zamanı ortamı oluşturulduktan sonra değiştirildi.",
+            "nextAction": "Güncel bir core-backend çalışma zamanı ortamı dışa aktarın ve Dağıtım yeniden başlatma yoluyla uygulayın."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Dağıtım Sihirbazı",
+      "step": "{{total}} içinden {{current}}. Adım"
+    },
+    "operationalReadiness": {
+      "title": "Operasyonel Hazırlık",
+      "description": "Normal operasyon öncesinde yedekleme, geri yükleme, izleme ve kurtarma tatbikatlarını gözden geçirin."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — yerel proxy için Tinfoil API anahtarınız.",
+      "apiKeyLabel": "Tinfoil API Anahtarı",
+      "ariaLabel": "Sage çalışma zamanı yapılandırma yardımı",
+      "exampleConfig": "Örnek yapılandırma",
+      "goToPage": "Sayfaya git",
+      "sageExtra": "LLM_API_KEY değerini {{tinfoilSignupUrl}} adresindeki Tinfoili anahtarınız olarak ayarlayın. Yığın bunu Sage ve yerel Tinfoil proxy'sine eşler.",
+      "sageHint": "Bu prototip, Agent Runtime trafiğini Sage ve Tinfoil üzerinden yönlendirir. LLM_API_KEY, standart Model Sağlayıcı anahtarıdır.",
+      "modelField": "TINFOIL_MODEL — Sage'in kullanması gereken Tinfoil model tanımlayıcısı (örneğin: glm-5-2).",
+      "overviewDesc": "Bu prototip, genel Agent Runtime olarak Sage'i ve Model Sağlayıcı taşıyıcısı olarak Tinfoil'i kullanır. Model Sağlayıcıyı LLM_* Dağıtım Ayarları aracılığıyla yapılandırın; yığın bunları Sage'in Tinfoil çalışma zamanına eşler.",
+      "overviewTitle": "Sage Çalışma Zamanı Genel Bakış",
+      "providerField": "LLM_PROVIDER — bu prototip için \"sage\" olarak ayarlanmalıdır."
+    },
+    "inferenceVerification": {
+      "current": "Güncel",
+      "missing": "Eksik",
+      "expired": "Süresi Dolmuş",
+      "failed": "Başarısız",
+      "success": "Başarılı",
+      "statusLoadFailed": "Çıkarım doğrulama durumu yüklenemedi",
+      "historyLoadFailed": "Çıkarım doğrulama geçmişi yüklenemedi",
+      "loadFailed": "Çıkarım doğrulama yüklenemedi",
+      "manualFailed": "Manuel doğrulama başarısız oldu",
+      "manualSucceeded": "Manuel doğrulama başarılı",
+      "detailLoadFailed": "Doğrulama detayı yüklenemedi",
+      "ariaLabel": "Çıkarım Doğrulaması",
+      "title": "Çıkarım Doğrulaması",
+      "summary": "Korumalı çıkarımın beklenen Model Sağlayıcı üzerinde çalıştığına dair yalnızca yöneticiye özel kanıt.",
+      "verifyNow": "Şimdi Doğrula",
+      "status": "Durum",
+      "checkedAt": "Kontrol Edildi",
+      "expiresAt": "Süresi Doluyor",
+      "expectedClaims": "Beklenen iddialar",
+      "expectedClaimsValue": "Beklenen iddialar: {{fingerprint}}",
+      "providerClaims": "Sağlayıcı İddiaları",
+      "provider": "Sağlayıcı",
+      "model": "Model",
+      "endpoint": "Uç Nokta",
+      "history": "Doğrulama Geçmişi",
+      "emptyHistory": "Henüz doğrulama kaydı bulunmuyor.",
+      "recordTitle": "Kayıt #{{id}}",
+      "inspectAttestation": "Doğrulamayı İncele",
+      "fullAttestation": "Tam Doğrulama Materyali"
+    },
+    "lifecycle": {
+      "notStarted": "Başlamadı",
+      "notConfigured": "Yapılandırılmadı",
+      "plaintextByOperatorChoice": "Operatör Seçimine Bağlı Düz Metin",
+      "allTombstones": "Tümü",
+      "allTombstonesLabel": "Tüm tombstonlar",
+      "incompleteTombstonesFilter": "Eksik",
+      "incompleteTombstonesLabel": "Eksik tombstonlar",
+      "completedTombstonesFilter": "Tamamlandı",
+      "completedTombstonesLabel": "Tamamlanmış tombstonlar",
+      "title": "Veri Yaşam Döngüsü Durumu",
+      "description": "Örnek verileri genelinde Operatör Tarafından Kontrol Edilen mevcut Gizlilik kapsamı.",
+      "scopeExcludes": "Hariç Tutulanlar: {{excludes}}",
+      "secureEraseStatus": "Güvenli Silme: {{status}}",
+      "readinessStatus": "Yaşam Döngüsü Hazırlığı: {{status}}",
+      "readinessNonBlocking": "v1 sürümünde Kullanıcı Konuşmaları, Yaşam Döngüsü Hazırlığı uyarılarından etkilenmez.",
+      "readinessStaleReason": "Neden: {{reason}}",
+      "contentEncryptionKey": "İçerik Şifreleme Anahtarı: {{status}}",
+      "artifactEncryptionPosture": "Nesne Şifreleme Durumu: {{status}}",
+      "artifactPostureLabel": "Nesne şifreleme durumu",
+      "artifactPostureRequired": "Gerekli",
+      "artifactPostureDisabled": "Devre Dışı",
+      "retentionSchedulerStatus": "Saklama Zamanlayıcısı: {{status}}",
+      "schedulerObservation": "Gözlem: {{status}}",
+      "schedulerEnabledClasses": "Zamanlayıcı etkin sınıflar: {{classes}}",
+      "schedulerLastRunStatus": "Son çalıştırma durumu: {{status}}",
+      "schedulerLastRun": "Son çalıştırma: {{actor}} tarafından {{trigger}}",
+      "previewRetention": "Saklama Önizleme",
+      "runScheduledRetention": "Zamanlanmış Çalıştırmayı Başlat",
+      "previewRetentionResult": "Önizleme: {{conversations}} konuşma, {{artifacts}} belge nesnesi, {{skipped}} atlanan sınıf.",
+      "scheduledRetentionResult": "Zamanlanmış çalıştırma: {{retries}} tombstone denemesi ile {{status}}.",
+      "scheduledRetentionStatus": "Zamanlanmış sınıflar: {{classes}}",
+      "auditCoverageStatus": "Denetim kapsamı: {{audited}} denetlendi, {{exceptions}} istisna, {{missing}} eksik.",
+      "owner": "Sahibi: {{owner}}",
+      "deletion": "Silme: {{status}}",
+      "retention": "Saklama: {{status}}",
+      "audit": "Denetim: {{status}}",
+      "confidentiality": "Gizlilik: {{status}}",
+      "incompleteTombstones": "Tamamlanmamış tombstone'lar: {{count}}",
+      "completedTombstones": "Tamamlanmış tombstone'lar: {{count}}",
+      "retentionEnabled": "Etkin",
+      "retentionWindow": "Pencere",
+      "retentionDays": "gün",
+      "scheduledEnforcement": "Zamanlanmış",
+      "saveRetentionPolicy": "Politikayı Kaydet",
+      "empty": "Yaşam döngüsü durumu mevcut değil.",
+      "retentionPolicySaveFailed": "Saklama politikası kaydedilemedi.",
+      "retentionPreviewFailed": "Saklama önizlemesi yapılamadı.",
+      "scheduledRetentionFailed": "Planlanmış saklama işlemi gerçekleştirilemedi.",
+      "artifactPostureFailed": "Artifact şifreleme durumu güncellenemedi.",
+      "unsupportedSurfacesTitle": "Desteklenmeyen Dağıtım Yüzeyleri",
+      "unsupportedSurfacesDescription": "Bu operasyonel izler burada gösterilmektedir ancak ürün yaşam döngüsü kontrolünün dışındadır.",
+      "unsupportedSurfaceAckFailed": "Onay güncellemesi yapılamadı.",
+      "acknowledgedSurface": "Onaylandı",
+      "acknowledgeSurface": "Onayla",
+      "tombstonesTitle": "Silme Kayıtları (Tombstones)",
+      "tombstonesDescription": "Silinen içeriği ifşa etmeden tamamlanmamış yaşam döngüsü silme işlemlerini tekrar deneyin.",
+      "tombstoneStatusFilter": "Kayıt durumu filtresi",
+      "tombstoneRetryFailed": "Yeniden deneme başarısız.",
+      "tombstonesFetchFailed": "Silme kayıtları yüklenemedi.",
+      "tombstoneClass": "Sınıf: {{className}}",
+      "tombstoneSource": "Kaynak: {{source}}",
+      "tombstoneRetries": "Yeniden denemeler: {{count}}",
+      "tombstoneUpdated": "Güncellendi: {{updated}}",
+      "retryTombstoneLabel": "{{id}} numaralı silme kaydını tekrar dene",
+      "retry": "Yeniden Dene",
+      "tombstonesEmpty": "Yeniden deneme bekleyen silme kaydı bulunmuyor."
+    },
+    "runtimeEnv": {
+      "unknown": "Bilinmiyor",
+      "title": "Çalışma Zamanı Yapılandırma Uyumu",
+      "description": "İstenen Dağıtım Ayarlarını, oluşturulan Sage ortamını ve gözlemlenebilir çalışma durumunu karşılaştırır.",
+      "desired": "İstenen",
+      "configuredKeys": "{{total}} anahtardan {{count}} tanesi yapılandırıldı",
+      "generated": "Oluşturulan",
+      "exportedAt": "Dışa aktarıldı: {{time}}",
+      "notExported": "Hiç Sage ortamı dışa aktarma kaydı bulunamadı",
+      "running": "Çalışıyor",
+      "runningUnknown": "Çalışma durumu henüz doğrudan incelenemiyor.",
+      "coreBackend": "Ana Backend",
+      "coreBackendHint": "Backend süreç ortamı uyumu",
+      "coreDesired": "Ana İstenen",
+      "coreConfiguredKeys": "Ana backend: {{total}} anahtardan {{count}} tanesi yapılandırıldı",
+      "coreGenerated": "Ana Oluşturulan",
+      "coreNotExported": "Hiçbir ana backend ortam dışa aktarımı kaydedilmedi",
+      "coreRunning": "Ana Çalışıyor",
+      "coreRunningUnknown": "Ana backend çalışma durumu henüz doğrudan incelenemiyor.",
+      "coreExportedTitle": "Ana-backend ortamı dışa aktarıldı",
+      "coreSensitiveArtifact": "core-backend.env dosyasını hassas bir dağıtım materyali olarak değerlendirin.",
+      "coreExportDoesNotApply": "Artefaktın dışa aktarılması, bir Operatör bunu uygulayıp core-backend'i yeniden başlatana kadar çalışan backend sürecini değiştirmez.",
+      "exportedTitle": "Sage ortamı dışa aktarıldı",
+      "sensitiveArtifact": "sage.env dosyasını hassas bir dağıtım materyali olarak değerlendirin.",
+      "exportDoesNotApply": "Artefaktın dışa aktarılması, bir Operatör bunu uygulayıp Sage'i yeniden başlatana kadar çalışan Sage sürecini değiştirmez."
+    },
+    "categorySettingsAria": "{{category}} Ayarları",
+    "exportCoreBackendRuntimeEnv": "core-backend ortamını dışa aktar",
+    "restartCurrent": "Yeniden başlatma gerekmiyor",
+    "restartCurrentDesc": "Servis başlangıcından bu yana Yeniden başlatma gerekmiyor Dağıtım Ayarları değişti.",
+    "saveError": "Kaydedilemedi",
+    "openHelpAria": "{{label}} için yardımı aç"
   },
   "upload": {
     "invalidFileType": "Geçersiz dosya türü. İzin verilen: {{extensions}}",
@@ -1123,7 +1934,8 @@
       "processing": "İşleniyor",
       "chunked": "Parçalandı",
       "complete": "Tamamlandı",
-      "failed": "Başarısız"
+      "failed": "Başarısız",
+      "completedWithErrors": "Hatalarla tamamlandı"
     },
     "chunks": "{{processed}}/{{total}} parça",
     "deleteDocument": "Belgeyi sil",
@@ -1172,7 +1984,21 @@
     "serverBusy": "Sunucu meşgul",
     "tryRefresh": "Tekrar dene",
     "uploadedSuccess": "Başarıyla yüklendi — işleme başlatıldı",
-    "uploadingStatus": "Sunucuya yükleniyor..."
+    "uploadingStatus": "Sunucuya yükleniyor...",
+    "uploadError": "Yükleme başarısız",
+    "documentDeletionError": "Belge silme hatası",
+    "navigationWarning": "Belgeniz hâlâ aktarılıyor. İşlem başladıktan sonra ayrılın, aksi takdirde yükleme kaydedilmeyebilir.",
+    "duplicateInBatch": "Bu grupta yinelenen belge adı",
+    "documentsSelected": "{{count}} belge",
+    "queueSummary": "{{valid}} hazır, {{rejected}} atlandı",
+    "skipped": "Atlandı",
+    "uploadedPartialSuccess": "{{count}} kuyruğa alındı, {{rejected}} atlandı",
+    "chooseFiles": "Dosyaları seç",
+    "chooseFolder": "Klasör seç",
+    "uploadDocuments": "Belgeleri yükle",
+    "replacingDocument": "{{filename}} değiştiriliyor",
+    "recentDocumentsShowing": "{{total}} belgeden {{shown}} tanesi gösteriliyor",
+    "showMore": "Daha fazla göster"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2040,11 @@
       "description": "SSL sertifikalarını ve HTTPS ayarlarını yapılandırın",
       "hint": "HTTPS üzerinden sunarken TLS ve proxy ayarlarını yapılandırın. Varsayılanlar yerel geliştirme için güvenlidir; HTTPS'yi yalnızca sertifikalar yüklendikten sonra etkinleştirin.",
       "label": "SSL ve Güvenlik"
+    },
+    "llm": {
+      "label": "Sage Agent Çalışma Zamanı",
+      "description": "Sage + Tinfoil çıkarımını yapılandırın",
+      "hint": "Bu prototip, Agent Runtime trafiğini Sage üzerinden yönlendirir ve Model Sağlayıcı iletimi için Tinfoil'i kullanır. Değişiklikler yeniden başlatma gerektirir."
     }
   },
   "promptSections": {
@@ -1240,6 +2071,12 @@
       "description": "Yapay zekanın yanıtlarını nasıl yapılandırdığı",
       "hint": "Madde işaretleri, başlıklar veya konuşma paragrafları kullanılıp kullanılmayacağı gibi biçimlendirme tercihlerini kontrol eder. Bu, yanıtların görsel olarak nasıl sunulacağını etkiler.",
       "placeholder": "Listeler için madde işaretleri, bölümler için başlıklar kullanın..."
+    },
+    "prompt_system": {
+      "label": "Sistem Komutu",
+      "description": "Yapay zeka için temel kimlik ve çalışma talimatları",
+      "hint": "Bunu asistan kimliği, misyonu ve ton, kurallar, araçlar veya belge bağlamından önce uygulanması gereken üst düzey sınırlar için kullanın. Değişiklikler yeni konuşmaları etkiler.",
+      "placeholder": "Siz Sage'siniz, bu örnek için özel bir asistansınız..."
     }
   },
   "parameters": {
@@ -1252,6 +2089,11 @@
       "label": "Bilgi Derinliği",
       "description": "Kaç belge bölümüne başvurulacağı",
       "hint": "Soruları yanıtlarken, yapay zeka yüklediğiniz belgeleri arar ve ilgili bölümleri çeker. Daha yüksek sayılar daha fazla bağlam sağlar ama daha yavaş yanıtlar. Daha düşük sayılar daha hızlıdır ama ilgili bilgileri kaçırabilir. Varsayılan: 5"
+    },
+    "max_tokens": {
+      "label": "Maksimum Token",
+      "description": "Her yapay zeka yanıtı için maksimum uzunluk",
+      "hint": "Bir yanıtın ne kadar uzun olabileceğini sınırlar. Düşük değerler yanıtları kısa tutar ve maliyeti düşürür; yüksek değerler daha uzun açıklamalara olanak tanır. Varsayılan: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2101,21 @@
       "label": "Web Araması",
       "description": "Yapay zekanın internette arama yapmasına izin ver",
       "hint": "Etkinleştirildiğinde, yapay zeka belgelerinizde olmayan güncel bilgiler için web'de arama yapabilir. Yanıtların yalnızca yüklediğiniz bilgi tabanından gelmesini istiyorsanız bunu devre dışı bırakın."
+    },
+    "knowledgeSource": {
+      "none": "Hiçbiri",
+      "selected": "Seçili varsayılan belgeler",
+      "all": "Tüm mevcut belgeler"
+    },
+    "knowledge_source_default": {
+      "label": "Bilgi Kaynakları",
+      "description": "Yüklenen hangi bilgi kaynaklarının Kullanıcı Konuşmalarında aktif olacağını seçin",
+      "hint": "Varsayılan olarak yüklü bilgi olmaması için \"none\", Varsayılan Olarak Aktif olarak işaretlenen belgeler için \"selected\" veya tüm mevcut belgeler için \"all\" kullanın."
+    },
+    "user_default_tool_ids": {
+      "label": "Kullanıcı Araç Setleri",
+      "description": "Kullanıcı Konuşmalarında varsayılan olarak aktif olan Araç Setleri",
+      "hint": "\"curated-resources\", \"knowledge-search\" ve \"web-search\" değerlerinden herhangi birini kullanan JSON dizisi. Bilgi Araması (Knowledge Search) ayrıca Bilgi Kaynakları tarafından da kontrol edilir."
     }
   },
   "colors": {
@@ -1437,6 +2294,51 @@
       "description": "Webhook geri çağrı temel URL'si",
       "hint": "Webhook geri çağrılarını oluşturmak için kullanılan temel URL. Örnek: https://api.example.com/webhooks. Varsayılan: http://localhost:8000.",
       "label": "Webhook URL'si"
+    },
+    "LLM_PROVIDER": {
+      "label": "Model Sağlayıcı",
+      "description": "Python tarafındaki Model Sağlayıcı etiketi",
+      "hint": "Bu prototip için \"sage\" kullanın. Bu dağıtım ayarı, Python tarafındaki teşhisleri ve doğrulama meta verilerini destekler."
+    },
+    "LLM_MODEL": {
+      "label": "Model Adı",
+      "description": "Model adı/tanımlayıcısı",
+      "hint": "Sage'in kullanması gereken Tinfoil model tanımlayıcısı (örneğin, \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API Uç Noktası",
+      "description": "Model Sağlayıcı API temel URL'si",
+      "hint": "Tinfoil proxy temel URL'si. Varsayılan: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API Anahtarı",
+      "description": "Tinfoil API anahtarı (gizli)",
+      "hint": "Mevcut Dağıtım Ayarlarını gizli tutmak için boş bırakın."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Sohbet Hız Sınırı",
+      "description": "Dakika başına sohbet istek sayısı",
+      "hint": "Sabit kullanıcı, yönetici, token veya istemci IP başına dakika başına maksimum /llm/chat istek sayısı. Yeniden başlatma gerektirir. Varsayılan: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Bilgi Getirme Sorgu Hız Sınırı",
+      "description": "Dakika başına bilgi getirme sorgu istek sayısı",
+      "hint": "Sabit kullanıcı, token veya istemci IP başına dakika başına maksimum /query istek sayısı. Yeniden başlat verme gerektirir. Varsayılan: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Yükleme Hız Sınırı",
+      "description": "Dakika başına belge yükleme istek sayısı",
+      "hint": "Sabit yönetici, token veya istemci IP başına dakika başına maksimum belge yükleme istek sayısı. Yeniden başlatma gerektirir. Varsayılan: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Vektör Arama Hız Sınırı",
+      "description": "Dakika başına vektör arama istek sayısı",
+      "hint": "Sabit kullanıcı, token veya istemci IP başına dakika başına maksimum vektör arama istek sayısı. Yeniden başlatma gerektirir. Varsayılan: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Yapılandırma Dışa Aktarma Hız Sınırı",
+      "description": "Saat başına dağıtım yapılandırma dışa aktarma sayısı",
+      "hint": "Yönetici oturumu veya istemci IP başına saat başına maksimum .env dışa aktarma sayısı. Yeniden başlatma gerektirir. Varsayılan: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2375,11 @@
       "title": "Bağlanmaya hazır"
     },
     "subtitle": "Birkaç adımda özel bilgi tabanınızı kurun.",
-    "title": "Enclave'a Hoş Geldiniz"
+    "title": "Enclave'a Hoş Geldiniz",
+    "keySafety": {
+      "title": "Örneğe özel bir Nostr anahtarı kullanın",
+      "body": "Kişisel Nostr anahtarınızı kullanmayın. İzlenme riskini azaltmak ve operasyonel erişimi ayrı tutmak için bu Örnek için özel bir yönetici anahtarı oluşturun veya seçin."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2387,8 @@
       "notConfigured": "Bu özellik yapılandırılmamış.",
       "rateLimited": "Çok fazla mesaj. Lütfen daha sonra tekrar deneyin.",
       "required": "Mesaj gerekli.",
-      "unavailable": "Ulaşım kullanılamıyor."
+      "unavailable": "Ulaşım kullanılamıyor.",
+      "formErrorLabel": "Reachout form hatası"
     },
     "form": {
       "messageLabel": "Mesaj",
@@ -1489,7 +2396,8 @@
       "send": "Gönder"
     },
     "status": {
-      "success": "Teşekkürler. Mesajınız gönderildi."
+      "success": "Teşekkürler. Mesajınız gönderildi.",
+      "successLabel": "Reachout başarılı"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2432,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Arka uç, kimlik doğrulamasını doğrularken bir hata döndürdü. Bu bir çıkış işlemi olarak kabul edilmez.",
       "unable_to_verify_admin_session_5f87b8": "Yönetici oturumu doğrulanamıyor",
       "verifying_admin_session_87c53b": "Yönetici oturumu doğrulanıyor..."
-    }
+    },
+    "loadingAssistant": "Yönetici asistanı yükleniyor"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2647,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Sihirli bir bağlantı jetonunu doğrulayın ve oturum bilgisini (çerez tabanlı oturum) alın.",
       "verify_magic_link_token_183cf5": "Sihirli Bağlantı Jetonunu Doğrula",
       "view_all_users_manage_approval_status_and_delete_03feec": "Tüm kullanıcıları görüntüleyin, onay durumunu yönetin ve kullanıcıları silin.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Örnek genel yapılandırma ayarlarını görüntüleyin ve güncelleyin."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Örnek genel yapılandırma ayarlarını görüntüleyin ve güncelleyin.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Yapılandırılmış Model Sağlayıcı yoluna olan bağlantıyı test eder."
+    },
+    "labels": {
+      "themePreference": "Tema tercihi",
+      "endpointGuidance": "Uç nokta kılavuzu",
+      "healthResponseOutput": "Sağlık yanıt çıktısı",
+      "jobs": "İşler",
+      "chunks": "Parçalar",
+      "rateLimitTestType": "Hız sınırı test türü",
+      "successfulRequests": "Başarılı istekler",
+      "successful": "Başarılı",
+      "blockedRequests": "Engellenen istekler"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Konuşma izi"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logosu"
+  },
+  "language": {
+    "english": "İngilizce",
+    "spanish": "İspanyolca",
+    "french": "Fransızca",
+    "german": "Almanca",
+    "portuguese": "Portekizce"
+  },
+  "home": {
+    "checkingInstanceStatus": "Örnek durumu kontrol ediliyor..."
+  },
+  "adminGuidedSetup": {
+    "title": "Örneğinizi kurun",
+    "subtitle": "Asistanınız temel bilgileri tek seferde toplayacaktır.",
+    "manual": "Bunun yerine manuel olarak yapılandırın",
+    "finish": "Bitir ve test etmeye başla",
+    "comingSoon": "Bu aşama yakında gelecek ve ayrı olarak inşa ediliyor.",
+    "steps": {
+      "initialize": {
+        "label": "Başlat",
+        "title": "Başlat",
+        "subtitle": "Ajanınızın doğru temelle başlaması için alanınızın temellerini belirleyelim."
+      },
+      "docs": {
+        "label": "Belgeleri Yükle",
+        "title": "Rehberinizi yükleyin",
+        "subtitle": "Ajanınızın yanıt vermek için kullandığı kaynak materyalleri ekleyin — kitaplar, kılavular ve referans belgeleri."
+      },
+      "resources": {
+        "label": "Küratörlü Kaynaklar",
+        "title": "Küratörlü kaynaklar",
+        "subtitle": "Ajanın insanları yönlendirebileceği güvenilir gerçek dünya kaynakları ekleyin — önemli kişiler, avukatlar, eğitim ve ruh sağlığı desteği."
+      },
+      "test": {
+        "label": "Kullanıcı Olarak Test Et",
+        "title": "Bir kullanıcı olarak test edin",
+        "subtitle": "Yakında — asistanı kullanıcı tiplerinizden biri olarak deneyin ve yanıtları değerlendirin."
+      },
+      "feedback": {
+        "label": "Geri Bildirim",
+        "title": "Geri bildirim döngüsü",
+        "subtitle": "Yakında — yanıt kalitesini inceleyin ve kurulumunuzu geliştirin."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test & Geri Bildirim",
+    "subtitle": "Bir Test Kullanıcı Oturumu başlatın, ardından şifrelenmiş beta günlüklerini ve kaydedilen konuşmalardan gelen geri bildirimleri inceleyin.",
+    "tabs": {
+      "test": "Kullanıcı Olarak Test Et",
+      "feedback": "Geri Bildirim"
+    },
+    "test": {
+      "pickPersona": "Test etmek için bir persona seçin",
+      "pickPersonaBody": "Kullanıcı tiplerinizden biri için bir test kullanıcısı oluşturun ve ardından onun adına sohbet edin. Oturum, Geri Bildirim altında değerlendirebileceğiniz şifrelenmiş bir deneme olarak kaydedilir.",
+      "userType": "Kullanıcı tipi",
+      "genericUser": "Genel kullanıcı (tip yok)",
+      "start": "Oturumu başlat",
+      "admin": "Yönetici",
+      "testUserId": "Test kullanıcısı",
+      "endSave": "Denemeyi bitir ve kaydet",
+      "previewNotice": "Önizleme modu — gerçek kimlik taklidi henüz entegre edilmedi, bu nedenle bu sohbet yönetici oturumunuz altında çalışır. Transkript inceleme için yine de kaydedilir.",
+      "chatEmpty": "Denemeyi başlatmak için bu kullanıcı olarak bir mesaj gönderin.",
+      "inputPlaceholder": "Bu kullanıcı olarak asistana mesaj gönderin...",
+      "saved": "Deneme kaydedildi (şifrelenmiş). Geri Bildirim altında inceleyin.",
+      "startError": "Test oturumu başlatılamadı",
+      "saveError": "Deneme kaydedilemedi",
+      "impersonationUnavailable": "Test kullanıcısı taklidi henüz kullanılamıyor",
+      "sessionTokenError": "Sentetik kullanıcı oturum jetonu oluşturulamadı",
+      "testingAs": "{{persona}} olarak test ediliyor",
+      "authFailed": "Sentetik Kullanıcı oturumunun yetkisi artık bulunmuyor.",
+      "discardUnsavedConfirm": "Kaydedilmemiş tamamlanmış turları atlamak istiyor musunuz?",
+      "workspaceAria": "Test Kullanıcı konuşma alanı"
+    },
+    "feedback": {
+      "trials": "Beta Günlükleri",
+      "untitled": "Başlıksız konuşma",
+      "turns": "tur",
+      "turn": "Tur",
+      "empty": "Henüz kaydedilmiş beta günlüğü yok. Bir Test Kullanıcı Oturumu çalıştırın veya kullanıcı konuşmalarını bekleyin.",
+      "selectPrompt": "Dökümü incelemek ve her turu değerlendirmek için bir beta günlüğü seçin.",
+      "noNip04": "Dökümleri şifresini çözmek için bir Nostr eklentisine (Alby, nos2x) bağlanın — dökümler admin anahtarınızla şifrelenmiştir.",
+      "sourceUser": "Kullanıcı Konuşması",
+      "sourceTest": "Test Kullanıcı Oturumu",
+      "thumbUp": "İyi cevap",
+      "thumbDown": "Geliştirilmesi gerekiyor",
+      "notePlaceholder": "İsteğe bağlı not (şifreli kaydedilir)…",
+      "exportNotDecrypted": "Dışa aktarmadan önce dökümü açın ve şifresini çözün.",
+      "exportFeedbackNotDecrypted": "Bazı geri bildirim yorumlarının şifresi çözülemedi. Dışa aktarmadan önce dökümü yeniden açın ve her şifre çözme isteğini onaylayın.",
+      "exportNeedsExtension": "Dışa aktarma işlemi bir Nostr eklentisi gerektirir. Dökümler bekleme durumunda şifrelidir ve şifreyi çözen eklentinizdir.",
+      "exportDecrypting": "Hâlâ şifre çözülüyor. Her istek onaylandığında dışa aktarma kullanılabilir hale gelecektir.",
+      "exportWhyDisabled": "Dışa aktarma neden devre dışı?",
+      "retryDecryption": "Şifre çözmeyi tekrar dene",
+      "decryptPendingTitle": "Nostr eklentinizi kontrol edin",
+      "decryptPendingBody": "Bu dökümün şifresini çözmek için izin istiyor. Kendi kendine açılmayabilir — görmüyorsanız eklenti simgesine tıklayın. Sadece bir kez sorması için seçiminizi hatırlama seçeneğini belirleyin.",
+      "decryptProgress": "{{total}} içinden {{done}} şifresi çözüldü.",
+      "loadTrialsError": "Denemeler yüklenemedi",
+      "loadTranscriptError": "Döküm yüklenemedi",
+      "saveError": "Geri bildirim kaydedilemedi",
+      "deleteError": "Oturum günlüğü silinemedi",
+      "exportError": "Oturum dışa aktarma işlemi başarısız oldu",
+      "transcriptIntegrityError": "Döküm kullanılamıyor veya eksik, bu nedenle dışa aktarılamıyor.",
+      "decryptTranscriptError": "Dökümün şifresi çözülemedi. Nostr eklentinizdeki şifre çözme isteğini onaylayın."
+    }
+  },
+  "adminResources": {
+    "title": "Kaynak Dizini",
+    "subtitle": "Bir konuşma kritikleştiğinde asistanın belirtebileceği, incelenmiş yönlendirme kaynaklarını manuel olarak yönetin. Son kullanıcılara yalnızca \"hazır\" kaynaklar gösterilir.",
+    "add": "Kaynak ekle",
+    "addTitle": "Kaynak ekle",
+    "editTitle": "Kaynağı düzenle",
+    "empty": "Henüz kaynak yok. İncelenmiş bir yönlendirme bulduğunuzda manuel olarak ekleyin.",
+    "verified": "doğrulandı",
+    "missing": "Yayına geçmek için eksik",
+    "name": "Ad",
+    "type": "Kaynak türü",
+    "languages": "Diller (virgülle ayrılmış ISO kodları)",
+    "description": "Açıklama",
+    "descriptionHint": "Asistanın bu kaynak hakkında kişiye ne söylemesi gerektiği.",
+    "scopeLevel": "Kapsam seviyesi",
+    "scopeCode": "Kapsam kodu",
+    "scopeCodeHint": "Ülke: ISO kodu (NI). Alt bölge/bölge: BM M49 kodu (013 = Orta Amerika). Küresel: boş bırakın.",
+    "helpTypes": "Yardım türleri",
+    "contact": "İletişim yöntemleri",
+    "vettedBy": "Doğrulayan",
+    "sourceNote": "Kaynak notu",
+    "markVerified": "Doğrulanmış olarak işaretle (ilk sırada yer alır)",
+    "archive": "Arşivle (son kullanıcılardan gizle)",
+    "deleteTitle": "Kaynağı sil?",
+    "deleteBody": "Bu işlem {{name}} için dizin kaydını kaldırır",
+    "coverage": "Kapsam",
+    "coverageHint": "Bir kapsam seviyesi seçin, ardından adını veya kodunu arayın.",
+    "coverageCodePlaceholder": "Ad veya kod ile ara…",
+    "coverageLevelFirst": "Önce bir kapsam seviyesi seçin",
+    "coverageClear": "Kapsam kodunu temizle",
+    "regionDirectoryUnavailable": "Bölge dizini kullanılamıyor. Kodu manuel olarak girin.",
+    "level": {
+      "country": "Ülke",
+      "subregion": "Alt bölge",
+      "region": "Bölge",
+      "global": "Küresel"
+    },
+    "addPointer": "İşaretçi ekle",
+    "addRegion": "Bölge ekle",
+    "displayOrder": "Görüntüleme sırası",
+    "displayOrderHint": "Düşük sayılar, alaka düzeyi ve doğrulamadan sonra ilk sırada görünür.",
+    "kind": "Tür",
+    "noSearchResults": "Bu aramaya uygun kaynak bulunamadı.",
+    "order": "Sıralama",
+    "pointerLabel": "İşaretçi {{number}} etiketi",
+    "pointerType": "İşaretçi {{number}} türü",
+    "pointerValue": "Pointer {{number}} değeri",
+    "pointers": "Pointerlar",
+    "regionNumber": "Bölge {{number}}",
+    "regions": "Bölgeler",
+    "removePointer": "Pointerı kaldır",
+    "removeRegion": "Bölgeyi kaldır",
+    "search": "Kaynakları ara",
+    "searchPlaceholder": "İsim, tür, etiket, pointer veya açıklama",
+    "tags": "Etiketler (virgülle ayrılmış)",
+    "namePlaceholder": "örneğin: Orta Amerika İnsan Hakları Konseyi",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, eğitim, yerel",
+    "loadError": "Kaynaklar yüklenemedi",
+    "loadDirectoryError": "Dizin yüklenemedi",
+    "saveError": "Kaynak kaydedilemedi",
+    "deleteError": "Kaynak silinemedi"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Yönetici Paneline Dön",
+    "eyebrow": "Yönetici işlemleri",
+    "title": "Kullanıcı Yöneticisi",
+    "subtitle": "Kullanıcıları inceleyin, durumlarını anlayın ve erişimi tek bir basit panelden onaylayın.",
+    "unlockDetails": "Detayları görüntüle",
+    "refreshRoster": "Listeyi yenile",
+    "exportVisible": "Görünen listeyi dışa aktar",
+    "prepareVisible": "Görünen listeyi hazırla",
+    "downloadPrepared": "Hazırlanan listeyi indir",
+    "exportPrepared": "Tüm görünür liste hazırlandı. İndirme işlemi artık etkin.",
+    "rosterTitle": "Kullanıcı listesi",
+    "rosterShown": "Toplam {{total}} içinden {{shown}} gösteriliyor.",
+    "tableLabel": "Kullanıcı listesi",
+    "tableRowsLabel": "Kullanıcı listesi satırları",
+    "loadingLabel": "Kullanıcı listesi yükleniyor",
+    "loadingUsers": "Kullanıcılar yükleniyor...",
+    "loadRetry": "Kullanıcı listesi yüklenemedi. Tekrar denemek için Listeyi yenile özelliğini kullanın.",
+    "emptyNoUsers": "Henüz kullanıcı yok. Yeni kimliği doğrulanmış kullanıcılar burada görünecektir.",
+    "emptyFiltered": "Bu filtrelere uygun kullanıcı bulunamadı.",
+    "noUserType": "Kullanıcı Türü Yok",
+    "unknown": "Bilinmiyor",
+    "userFallback": "Kullanıcı #{{id}}",
+    "approvalSuccess": "{{name}} onaylandı.",
+    "exportSuccess": "Kullanıcı listesi e-tablosu indirildi.",
+    "metrics": {
+      "total": "Toplam kullanıcı",
+      "totalDetail": "listede",
+      "pendingApproval": "Onay bekliyor",
+      "pendingDetail": "{{count}} bekliyor",
+      "approved": "Onaylandı",
+      "approvedDetail": "sohbete girebilir",
+      "incompleteProfiles": "Eksik profiller",
+      "incompleteDetail": "zorunlu yanıtlar gerekiyor"
+    },
+    "callouts": {
+      "loadFailed": "Kullanıcı listesi yükleme başarısız oldu",
+      "approvalUpdated": "Kullanıcı onayı güncellendi",
+      "approvalFailed": "Kullanıcı onay güncellemesi başarısız oldu",
+      "exportReady": "Kullanıcı listesi dışa aktarımı hazır",
+      "exportFailed": "Kullanıcı listesi dışa aktarımı başarısız oldu"
+    },
+    "filters": {
+      "search": "Kullanıcıları ara",
+      "searchPlaceholder": "İsim, e-posta, genel anahtar veya #ID",
+      "approvalStatus": "Onay durumu",
+      "allApprovalStates": "Tüm onay durumları",
+      "pendingApproval": "Onay bekliyor",
+      "approved": "Onaylandı",
+      "allUserTypes": "Tüm Kullanıcı Türleri"
+    },
+    "columns": {
+      "user": "Kullanıcı",
+      "approval": "Onay",
+      "userType": "Kullanıcı Türü",
+      "userProfile": "Kullanıcı Profili",
+      "joined": "Katılım Tarihi",
+      "action": "İşlem"
+    },
+    "status": {
+      "approved": "Onaylandı",
+      "pending": "Bekliyor"
+    },
+    "actions": {
+      "approve": "Onayla",
+      "approveUser": "{{name}} kullanıcısını onayla",
+      "viewUserDetails": "{{name}} detaylarını görüntüle"
+    },
+    "profile": {
+      "noQuestions": "Soru yok",
+      "noQuestionsDetail": "Geçerli katılım sorusu bulunmuyor.",
+      "needsProfile": "Profil gerekiyor",
+      "missingRequiredOne": "1 zorunlu cevap eksik",
+      "missingRequiredMany": "{{count}} zorunlu cevap eksik",
+      "noProfileYet": "Henüz profil yok",
+      "noAnswersSaved": "Hiç cevap kaydedilmedi.",
+      "ready": "Profil hazır",
+      "answersSavedOne": "1 cevap kaydedildi",
+      "answersSavedMany": "{{count}} cevap kaydedildi"
+    },
+    "identity": {
+      "decrypting": "İsim ve e-posta çözümleniyor...",
+      "failed": "Şifrelenmiş ayrıntıların kilidi açılamadı.",
+      "unavailable": "Şifrelenmiş ayrıntılar için bir tarayıcı imzalayıcısı gerekiyor.",
+      "locked": "Şifrelenmiş ayrıntılar kilitli."
+    },
+    "errors": {
+      "loadUsers": "Kullanıcılar yüklenemedi.",
+      "loadUserTypes": "Kullanıcı türleri yüklenemedi.",
+      "loadQuestions": "Katılım soruları yüklenemedi.",
+      "approvalUpdate": "Kullanıcı onayı güncellenemedi.",
+      "decryptUnavailable": "Bu listeyi hazırlamak için NIP-04 şifre çözme özelliğine sahip bir tarayıcı eklentisi gereklidir.",
+      "decryptRoster": "Şifrelenmiş bir liste değeri çözülemedi. Hiçbir e-tablo oluşturulmadı.",
+      "prepareRequired": "İndirmeden önce mevcut görünür listeyi hazırlayın.",
+      "exportAudit": "Kullanıcı listesi dışa aktarımı denetlenemedi.",
+      "exportRoster": "Kullanıcı listesi dışa aktarılamadı."
+    },
+    "detail": {
+      "booleanYes": "Evet",
+      "booleanNo": "Hayır",
+      "fieldUnlocked": "Şifrelenmiş yanıt bu tarayıcıda çözüldü.",
+      "decryptingField": "Yanıt çözülüyor...",
+      "encryptedFieldUnavailable": "Şifrelenmiş yanıt için bir tarayıcı imzalayıcısı gerekiyor.",
+      "encryptedFieldFailed": "Şifrelenmiş yanıtın kilidi açılamadı.",
+      "encryptedFieldLocked": "Şifrelenmiş yanıt kilitli.",
+      "notAnswered": "Yanıtlanmadı",
+      "requiredMissing": "Gerekli yanıt eksik.",
+      "backToUserManager": "Kullanıcı Yöneticisine Dön",
+      "backToRoster": "Kullanıcı listesine dön",
+      "eyebrow": "Kullanıcı ayrıntıları",
+      "notFoundTitle": "Kullanıcı bulunamadı",
+      "notFoundBody": "Bu kullanıcı mevcut yönetici listesinde bulunmuyor.",
+      "subtitle": "Bu kullanıcının durumunu, profil yanıtlarını ve erişim ayrıntılarını inceleyin.",
+      "approvalStatus": "Onay durumu",
+      "waitingApproval": "onay bekleniyor",
+      "identityTitle": "Kimlik",
+      "name": "Ad",
+      "nameUnavailable": "Mevcut değil",
+      "email": "E-posta",
+      "emailUnavailable": "Kullanılamıyor",
+      "userId": "Kullanıcı Kimliği",
+      "publicKey": "Açık anahtar",
+      "noPublicKey": "Açık anahtar yok",
+      "fieldsTitle": "Profil alanları",
+      "fieldsShown_one": "Bu kullanıcı için {{count}} alan geçerli.",
+      "fieldsShown_other": "Bu kullanıcı için {{count}} alan geçerli.",
+      "noFields": "Bu kullanıcı için geçerli herhangi bir katılım alanı bulunmuyor.",
+      "required": "Zorunlu",
+      "optional": "İsteğe bağlı",
+      "encrypted": "Şifrelenmiş",
+      "plain": "Düz metin",
+      "chatContext": "Sohbet bağlamı"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Şifre çözülüyor: {{total}} üzerinden {{done}}",
+    "checkExtension": "Nostr eklentinizi kontrol edin",
+    "persistentApproval": "Sadece bir kez sorulması için hatırla veya her zaman seçeneğini belirleyin."
   }
 }

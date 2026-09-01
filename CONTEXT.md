@@ -4,6 +4,18 @@ The Enclave Free prototype is the candidate next version of Enclave Free, distin
 
 ## Language
 
+**Advertised Locale**:
+A language choice the product presents to an **Admin** or **User** as supported for an **Instance**.
+_Avoid_: available language, translation file
+
+**Locale Structural Completeness**:
+The posture where an **Advertised Locale** can resolve every static product message with the required interpolation and plural forms without silently falling back to English.
+_Avoid_: i18n completeness, finished translation
+
+**Linguistic Review**:
+Native- or expert-speaker review of an **Advertised Locale** for meaning, fluency, tone, terminology, and cultural fit after **Locale Structural Completeness** is established.
+_Avoid_: locale parity, translation gate
+
 **Enclave Free**:
 The product for private, operator-controlled AI assistance over curated organizational knowledge.
 _Avoid_: original app, legacy app
@@ -555,6 +567,9 @@ _Avoid_: scoped config context, config dump, manual context switch
 - The first **Deployment Wizard** slice should guide readiness review and point to existing edit surfaces before it becomes a full inline editor
 - The first experience-readiness polish milestone should prioritize **Admin** confidence in initiating, configuring, verifying, and reviewing an **Instance** before broad visual polish of **User Conversations**
 - The first i18n polish milestone should mean extraction, fallback correctness, interpolation safety, layout resilience, and terminology consistency before human-quality translation review across every locale
+- Every **Advertised Locale** should reach **Locale Structural Completeness** before the product claims support for it
+- Machine-assisted translation may establish **Locale Structural Completeness** when provenance is recorded and automated checks preserve interpolation and plural behavior
+- **Linguistic Review** remains required for human-quality translation claims but does not block structural locale delivery
 - Default language, theme, and branding should first be **Instance Settings** controlled by the **Admin**; per-user preferences are a later user preference model, not a first milestone browser-storage feature
 - Diagnostic dashboards should remain available for development and verification, but they should not be the primary first impression or product path for **Admins** or **Users**
 - **Deployment Automation** belongs to the **Deployment**, not to the **Admin**
