@@ -71,7 +71,8 @@ the Sage submodule.
   tests passed.
 - Full frontend suite after removing the Sage-only tests: 80 files / 481 tests
   passed, plus 1 file / 6 reset-script tests passed in the isolated harness.
-- TypeScript and the production frontend build passed.
+- TypeScript, the host production frontend build, and the exact frontend-only
+  Docker production build passed without a Sage checkout or build context.
 - The exact Enclave Control Plane security-regression selection passed 144
   tests under Python 3.11.
 - The no-Sage-dependency audit found no Sage submodule diff, Sage localization
