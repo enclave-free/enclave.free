@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.20 - 2026-08-31
+
+- Completed Locale Structural Completeness for all 31 Advertised Locales across platform-owned static product copy, including placeholders and locale-required plural forms.
+- Localized magic-link email and Deployment Readiness copy, kept explicit User language choice authoritative, and synchronized document language and Arabic RTL direction.
+- Added CI enforcement for locale registration, missing keys, placeholder and plural drift, dynamic translation families, and unapproved raw user-facing copy.
+
 ## 0.4.19 - 2026-08-24
 
 - Made Test & Feedback and User Roster copied exports fail closed until browser-held ciphertext is completely decrypted, with serialized NIP-04 approvals, persistent-approval guidance, snapshot invalidation, and audit-before-download.
