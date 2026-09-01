@@ -233,6 +233,54 @@ describe('localization contract validator', () => {
     ]);
   });
 
+  it('does not resolve through parameter or destructuring shadows', () => {
+    expect(
+      inspectStaticCopy({
+        'components/shared/ShadowedVariableFixture.tsx': `
+          const caption = 'Wrong outer caption';
+          const detail = 'Wrong outer detail';
+          function ParameterFixture(caption: string) {
+            return <h1>{caption}</h1>;
+          }
+          function DestructuredFixture({ detail }: Props) {
+            return <p>{detail}</p>;
+          }
+        `,
+      })
+    ).toEqual([]);
+  });
+
+  it('keeps catch and loop bindings inside their lexical scopes', () => {
+    expect(
+      inspectStaticCopy({
+        'components/shared/BlockScopeFixture.tsx': `
+          const message = 'Visible after catch';
+          const label = 'Visible after loop';
+          function BlockScopeFixture(items: string[]) {
+            try {
+              runTask();
+            } catch (message) {
+              return <p>{message}</p>;
+            }
+            for (const label of items) console.log(label);
+            return <>{message}{label}</>;
+          }
+        `,
+      })
+    ).toEqual([
+      {
+        file: 'components/shared/BlockScopeFixture.tsx',
+        kind: 'text',
+        text: 'Visible after catch',
+      },
+      {
+        file: 'components/shared/BlockScopeFixture.tsx',
+        kind: 'text',
+        text: 'Visible after loop',
+      },
+    ]);
+  });
+
   it('reports static copy in rendered attribute expressions and state object values', () => {
     const report = inspectStaticCopy({
       'components/shared/AttributeFlowFixture.tsx': `

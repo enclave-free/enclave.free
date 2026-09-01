@@ -122,10 +122,60 @@ export function inspectStaticCopy(
       if (!staticCopyExempt(violation, exemptions)) violations.push(violation);
     };
 
-    const valueBindings = new Map<string, ts.VariableDeclaration[]>();
+    interface ValueBinding {
+      node: ts.Node;
+      initializer?: ts.Expression;
+    }
+
+    const valueBindings = new Map<string, ValueBinding[]>();
 
     const bindingScope = (node: ts.Node): ts.Node => {
-      let current = node.parent;
+      let owner = node;
+      while (
+        owner.parent &&
+        !ts.isVariableDeclaration(owner) &&
+        !ts.isParameter(owner) &&
+        !ts.isFunctionDeclaration(owner) &&
+        !ts.isClassDeclaration(owner)
+      ) {
+        owner = owner.parent;
+      }
+
+      if (ts.isParameter(owner) && ts.isFunctionLike(owner.parent)) {
+        return owner.parent;
+      }
+      if (ts.isVariableDeclaration(owner) && ts.isCatchClause(owner.parent)) {
+        return owner.parent.block;
+      }
+      if (
+        ts.isVariableDeclaration(owner) &&
+        ts.isVariableDeclarationList(owner.parent)
+      ) {
+        const declarationList = owner.parent;
+        const container = declarationList.parent;
+        if (
+          (declarationList.flags & ts.NodeFlags.BlockScoped) !== 0 &&
+          (ts.isForStatement(container) ||
+            ts.isForInStatement(container) ||
+            ts.isForOfStatement(container))
+        ) {
+          return container;
+        }
+        if ((declarationList.flags & ts.NodeFlags.BlockScoped) === 0) {
+          let functionScope: ts.Node | undefined = container;
+          while (functionScope) {
+            if (
+              ts.isSourceFile(functionScope) ||
+              ts.isFunctionLike(functionScope)
+            ) {
+              return functionScope;
+            }
+            functionScope = functionScope.parent;
+          }
+        }
+      }
+
+      let current = owner.parent;
       while (current) {
         if (
           ts.isSourceFile(current) ||
@@ -139,35 +189,40 @@ export function inspectStaticCopy(
       return sourceFile;
     };
 
-    const scopeContains = (scope: ts.Node, node: ts.Node): boolean => {
+    const scopeDistance = (scope: ts.Node, node: ts.Node): number => {
+      let distance = 0;
       let current: ts.Node | undefined = node;
       while (current) {
-        if (current === scope) return true;
+        if (current === scope) return distance;
         current = current.parent;
+        distance += 1;
       }
-      return false;
+      return Number.POSITIVE_INFINITY;
     };
 
     const resolveValueBinding = (
       identifier: ts.Identifier
-    ): ts.VariableDeclaration | undefined =>
+    ): ValueBinding | undefined =>
       (valueBindings.get(identifier.text) ?? [])
         .filter(
-          (declaration) =>
-            declaration.initializer &&
-            declaration.getStart(sourceFile) <
+          (binding) =>
+            binding.node.getStart(sourceFile) <
               identifier.getStart(sourceFile) &&
-            scopeContains(bindingScope(declaration), identifier)
+            Number.isFinite(
+              scopeDistance(bindingScope(binding.node), identifier)
+            )
         )
         .sort(
           (left, right) =>
-            right.getStart(sourceFile) - left.getStart(sourceFile)
+            scopeDistance(bindingScope(left.node), identifier) -
+              scopeDistance(bindingScope(right.node), identifier) ||
+            right.node.getStart(sourceFile) - left.node.getStart(sourceFile)
         )[0];
 
     const inspectExpression = (
       expression: ts.Expression,
       kind: StaticCopyKind = 'text',
-      resolving = new Set<ts.VariableDeclaration>()
+      resolving = new Set<ts.Node>()
     ): void => {
       if (
         ts.isCallExpression(expression) &&
@@ -180,9 +235,9 @@ export function inspectStaticCopy(
       }
       if (ts.isIdentifier(expression)) {
         const binding = resolveValueBinding(expression);
-        if (!binding?.initializer || resolving.has(binding)) return;
+        if (!binding?.initializer || resolving.has(binding.node)) return;
         const nextResolving = new Set(resolving);
-        nextResolving.add(binding);
+        nextResolving.add(binding.node);
         inspectExpression(binding.initializer, kind, nextResolving);
         return;
       }
@@ -308,14 +363,38 @@ export function inspectStaticCopy(
     };
 
     const collectBindings = (node: ts.Node): void => {
-      if (
-        ts.isVariableDeclaration(node) &&
-        ts.isIdentifier(node.name) &&
-        node.initializer
+      const registerBinding = (
+        name: ts.BindingName,
+        bindingNode: ts.Node,
+        initializer?: ts.Expression
+      ): void => {
+        if (ts.isIdentifier(name)) {
+          const bindings = valueBindings.get(name.text) ?? [];
+          bindings.push({ node: bindingNode, initializer });
+          valueBindings.set(name.text, bindings);
+          return;
+        }
+        for (const element of name.elements) {
+          if (!ts.isBindingElement(element)) continue;
+          registerBinding(element.name, element, element.initializer);
+        }
+      };
+
+      if (ts.isVariableDeclaration(node)) {
+        registerBinding(node.name, node, node.initializer);
+      } else if (ts.isParameter(node)) {
+        registerBinding(node.name, node, node.initializer);
+      } else if (ts.isCatchClause(node) && node.variableDeclaration) {
+        registerBinding(
+          node.variableDeclaration.name,
+          node.variableDeclaration,
+          node.variableDeclaration.initializer
+        );
+      } else if (
+        (ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) &&
+        node.name
       ) {
-        const bindings = valueBindings.get(node.name.text) ?? [];
-        bindings.push(node);
-        valueBindings.set(node.name.text, bindings);
+        registerBinding(node.name, node);
       }
       if (
         ts.isVariableDeclaration(node) &&

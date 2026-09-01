@@ -89,7 +89,7 @@ Systematically finish Jim's localization work end to end so every language the p
 - The magic-link renderer supports all 31 advertised locale codes, uses exact placeholder validation, separates plain RFC subjects from escaped HTML, and isolates RTL URL/identity fragments. Frontend locale propagation remains intentionally sequenced after #661.
 - Sage PR #54 adds keyed Activity descriptors while preserving English compatibility fields and stable safe machine identifiers; provider-controlled unsafe display data and trace IDs are redacted before stream, snapshot, persistence, and export boundaries.
 - Final Sage review additionally gates timing title keys on canonical fallback equality, so custom compatibility titles remain visible and unkeyed instead of being replaced by localized static copy.
-- Post-review verification covered all 493 frontend test definitions across the full and isolated harness runs, including 36 localization tests and 6 reset-script tests; TypeScript and the direct Vite production build passed. The exact GitHub backend security selection passed 144 tests in Python 3.11.
+- Post-review verification covered all 495 frontend test definitions across the full and isolated harness runs, including lexical-shadowing regressions, 38 localization tests, and 6 reset-script tests; TypeScript, the direct Vite production build, and the exact frontend Docker build passed. The exact GitHub backend security selection passed 144 tests in Python 3.11.
 
 ## Open questions
 
