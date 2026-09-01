@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AdminInstanceConfig } from './AdminInstanceConfig'
 import { adminFetch } from '../utils/adminApi'
 import { DEFAULT_INSTANCE_CONFIG } from '../types/instance'
+import { advertisedLocaleCodes } from '../i18n/localeCatalog'
 
 vi.mock('../utils/adminApi', () => ({
   adminFetch: vi.fn(),
@@ -165,6 +166,26 @@ describe('AdminInstanceConfig', () => {
       defaultLanguage: 'es',
       defaultTheme: 'dark',
     }))
+  })
+
+  it('offers every Advertised Locale as an Instance default in mission order', () => {
+    render(
+      <MemoryRouter initialEntries={['/admin/instance']}>
+        <Routes>
+          <Route path="/admin/instance" element={<AdminInstanceConfig />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    const languageSelect = screen.getByRole('combobox', {
+      name: 'Default language',
+    })
+    const optionValues = Array.from(
+      languageSelect.querySelectorAll('option'),
+      (option) => option.value
+    )
+
+    expect(optionValues).toEqual(advertisedLocaleCodes)
   })
 
   it('does not clear the public email display name when initial settings fail to load', async () => {

@@ -9,8 +9,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Globe, X } from 'lucide-react';
 import { Badge, SelectField } from '../ui';
+import { localizedCoverageLevels } from '../../i18n/dynamicTranslationFamilies';
 
-export type CoverageLevel = '' | 'country' | 'subregion' | 'region' | 'global';
+export type CoverageLevel =
+  | ''
+  | (typeof localizedCoverageLevels)[number]
+  | 'global';
 
 /** Coverage taxonomy returned by GET /admin/regions. */
 export interface RegionData {

@@ -22,7 +22,8 @@
       "title": "Hva beskriver deg best?",
       "description": "Velg alternativet som passer best til dine behov",
       "loadError": "Kunne ikke laste brukertyper. Prov igjen.",
-      "selectionLabel": "Valg av brukertype"
+      "selectionLabel": "Valg av brukertype",
+      "errorLabel": "Feil ved lasting av brukertype"
     },
     "language": {
       "selectLabel": "Velg et sprak",
@@ -65,7 +66,8 @@
       "encryptionBody": "Profilfelt er kryptert som standard, men denne instansens administrator kontrollerer innstillinger på feltnivå og kan tillate at utvalgte data lagres eller deles på en annen måte.",
       "adminControlNotice": "Datahåndtering konfigureres av denne instansens administrator, inkludert hva som kan lagres ukryptert eller deles med AI-verktøy.",
       "noWarrantyNotice": "Enclave-programvare leveres som den er, uten garanti. Bruk av denne instansen er underlagt administratorens retningslinjer.",
-      "retentionNotice": "Retningslinjer for datalagring og sletting er satt av denne instansens administrator. Kontakt dem for forespørsler om tilgang, korrigering eller sletting."
+      "retentionNotice": "Retningslinjer for datalagring og sletting er satt av denne instansens administrator. Kontakt dem for forespørsler om tilgang, korrigering eller sletting.",
+      "errorLabel": "Feil ved forespørsel om Magic link"
     },
     "verify": {
       "verifying": "Verifiserer lenken din...",
@@ -125,20 +127,28 @@
       "databaseName": "Informasjonsbase",
       "knowledgeGraph": "Søk i kunnskapsgrafen",
       "config": "Konfigurasjon",
-      "configName": "Konfigurasjon"
+      "configName": "Konfigurasjon",
+      "knowledgeSearch": "Søk i opplastede dokumenter og kunnskapsbiter",
+      "knowledgeSearchName": "Kunnskap",
+      "curatedResources": "Finn admin-godkjente henvisningsressurser og pålitelige organisasjoner",
+      "curatedResourcesName": "Ressurser"
     },
     "documentScope": {
       "title": "Kunnskapsbaser",
       "description": "Velg kilder som skal inkluderes i konteksten",
       "noSources": "Ingen kilder tilgjengelig",
       "clearAll": "Fjern alle",
-      "docsLabel": "Dokumenter"
+      "docsLabel": "Dokumenter",
+      "clearAllSelectedAria": "Tøm alle valgte dokumenter",
+      "docsLabelWithCount": "Dokumenter {{count}}"
     },
     "messages": {
       "searching": "Søker etter \"{{term}}\"...",
       "searchingPrefix": "Søker",
       "searchResults": "Jeg søkte etter \"{{term}}\" for deg:",
-      "newConversation": "Ny samtale"
+      "newConversation": "Ny samtale",
+      "copy": "Kopier melding",
+      "copied": "Melding kopiert"
     },
     "code": {
       "copy": "Kopier",
@@ -157,7 +167,87 @@
       "roleUser": "Deg",
       "roleAssistant": "Assistent",
       "footer": "Eksportert fra {{instanceName}}",
-      "exportedOn": "Eksportert {{timestamp}}"
+      "exportedOn": "Eksportert {{timestamp}}",
+      "copiedExportNotice": "Denne eksporten forlater aktiv produktlagring og er utenfor Active Storage Lifecycle etter nedlasting."
+    },
+    "new": "Ny chat",
+    "listTitle": "Chatter",
+    "contextTitle": "Kontekst",
+    "messageActions": "Meldingshandlinger",
+    "actions": {
+      "stop": "Stopp svar",
+      "stopDisabled": "Det er ingen svar som kan stoppes.",
+      "regenerate": "Generer svar på nytt",
+      "edit": "Rediger melding",
+      "waitForResponse": "Vent til det nåværende svaret er ferdig.",
+      "startConversation": "Start eller gjenoppta en samtale først.",
+      "resolveConfirmation": "Løs den ventende endringskonfirmasjonen før du endrer historikken."
+    },
+    "composerContextAria": "Kontekst for skriver",
+    "sessions": {
+      "ariaLabel": "Chat-sesjoner",
+      "current": "Nåværende chat",
+      "empty": "Tom",
+      "messageCount_one": "{{count}} melding",
+      "messageCount_other": "{{count}} meldinger",
+      "deleteConfirmTitle": "Slette \"{{title}}\"?",
+      "rename": "Gi nytt navn til {{title}}",
+      "delete": "Slett {{title}}",
+      "resumeInvalid": "Kunne ikke laste den samtalen.",
+      "renameEmpty": "Tittel på samtalen er påkrevd.",
+      "renameError": "Kunne ikke gi samtalen nytt navn.",
+      "deleteError": "Kunne ikke slette samtalen.",
+      "loading": "Laster chatter...",
+      "error": "Kunne ikke laste chatter",
+      "saved": "Lagret chat",
+      "deleteConfirmBody": "Dette fjerner den lagrede samtalen og dens sesjonshukommelse.",
+      "deleteCancel": "Avbryt sletting av samtale",
+      "cancel": "Avbryt",
+      "deleteConfirm": "Slett samtale",
+      "deleteDeleting": "Sletter...",
+      "renameInput": "Tittel på samtale",
+      "renameCancel": "Avbryt endring av samtalenavn",
+      "renameSave": "Lagre samtaletittel",
+      "renameSaving": "Gir nytt navn...",
+      "open": "Åpne chat-sesjoner",
+      "close": "Lukk chat-sesjoner"
+    },
+    "currentChatAria": "Nåværende chat",
+    "newFromCurrent": "Start en ny chat",
+    "documentsContextTitle": "Dokumenter",
+    "errors": {
+      "requestLabel": "Feil i chat-forespørsel"
+    },
+    "trace": {
+      "finalizing": "Ferdigstiller svar...",
+      "collapse": "Skjul",
+      "expand": "Utvid",
+      "reasoning": "Resonnering",
+      "thinking": "Tenker",
+      "transcript": "{{label}} transkripsjon",
+      "reasoningSummaryAria": "Sammendrag av resonnering",
+      "reasoningTranscriptAria": "Transkripsjon av resonnering",
+      "label": "Spor",
+      "toolCalls": "Verktøykall",
+      "retrieval": "Henting",
+      "input": "Inndata",
+      "output": "Utdata",
+      "retrievedSource": "Hentet kilde",
+      "score": "score {{score}}",
+      "optionalDetailsAria": "valgfrie detaljer for {{label}}"
+    },
+    "conversationMessagesAria": "Samtalemeldinger",
+    "conversationSurfaceAria": "Samtalefelt",
+    "conversationThreadAria": "Samtaletråd",
+    "activity": {
+      "label": "Aktivitet",
+      "summaryAria": "Aktivitetssammendrag",
+      "detailsAria": "Aktivitetsdetaljer",
+      "timelineAria": "Aktivitetstidslinje",
+      "show": "Vis aktivitet",
+      "hide": "Skjul aktivitet",
+      "showOptional": "Vis valgfrie detaljer",
+      "hideOptional": "Skjul valgfrie detaljer"
     }
   },
   "common": {
@@ -197,7 +287,17 @@
     "retry": "Prøv igjen",
     "saved": "Lagret",
     "sending": "Sender...",
-    "gotIt": "Forstått"
+    "gotIt": "Forstått",
+    "send": "Send",
+    "backToAdminDashboard": "Tilbake til admin-dashbord",
+    "loadingPage": "Laster side",
+    "pageLoadError": "Kunne ikke laste siden. Vennligst oppdater.",
+    "export": "Eksporter",
+    "reset": "Nullstill",
+    "exit": "Avslutt",
+    "none": "Ingen",
+    "all": "Alle",
+    "warning": "Advarsel"
   },
   "settings": {
     "title": "Innstillinger",
@@ -220,8 +320,23 @@
       "deploymentConfig": "Distribusjonskonfigurasjon",
       "deploymentConfigDesc": "Tjenester, SMTP, lagring",
       "userConfig": "Brukerkonfigurasjon",
-      "userConfigDesc": "Brukertyper og onboarding-spørsmål"
-    }
+      "userConfigDesc": "Brukertyper og onboarding-spørsmål",
+      "guidedSetup": "Veiledet oppsett",
+      "guidedSetupDesc": "Gjennomgang av oppsett, dokumenter, ressurser og testing.",
+      "guides": "Admin-guider",
+      "guidesDesc": "Forstå hva administratorer konfigurerer og hvor.",
+      "testUserSession": "Test av brukersesjon",
+      "testUserSessionDesc": "Chat som en simulert bruker og gå gjennom beta-tilbakemeldinger.",
+      "diagnostics": "Diagnostikk",
+      "diagnosticsDesc": "Kjør sjekker for å undersøke problemer.",
+      "resourceDirectory": "Ressurskatalog",
+      "resourceDirectoryDesc": "Kurater pålitelige referanseressurser manuelt."
+    },
+    "diagnostics": "Diagnostikk",
+    "adminWorkflows": "Admin-arbeidsflyter",
+    "settingsSection": "Innstillinger",
+    "dataAndContent": "Data og innhold",
+    "operations": "Operasjoner"
   },
   "admin": {
     "confirmDelete": "Er du sikker på at du vil slette denne oppføringen?",
@@ -264,7 +379,12 @@
       "optionsCount_one": "{{count}} alternativ",
       "optionsCount_other": "{{count}} alternativer",
       "userSectionDesc": "Konfigurer brukertyper og spørsmålene brukere svarer på under introduksjon.",
-      "userSectionTitle": "Brukerkonfigurasjon"
+      "userSectionTitle": "Brukerkonfigurasjon",
+      "fieldScopeFilterLabel": "Filtrer spørsmål etter brukertype",
+      "noFieldsForScope": "Ingen spørsmål gjelder for denne brukertypen ennå.",
+      "reorderNeedsAllScope": "Vis alle spørsmål for å endre rekkefølgen",
+      "fieldScopeGlobalHint": "Spørsmål som alle brukere svarer på, uavhengig av type.",
+      "fieldScopeTypeHint": "Alt denne brukertypen blir spurt om: de globale spørsmålene alle svarer på, pluss sine egne."
     },
     "database": {
       "backToSetup": "Tilbake til adminoppsett",
@@ -349,7 +469,14 @@
       "nip07Unavailable": "Ingen Nostr-utvidelse oppdaget",
       "plaintextFieldIcon": "Klartekstfelt",
       "primaryKeyIcon": "Primærnøkkel",
-      "unlockDecryption": "Lås opp dekryptering"
+      "unlockDecryption": "Lås opp dekryptering",
+      "safeQueryResults": "Sikre spørringsresultater",
+      "queryError": "Spørrefeil",
+      "writeResult": "Skriveresultat for database",
+      "emptyQueryResult": "Tomt spørringsresultat",
+      "readOnly": "Skrivebeskyttet",
+      "tableLoadError": "Feil ved lasting av tabell",
+      "readOnlyHint": "Direkte databaseendringer er deaktivert; bruk reviderte admin-flyter for å gjøre endringer."
     },
     "fields": {
       "nameRequired": "Feltnavn er påkrevd",
@@ -439,7 +566,11 @@
       "removeFieldFailed": "Kunne ikke fjerne felt",
       "reorderFailed": "Kunne ikke omorganisere felt",
       "loadUsersFailed": "Kunne ikke laste brukere",
-      "updateTypeFailed": "Klarte ikke å oppdatere brukertype"
+      "updateTypeFailed": "Klarte ikke å oppdatere brukertype",
+      "loadSettingsFailed": "Kunne ikke laste inn innstillinger",
+      "externalConfigConflict": "Sage eller en annen admin endret disse innstillingene mens du redigerte. Last inn siden på nytt før du lagrer, slik at du ikke overskriver de nyeste verdiene.",
+      "externalSettingsConflict": "Sage eller en annen admin endret disse innstillingene mens du redifgerte. Last inn siden på nytt før du lagrer.",
+      "externalUserConfigConflict": "Sage eller en annen admin endret brukertyper eller oppsettspørsmål mens du redigerte. Last inn siden på nytt før du lagrer utkastet ditt."
     },
     "userMigration": {
       "title": "Migrering av brukertype",
@@ -474,7 +605,10 @@
       "emailEncryptedHint": "E-post (kryptert)",
       "nameEncryptedHint": "Navn (kryptert)",
       "noUsersHint": "Prøv å endre filteret ovenfor eller oppdatere.",
-      "pubkeyPresent": "Nostr pubkey tilstede"
+      "pubkeyPresent": "Nostr pubkey tilstede",
+      "usersErrorLabel": "Feil ved migrering av brukertyper",
+      "errorLabel": "Feil ved migrering av brukertyper",
+      "summaryLabel": "Sammendrag av migrering av brukertyper"
     },
     "configAssistant": {
       "openAria": "Åpne adminassistent",
@@ -512,8 +646,40 @@
         "restartRequiredFor": "Omstart kreves for: {{keys}}.",
         "restartRequiredNo": "Omstart kreves: nei.",
         "restartCheckFailedHttp": "Sjekk for omstartskrav feilet (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Sjekk for omstartskrav feilet (nettverksfeil)."
-      }
+        "restartCheckFailedNetwork": "Sjekk for omstartskrav feilet (nettverksfeil).",
+        "pageRefreshRecommended": "Oppdater denne siden for å se temaendringer."
+      },
+      "onboardingWelcome": "Velkommen — la oss sette opp plassen din. Svar på så mange du vil i én melding (nummerer dem, og hopp over det du er usikker på):\n\n1. **Navn** — hva skal vi kalle denne plassen? (vises i header og nettleserfane)\n2. **Beskrivelse** — én setning om hva den er til for (en privat notat, vises ikke for brukere)\n3. **Assistentnavn** — hva skal AI-hjelperen hete?\n4. **Aksentfarge** — fremhevingfarge for knapper og lenker (et navn som blå/turkis, eller en hex som #3B82F6)\n5. **Tema** — lyst, mørkt eller system (match enheten)?\n6. **Standardspråk** — f.eks. engelsk eller spansk (valgfritt)\n7. **Slagord** — en kort linje for headeren (valgfritt)\n8. **Nye brukere** — slipp dem inn med en gang, eller godkjenn hver person?\n9. **Brukertyper** — hvilke typer ikke-administratorer skal bruke denne? (f.eks. Lærer og Student) — Jeg vil opprette hver av dem for deg.\n\nEksempel: \"9. Lærer og Student\". Jeg lagrer alt i ett trinn — og du kan bytte til manuell oppsett når som helst.",
+      "collapseSidebar": "Skjul assistent-sidefelt",
+      "expandSidebar": "Åpne sidefelt for administratorassistent",
+      "resize": "Endre størrelse på kontrollpanel for administratorassistent",
+      "railLabel": "Assistent",
+      "shareSecretsHint": "Av. som standard. Aktiver konfigurasjonsverktøyet først. Når det er aktivert, vil konfigurasjonsverdier for hemmeligheter bli synlige på klientsiden og sendt til Sage for denne prototypen.",
+      "applyIntentUsePanel": "Bruk panelet for kommende endringer nedenfor og klikk på 'Bruk' for å bekrefte disse konfigurasjonsoppdateringene.",
+      "applyIntentNoPending": "Det er ingen kommende konfigurasjonsendringer som skal brukes. Be assistenten om å foreslå et endringssett først.",
+      "startNewConversation": "Start ny samtale med assistenten",
+      "reducedContextNoticeLabel": "Varsel om redusert kontekst",
+      "sessionMemoryNoticeLabel": "Varsel om komprimering av sesjonshukommelse",
+      "sessionMemoryNotice": "Eldre kontekst ble oppsummert for å holde samtalen i gang.",
+      "reducedContextNotice": "Noe kontekst ble redusert for å passe budsjettet til modellleverandøren ({{sections}}). Svarene kan være mindre fullstendige frem til du starter en ny samtale med assistenten.",
+      "reducedContextSections": {
+        "recentConversation": "nylig samtalshistorikk"
+      },
+      "approvalCardTitle": "Godkjenn konfigurasjonsendringer",
+      "applying": "Bruker",
+      "applied": "Brukt",
+      "rejected": "Avvist",
+      "failed": "Mislykket",
+      "superseded": "Erstattet",
+      "hideDetails": "Skjul detaljer",
+      "reviewDetails": "Se detaljer",
+      "reject": "Avvis",
+      "approve": "Godkjenn",
+      "applyErrorLabel": "Feil ved bruk av konfigurasjon",
+      "onboardingTitle": "Veiledet oppsett-chat",
+      "onboardingContext": "Fokusert oppsett-samtale",
+      "directShareSecretsHint": "Valgfritt: inkluder lagrede verdier for distribusjonshemmeligheter i denne samtalens kontekst. Direkte lesing av hemmeligheter krever ikke dette.",
+      "directWritePrompt": "Spør om admin-konfigurasjon. Sage kan inspisere innstillinger og, etter å ha bekreftet med deg i samtalen, bruke støttede endringer direkte."
     },
     "reachout": {
       "badgeDefault": "Standard",
@@ -680,7 +846,16 @@
       "typographyTitle": "Typografi",
       "userIconLabel": "Brukerikon",
       "userLabelLabel": "Brukeretikett",
-      "userLabelPlaceholder": "f.eks. Du"
+      "userLabelPlaceholder": "f.eks. Du",
+      "publicEmailDisplayNameLabel": "Offentlig visningsnavn for e-post (valgfritt)",
+      "publicEmailDisplayNameHint": "Brukes i e-poster med magic-link-innlogging. La det stå tomt for å bruke navnet på instansen.",
+      "defaultsTitle": "Standardinnstillinger for instans",
+      "defaultsDesc": "Angi grunnleggende språk og tema som brukes før lokale nettleserinnstillinger trer i kraft.",
+      "defaultLanguageLabel": "Standardspråk",
+      "defaultThemeLabel": "Standardtema",
+      "themeSystem": "System",
+      "themeLight": "Lyst",
+      "themeDark": "Mørkt"
     },
     "userConfig": {
       "subtitle": "Konfigurer brukertyper og spørsmålene brukere svarer på under introduksjon.",
@@ -688,6 +863,55 @@
       "typeDescription": "Beskrivelse",
       "typeIcon": "Typeikon",
       "typeName": "Typenavn"
+    },
+    "userApproval": {
+      "updateFailed": "Kunne ikke oppdatere brukergodkjenning.",
+      "approvedUser": "Bruker #{{id}} godkjent.",
+      "revokedUser": "Bruker #{{id}} flyttet tilbake til ventende.",
+      "title": "Godkjenning av brukere",
+      "subtitle": "Velg om nye autentiserte brukere kan gå rett inn i chatten eller må vente på godkjenning fra Admin.",
+      "requireManualLabel": "Krev manuell godkjenning for nye brukere",
+      "requireManualHint": "Når dette er aktivert, havner nye brukere på en skjerm for ventende godkjenning frem til en Admin har godkjent dem.",
+      "loadingHint": "Laster...",
+      "saveButton": "Lagre godkjenning av brukere",
+      "savedCalloutLabel": "Brukkergodkjenning lagret",
+      "errorCalloutLabel": "Feil ved brukergodkjenning",
+      "pendingTitle": "Ventende godkjenninger",
+      "pendingCount_zero": "{{count}} brukere trenger godkjenning før de får chat-tilgang.",
+      "pendingCount_one": "{{count}} bruker trenger godkjenning før hen får chat-tilgang.",
+      "pendingCount_two": "{{count}} brukere trenger godkjenning før de får chat-tilgang.",
+      "pendingCount_few": "{{count}} brukere trenger godkjenning før de får chat-tilgang.",
+      "pendingCount_many": "{{count}} brukere trenger godkjenning før de får chat-tilgang.",
+      "pendingCount_other": "{{count}} brukere trenger godkjenning før de får chat-tilgang.",
+      "nonePending": "Ingen brukere venter på godkjenning.",
+      "actionSavedCalloutLabel": "Brukergodkjenning oppdatert",
+      "actionErrorCalloutLabel": "Oppdatering av brukergodkjenning mislyktes",
+      "loadingUsers": "Laster brukere...",
+      "emptyState": "Nye brukere som venter på godkventning vil vises her når manuell godkjenning er påkrevd.",
+      "emailOnFile": "E-post registrert",
+      "nameOnFile": "Navn registrert",
+      "approveButton": "Godkjenn",
+      "revokeButton": "Trekk tilbake"
+    },
+    "userRosterExport": {
+      "auditFailed": "Eksport av brukerliste kunne ikke revideres. Regnearket ble ikke lastet ned.",
+      "decryptUnavailable": "En nettleserutvidelse med NIP-04-dekryptering er nødvendig for å klargjøre denne listen.",
+      "decryptFailed": "En kryptert listeverdi kunne ikke dekrypteres. Ingen regneark ble opprettet.",
+      "prepared": "Den fullstendige listen er klar. Nedlasting er nå aktivert.",
+      "prepareRequired": "Klargjør gjeldende liste før nedlasting.",
+      "prepareButton": "Klargjør brukerliste",
+      "downloadButton": "Last ned ferdigstilt liste",
+      "success": "Regneark med brukerliste er lastet ned.",
+      "failed": "Kunne ikke eksportere brukerliste.",
+      "button": "Eksporter brukere",
+      "successLabel": "Brukerlisteeksport er klar",
+      "errorLabel": "Brukerlisteeksport mislyktes"
+    },
+    "userIdentity": {
+      "decrypting": "Dekrypterer navn/e-post...",
+      "decryptFailed": "Kunne ikke dekryptere navn/e-post",
+      "unlockDetails": "Lås opp for å vise navn/e-post",
+      "unlockButton": "Lås opp detaljer"
     }
   },
   "adminOnboarding": {
@@ -712,7 +936,9 @@
     "legalResponsibilityNotice": "Du er ansvarlig for lovlig konfigurasjon, brukerinformasjon og retningslinjer for datahåndtering for denne instansen.",
     "extracted": {
       "change_language_789b14": "Endre språk"
-    }
+    },
+    "statusError": "Kunne ikke sjekke instansstatus",
+    "connectionError": "Kunne ikke koble til"
   },
   "errors": {
     "requestFailed": "Forespørsel mislyktes",
@@ -746,11 +972,228 @@
     "adminSessionExpired": "Administratorøkt utløpt",
     "authenticationFailed": "Autentisering mislyktes",
     "noNostrExtension": "Ingen Nostr-utvidelse funnet",
-    "exportFailed": "Eksport mislyktes"
+    "exportFailed": "Eksport mislyktes",
+    "failedToRetryDeletionTombstone": "Kunne ikke prøve på nytt sletting av tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Kunne ikke bekrefte ustøttet distribusjonsflate",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Kunne ikke bekrefte ustøttet kategori for distribusjonsflate",
+    "failedToPreviewRetention": "Kunne ikke forhåndsvise oppbevaringspolicy",
+    "failedToUpdateRetentionPolicy": "Kunne ikke oppdatere oppbevaringspolicy",
+    "failedToRunScheduledRetention": "Kunne ikke kjøre planlagt oppbevaring",
+    "failedToUpdateArtifactEncryptionPosture": "Kunne ikke oppdatere krypteringsstatus for artefakter",
+    "queryExecutionFailed": "Spørringseksekvering mislyktes"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Administratorer kan"
+    },
+    "summary": {
+      "brand": {
+        "title": "Merk instansen",
+        "body": "Navn, logo, tema, assistentens identitet og visning av offentlig e-post."
+      },
+      "people": {
+        "title": "Kontroller brukere",
+        "body": "User types, onboarding-spørsmål, godkjenninger, migrering og tilgang."
+      },
+      "agent": {
+        "title": "Form Sage",
+        "body": "Prompt-regler, responshåndtering, dokumenttilgang og standardinnstillinger for verktøy."
+      },
+      "launch": {
+        "title": "Lansering på en trygg måte",
+        "body": "E-post, domener, CORS, HTTPS, modell-ruting, helsetilstand og kjøretidsmiljø."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Merkevare",
+        "title": "Identitet og utseende",
+        "body": "Gjør instansen til din egen organisasjon.",
+        "detail1": "Navn, slagord, assistentnavn og brukeretikett.",
+        "detail2": "Logo, favicon, ikon, aksentfarge, tema, typografi og chat-stil.",
+        "detail3": "Standard språk og offentlig visningsnavn for e-post.",
+        "link": "Åpne instansinnstillinger"
+      },
+      "people": {
+        "eyebrow": "Tilgang",
+        "title": "Personer og tilgang",
+        "body": "Bestem hvem som bruker instansen og hva du spør dem om.",
+        "detail1": "Brukertyper for grupper som ansatte, medlemmer eller klienter.",
+        "detail2": "Onboarding-felt, obligatoriske spørsmål, alternativer, plassholdere og felt per type.",
+        "detail3": "Manuell godkjenning, brukermigrasjon, tilbakekalling av tilgang og sletting.",
+        "link": "Åpne brukerinnstillinger"
+      },
+      "agent": {
+        "eyebrow": "Atferd",
+        "title": "Agentens atferd",
+        "body": "Form hvordan Sage svarer og hvilke verktøy som er på som standard.",
+        "detail1": "Prompt-mal, atferdsregler, forbudte emner og svarinnstillinger.",
+        "detail2": "Standardinnstillinger for verktøy innen Knowledge, Resources, Web, Config og Database.",
+        "detail3": "Globale innstillinger pluss overstyringer per brukertype.",
+        "link": "Åpne agentinnstillinger"
+      },
+      "docs": {
+        "eyebrow": "Kunnskap",
+        "title": "Dokumentkunnskap",
+        "body": "Gi agenten kildemateriale den kan søke i.",
+        "detail1": "Last opp PDF-er, retningslinjer, FAQ-er, håndbøker og guider.",
+        "detail2": "Dokumenter deles opp, vektoriseres og gjøres søkbare.",
+        "detail3": "Dokumenttilgang kontrollerer hva som kan velges eller være aktivt som standard.",
+        "link": "Åpne dokumentopplasting"
+      },
+      "resources": {
+        "eyebrow": "Referanser",
+        "title": "Verifiserte ressurser",
+        "body": "Legg til pålitelige henvisninger som agenten kan anbefale.",
+        "detail1": "Navn, beskrivelser, ressurstype, språk, dekning og hjelpetyper.",
+        "detail2": "Telefon, e-post, URL, sikker kanal, adresse og notater.",
+        "detail3": "Verifiserte ressurser rangeres øverst. Arkiverte ressurser forblir skjult for brukere.",
+        "link": "Åpne ressurskatalog"
+      },
+      "ops": {
+        "eyebrow": "Drift",
+        "title": "Drift og kjøretid",
+        "body": "Hold instansen tilkoblet, tilgjengelig og sunn.",
+        "detail1": "SMTP for magiske e-postlenker, domener, CORS, HTTPS og offentlige URL-er.",
+        "detail2": "Modellleverandør, embedding-modell, søk, lagring og tjenestestatus.",
+        "detail3": "Eksport av kjøretidsmiljø, klarhet, utdaterte innstillinger og migrering av admin-nøkkel.",
+        "link": "Åpne distribusjonsinnstillinger"
+      },
+      "title": "Hva administratorer konfigurerer",
+      "body": "Dette er de viktigste kontrollflatene. Du kan bruke sidene direkte eller be Admin Assistant om å forberede endringer."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Spør",
+        "title": "Administrasjonsassistent",
+        "body": "Still spørsmål om nåværende oppsett og be om konfigurasjonsendringer.",
+        "detail1": "Konfigurasjonslesing undersøker den faktiske tilstanden til instansen i stedet for å gjette.",
+        "detail2": "Foreslåtte endringer klargjøres for gjennomgang.",
+        "detail3": "Apply kjører de godkjente admin-endepunktene uten en ny modellrunde.",
+        "link": "Åpne Admin Assistant",
+        "directWriteDetail2": "Sage ber om bekreftelse via chat før en støttet skriveoperasjon.",
+        "directWriteDetail3": "Etter at du har bekreftet, kaller Sage sine direkte konfigurasjonsverktøy og rapporterer det faktiske resultatet."
+      },
+      "guided": {
+        "eyebrow": "Start",
+        "title": "Veiledet oppsett",
+        "body": "Bruk en veiledet chat for å lage en nyttig første konfigurasjon.",
+        "detail1": "Identitet, assistent, språk, tilgangspolicy, brukertyper, spørsmål og atferdsregler.",
+        "detail2": "Deretter laster du opp dokumenter, legger til ressurser og tester.",
+        "link": "Åpne veiledet oppsett"
+      },
+      "test": {
+        "eyebrow": "Valider",
+        "title": "Testing og tilbakemelding",
+        "body": "Prøv agenten fra et brukerperspektiv før lansering.",
+        "detail1": "Velg en brukertype, start en testsesjon og lagre prøven.",
+        "detail2": "Gå gjennom krypterte beta-logger og vurder svar.",
+        "link": "Åpne tests brukerøkt"
+      },
+      "database": {
+        "eyebrow": "Inspiser",
+        "title": "Databaseutforsker",
+        "body": "Inspiser lagrede SQLite-data ved feilsøking.",
+        "detail1": "Bruk skrivebeskyttede SELECT-spørringer for inspeksjon.",
+        "detail2": "Ikke bruk den som en vei for endring av produktdata.",
+        "link": "Åpne Databaseutforsker"
+      },
+      "title": "Vanlige admin-arbeidsflyter",
+      "body": "Bruk disse når du setter opp, kontrollerer kvalitet eller undersøker data."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Kjøretid",
+        "title": "Én samtale-kjøretid",
+        "body": "Knowledge, Resources, Web, Config og Database er synlige verktøysett, ikke separate chat-systemer.",
+        "detail1": "Modellen kan kalle aktiverte verktøy når de er til hjelp.",
+        "detail2": "Config og Database vises kun for servervaliderte administratorer."
+      },
+      "auth": {
+        "eyebrow": "Logg inn",
+        "title": "Ulike påloggingsveier",
+        "body": "Administratorer bruker NIP-07. Brukere bruker magiske e-postlenker.",
+        "detail1": "Admins private nøkler forblir i nettleserens signeringsverktøy.",
+        "detail2": "SMTP må fungere før brukerens magiske lenker fungerer i produksjon."
+      },
+      "data": {
+        "eyebrow": "Personvern",
+        "title": "Datagrenser er viktige",
+        "body": "Krypterte profilfelt holdes utenfor chat-konteksten.",
+        "detail1": "Kun ukrypterte felt kan merkes for AI-chat-kontekst.",
+        "detail2": "Distribusjonshemmeligheter lagres kryptert og vises maskert som standard."
+      },
+      "ops": {
+        "eyebrow": "Drift",
+        "title": "Enkelte endringer krever operatører",
+        "body": "Appen kan lagre ønskede innstillinger for kjøretid; den starter ikke tjenester på nytt i det stille.",
+        "detail1": "Eksporter runtime env etter endringer i provider, origin, CORS eller søk.",
+        "detail2": "Bruk readiness og tjenestestatus for å bekrefte hva som faktisk kjører."
+      },
+      "title": "Viktige produktfakta å huske",
+      "body": "Disse reglene sikrer en ærlig oppsett og forhindrer utilsiktet overforbruk."
+    },
+    "ask": {
+      "prompt1": "Hva mangler fortsatt før denne instansen er klar for brukere?",
+      "prompt2": "Gå gjennom gjeldende brukertyper, onboarding-spørsmål, dokumentasjon og ressurser.",
+      "prompt3": "Forbered endringer for gjennomgang: angi assistentens tone og standardspråk.",
+      "title": "Gode ting å spørre Admin Assistant om",
+      "body": "Be om en gjennomgang før du ber om endringer. Den kan inspisere oppsettet og forberede et endringssett.",
+      "directWriteBody": "Be Sage om å inspisere eller endre støttet konfigurasjon. Den vil bekrefte den tiltenkte endringen med deg før den skriver.",
+      "directWritePrompt3": "Angi assistentens tone og standardspråk, og be meg bekrefte den tiltenkte endringen først."
+    },
+    "hero": {
+      "eyebrow": "Kart over administrativ kontroll",
+      "shortVersion": {
+        "title": "Kort versjon",
+        "body": "Administratorer setter identitet, brukere, kunnskap, verktøy og oppstartsinnstillinger. Enkelte endringer i kjøretid krever fortsatt en omstart av operatøren."
+      }
+    },
+    "title": "Admin-guider",
+    "subtitle": "Et enkelt kart over hva administratorer konfigurerer, hva produktet kan gjøre, og hva som krever tilsyn før lansering.",
+    "quickStart": {
+      "title": "Start her",
+      "body": "Gjør det lille, nyttige oppsettet først. Poler det etter testing med ekte spørsmål."
+    },
+    "safety": {
+      "title": "Grunnleggende sikkerhet",
+      "body": "Administratorer kontrollerer tilgang, data, oppførsel og kjøretidsinnstillinger. Gå sakte frem med risikable endringer.",
+      "items": {
+        "0": "Administratorer logger inn med NIP-07. Brukere logger inn med magiske e-postlenker.",
+        "1": "Brukerfelt er kryptert som standard. Kun tekstfelt kan deles med chat.",
+        "2": "Hemmeligheter forblir maskerte med mindre du deler dem for den nåværende admin-sesjonen.",
+        "3": "Assistentendringer er forslag. Du må fortsatt gjennomgå og klikke på Bruk.",
+        "4": "Deployment Settings lagrer ønskede verdier for kjøretid. Operatører må fortsatt eksportere env og starte tjenester på nytt ved behov."
+      },
+      "directItems": {
+        "0": "Administratorer logger inn med NIP-0t. Brukere logger inn med magiske e-postlenker.",
+        "1": "Brukerfelt er kryptert som standard. Kun tekstfelt kan deles med chat.",
+        "2": "Hemmeligheter forblir maskerte med mindre du deler dem for den nåværende admin-sesjonen.",
+        "3": "Sage bekrefter konfigurasjonsendringer med deg i chat, og bruker deretter støttede endringer direkte.",
+        "4": "Deployment Settings lagrer ønskede verdier for kjøretid. Operatører må fortsatt eksportere env og starte tjenester på nytt ved behov."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Logg inn som admin",
+        "body": "Bruk admin NIP-07-nøkkelen. Hold den privat."
+      },
+      "1": {
+        "title": "Angi det grunnleggende",
+        "body": "Gi instansen et navn, velg utseende, og angi assistentens identitet."
+      },
+      "2": {
+        "title": "Definer dine brukere",
+        "body": "Opprett brukertyper, onboarding-spørsmål og godkjenningsregler."
+      },
+      "3": {
+        "title": "Legg til pålitelig kunnskap",
+        "body": "Last opp dokumenter og legg til kvalitetssikrede ressurser."
+      },
+      "4": {
+        "title": "Test før lansering",
+        "body": "Chat som en bruker, gå gjennom tilbakemeldinger, og inviter deretter ekte mennesker."
+      }
     }
   },
   "adminDashboard": {
@@ -787,7 +1230,55 @@
     "securityStep3Primary": "Kjør konfigurasjonsvalidering",
     "securityStep3Secondary": "Gjennomgå lagrede data",
     "user": "Brukerkonfigurasjon",
-    "userDesc": "Definer brukertyper og introduksjonsspørsmål"
+    "userDesc": "Definer brukertyper og introduksjonsspørsmål",
+    "subtitleSimple": "Velg hvor du vil jobbe på denne instansen.",
+    "workflowsSectionLabel": "Admin-arbeidsflyter",
+    "adminAssistant": "Admin-assistent",
+    "adminAssistantDesc": "Bruk admin-chatten for hjelp til konfigurasjon og gjennomgang av endringer.",
+    "guidedSetup": "Veiledet oppsett",
+    "guidedSetupDesc": "Gå gjennom oppsett, dokumenter, ressurser og testing.",
+    "guides": "Admin-guider",
+    "guidesDesc": "Forstå hva administratorer konfigurerer og hvor.",
+    "testUserSession": "Test brukersesjon",
+    "testUserSessionDesc": "Chat som en simulert bruker og gå gjennom lagrede beta-logger.",
+    "aiSetupTitle": "Sett opp med AI-assistenten",
+    "aiSetupBody": "La assistenten samle det grunnleggende for navngivning og konfigurasjon av instansen din i én omgang. Du kan bytte til manuelt oppsett når som helst.",
+    "aiSetupAction": "Start veiledet oppsett",
+    "readinessTitle": "Klarhet for utrulling",
+    "readinessDesc": "Gå gjennom beredskap før du inviterer brukere. Sjekk hindringer, advarsler, endringer som krever omstart og gjenopprettingsstatus på ett sted.",
+    "readinessPrimary": "Åpne beredskapsgjennomgang",
+    "firstRunPathTitle": "Admin-oppstartsprosess",
+    "firstRunStep1Title": "Konfigurer grunnlinjen for instansen",
+    "firstRunStep1Body": "Angi merkevare, språk, tema, brukerfelt og Agent Settings før gjennomgang.",
+    "firstRunStep1Action": "Åpne instansinnstillinger",
+    "firstRunStep2Title": "Gjennomgå beredskap for utrulling",
+    "firstRunStep2Body": "Sjekk hindringer, advarsler, endringer som krever omstart og gjenopprettingsstatus før du inviterer brukere.",
+    "firstRunStep2Action": "Åpne utrullingsveiviser",
+    "firstRunStep3Title": "Bruk diagnostikk kun ved undersøkelser",
+    "firstRunStep3Body": "Hold røyktester og diagnostikk tilgjengelig uten at de blir den primære produktstien.",
+    "firstRunStep3Action": "Åpne diagnostikk",
+    "instanceDescSimple": "Navn, offentlig e-postidentitet, tema og merkevarekontroller.",
+    "aiDescSimple": "Ledetekster, modellatferd og standardinnstillinger for dokumenter.",
+    "deploymentDescSimple": "Kjøretidsinnstillinger, helse og detaljer om beredskap.",
+    "resources": "Ressurskatalog",
+    "resourcesDesc": "Kurater pålitelige advokater, NGO-er og henvisningsressurser",
+    "resourcesDescSimple": "Kurater pålitelige henvisningsressurser manuelt.",
+    "testFeedback": "Testing og tilbakemelding",
+    "testFeedbackDesc": "Chat som en testbruker og vurder svar for å forbedre oppsettet ditt",
+    "diagnosticsSectionLabel": "Diagnostikk",
+    "operationsSectionLabel": "Operasjoner",
+    "testDashboard": "Diagnostikk",
+    "testDashboardDesc": "Kjør utviklingsbaserte smoke-tester og inspiser diagnosemoduler",
+    "testDashboardDescSimple": "Kjør smoke-tester når du undersøker et problem.",
+    "iaChecklistTitle": "Sjekkliste for gjennomgang av informasjonsarkitektur for administratorer",
+    "iaChecklistBody": "Hold Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness og diagnoseflater adskilt under manuell gjennomgang.",
+    "humanReviewTitle": "Overlevering til manuell gjennomgang",
+    "humanReviewStatus": "Krever personlig utrullingsstøtte",
+    "humanReviewBody": "Anvendelse av kjøretidsmiljø forblir eksplisitt: eksporter artefakter, bruk dem med operatørstøtte, start berørte tjenester på nytt og verifiser beredskapsbevis.",
+    "humanReviewAction": "Gjennomgå Deployment Readiness",
+    "settingsSectionLabel": "Innstillinger",
+    "userManager": "Brukerbehandling",
+    "userManagerDesc": "Gjennomgå brukere, sjekk status, eksporter lister og godkjenn tilgang."
   },
   "adminAI": {
     "title": "AI-konfigurasjon",
@@ -872,7 +1363,18 @@
       "userInfoPlaceholder": "{user_info} — erstattes med den gjeldende brukerens profilfelt, hvis tilgjengelig"
     },
     "revert": "Angre",
-    "revertToGlobal": "Tilbakestill til global"
+    "revertToGlobal": "Tilbakestill til global",
+    "knowledgeSearchDisabledLabel": "Kunnskapssøk er av",
+    "knowledgeSearchDisabledMessage": "Aktive standarddokumenter vil ikke bli brukt før Kunnskapskilder er satt til valgte standarddokumenter eller alle tilgjengelige dokumenter.",
+    "assembledPromptOutput": "Sammensatt prompt-utdata",
+    "saveError": "Kunne ikke lagre",
+    "revertError": "Kunne ikke angre",
+    "toggleError": "Veksling mislyktes",
+    "loadErrorLabel": "Feil ved lasting av Agent-innstillinger",
+    "previewErrorLabel": "Feil ved forhåndsvisning av Agent-innstillinger",
+    "documentToggleErrorLabel": "Feil ved veksling av dokument i Agent-innstillinger",
+    "documentDefaultsHintV2": "Dokumenter merket \"Tilgjengelig\" kan brukes av Kunnskapssøk. Dokumenter merket \"Standard aktiv\" inkluderes når Kunnskapskilder er satt til valgte standarddokumenter.",
+    "externalChangeConflict": "Sage eller en annen administrator endret denne innstillingen mens du redigerte. Avbryt og åpne redigeringsverktøyet på nytt før du lagrer."
   },
   "adminDeployment": {
     "title": "Distribusjonskonfigurasjon",
@@ -970,7 +1472,9 @@
       "unknown": "Ukjent",
       "usersMigrated": "Brukere migrert",
       "usersToMigrate": "Brukere å migrere",
-      "warning": "Dette er en avansert operasjon. Feil migrering kan stenge deg ute fra krypterte data. Fortsett bare hvis du forstår konsekvensene."
+      "warning": "Dette er en avansert operasjon. Feil migrering kan stenge deg ute fra krypterte data. Fortsett bare hvis du forstår konsekvensene.",
+      "inputWarningLabel": "Advarsel ved migrering av admin-nøkkel",
+      "destructiveWarningLabel": "Destruktiv advarsel ved migrering av admin-nøkkel"
     },
     "revealFailed": "Kunne ikke avsløre verdien. Sjekk tilkoblingen til Nostr-utvidelsen din.",
     "searchHelp": {
@@ -1001,7 +1505,8 @@
       "overviewDesc": "Sikkerhetsinnstillinger kontrollerer autentisering, økthåndtering og utviklingssnarveier. Standardverdier er konfigurert for lokal utvikling.",
       "overviewNote": "I produksjon, sørg for at simuleringsflagg er av og at FRONTEND_URL matcher ditt faktiske domene.",
       "overviewTitle": "Sikkerhetsoversikt",
-      "overviewWhen": "Gjennomgå disse innstillingene før du distribuerer til en offentlig server."
+      "overviewWhen": "Gjennomgå disse innstillingene før du distribuerer til en offentlig server.",
+      "devNote": "Bruk MOCK_EMAIL for lokal testing av e-post; bruker- og admin-sesjoner krever fortsatt den vanlige verifiseringsflyten."
     },
     "sslHelp": {
       "ariaLabel": "Hjelp for SSL- og HTTPS-konfigurasjon",
@@ -1102,7 +1607,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Opplastingsmappe",
       "vector_database_eb5526": "Vektordatabase"
-    }
+    },
+    "exportSageRuntimeEnv": "Eksporter Sage-miljø",
+    "readiness": {
+      "title": "Klarhet for distribusjon",
+      "statusTitle": "Klarhet for distribusjon: {{status}}",
+      "description": "Gå gjennom bevisene som trengs før denne Single-Instance-distribusjonen er klar for normal drift.",
+      "openWizard": "Åpne gjennomgang av klarhet",
+      "blockerCount": "{{count}} blokkerende elementer",
+      "warningCount": "{{count}} advarsler",
+      "readyCount": "{{count}} klare",
+      "empty": "Ingen kontroller for utrullingsberedskap er tilgjengelige ennå.",
+      "conversationBlocking": "Blokkerer normale samtaler",
+      "blocker": "Blokkerende",
+      "warning": "Advarsel",
+      "ready": "Klar",
+      "reviewInferenceVerification": "Gjennomgå verifisering av slutning",
+      "reviewDataLifecycleStatus": "Gjennomgå status for datalivssyklus",
+      "reviewDeploymentValidation": "Gjennomgå utrullingsinnstillinger",
+      "reviewRestartRequired": "Gjennomgå krav om omstart",
+      "reviewOperationalReadiness": "Gjennomgå operasjonell beredskap",
+      "reviewServiceHealth": "Gjennomgå tjenestetilstand",
+      "reviewRuntimeEnv": "Gjennomgå eksport av kjøretidsmiljø",
+      "deployment_settings_validation": {
+        "label": "Validering av utrullingsinnstillinger",
+        "status": {
+          "invalid": {
+            "summary": "Validering av utrullingsinnstillinger har feil som må utbedres.",
+            "nextAction": "Gjennomgå valideringsfeil for utrullingsinnstillinger."
+          },
+          "warnings": {
+            "summary": "Validering av utrullingsinnstillinger har veiledende advarsler.",
+            "nextAction": "Gjennomgå valideringsadvarsler for utrullingsinnstillinger."
+          },
+          "valid": {
+            "summary": "Validering av utrullingsinnstillinger har ingen feil eller advarsler.",
+            "nextAction": "Ingen handling nødvendig."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Verifiserbar slutning",
+        "status": {
+          "current": {
+            "summary": "Den konfigurerte modellleverandøren har en gjeldende verifiseringspost for slutning.",
+            "nextAction": "Ingen handling nødvendig. Gjennomgå gjeldende verifiseringspost for slutning når leverandørens krav endres."
+          },
+          "deferred_missing": {
+            "summary": "Kryptert og verifiserbar slutning er for øyeblikket ikke verifisert for den konfigurerte modellleverandøren.",
+            "nextAction": "Konfigurer en støttet modellleverandør og kjør verifisering av slutning før utrullingsberedskap anses som fullført."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Gjennomgang av datalivssyklus",
+        "status": {
+          "needs_review": {
+            "summary": "Gjennomgang av datalivssyklus krever administratorgjennomgang.",
+            "nextAction": "Gjennomgå status for aktiv lagringslivssyklus og registrer gjennomgang av datalivssyklus."
+          },
+          "stale": {
+            "summary": "Den registrerte gjennomgangen av datalivssyklus er utdatert etter en støttet endring i livssyklusen.",
+            "nextAction": "Gjennomgå gjeldende status for aktiv lagringslivssyklus og registrer en ny gjennomgang av datalivssyklus."
+          },
+          "reviewed": {
+            "summary": "Gjennomgang av livssyklus for data er fullført.",
+            "nextAction": "Ingen handling er nødvendig med mindre den støttede livssyklus-statusen endres."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Bekreftelser for utrullingsflate",
+        "status": {
+          "acknowledged": {
+            "summary": "Kategorier for ustøttet utrullingsflate er bekreftet.",
+            "nextAction": "Ingen handling er nødvendig."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Kategorier for ustøttet utrullingsflate krever bekreftelse fra operatør.",
+            "nextAction": "Gå gjennom de oppførte kategoriene for utrullingsflate og bekreft hver enkelt før du anser utrullingsklarhet som fullført."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Øvelse i sikkerhetskopiering og gjenoppretting",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Det kreves en nylig registrering av operatørens øvelse i sikkerhetskopiering og gjenoppretting.",
+            "nextAction": "Gjennomfør og registrer en øvelse i sikkerhetskopiering og gjenoppretting for denne utrullingen."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Omstart kreves",
+        "status": {
+          "current": {
+            "summary": "Ingen utrullingsinnstillinger som krever omstart har blitt endret siden tjenesten startet.",
+            "nextAction": "Ingen handling er nødvendig."
+          },
+          "restart_required": {
+            "summary": "Utrullingsinnstillinger som krever omstart ble endret etter at tjenesten startet. ({{changedSettings}})",
+            "nextAction": "Bruk de ønskede utrullingsinnstillingene og start de berørte tjenestene på nytt før du anser dem som gjeldende."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage kjøretidskonfigurasjon",
+        "status": {
+          "not_generated": {
+            "summary": "Sage kjøretidsmiljø er ikke generert fra utrullingsinnstillinger ennå.",
+            "nextAction": "Eksporter Sage kjøretidsmiljøet før du anser utrullingsinnstillingene som anvendt på Sage."
+          },
+          "matches_desired": {
+            "summary": "Kjørende Sage kjøretidskonfigurasjon samsvarer med ønskede utrullingsinnstillinger.",
+            "nextAction": "Ingen handling er nødvendig."
+          },
+          "drifted": {
+            "summary": "Kjørende Sage kjøretidskonfigurasjon avviker fra ønskede utrullingsinnstillinger.",
+            "nextAction": "Undersøk avvik i Sage kjøretidskonfigurasjon, bruk det genererte Sage-miljøet og start Sage på nytt."
+          },
+          "current": {
+            "summary": "Sage kjøretidsmiljø er generert fra gjeldende utrullingsinnstillinger.",
+            "nextAction": "Ingen handling er nødvendig med mindre det genererte artefaktet ikke er anvendt på utrullingen."
+          },
+          "stale": {
+            "summary": "Utrullingsinnstillinger ble endret etter at Sage kjøretidsmiljøet ble generert.",
+            "nextAction": "Eksporter et nytt Sage kjøretidsmiljø og bruk det gjennom omstartsprosessen for utrullingen."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Konfigurasjon for kjerne-backend kjøretid",
+        "status": {
+          "not_generated": {
+            "summary": "Kjerne-backend kjøretidsmiljø er ikke generert fra utrullingsinnstillinger ennå.",
+            "nextAction": "Eksporter kjerne-backend kjøretidsmiljøet før du anser utrullingsinnstillingene som anvendt på kjerne-backend."
+          },
+          "matches_desired": {
+            "summary": "Kjørende kjerne-backend kjøretidskonfigurasjon samsvarer med ønskede utrullingsinnstillinger.",
+            "nextAction": "Ingen handling er nødvendig."
+          },
+          "drifted": {
+            "summary": "Kjørende kjerne-backend kjøretidskonfigurasjon avviker fra ønskede utrullingsinnstillinger.",
+            "nextAction": "Undersøk avvik i core-backend runtime-konfigurasjon, bruk den genererte core-backend env-en, og start core-backend på nytt."
+          },
+          "current": {
+            "summary": "Core-backend runtime env har blitt generert fra gjeldende Deployment Settings.",
+            "nextAction": "Ingen handling kreves med mindre det genererte artefaktet ikke har blitt brukt i Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings ble endret etter at core-backend runtime env ble generert.",
+            "nextAction": "Eksporter en ny core-backend runtime env og bruk den gjennom prosessen for omstart av Deployment."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Deployment-veiviser",
+      "step": "Trinn {{current}} av {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Operasjonell beredskap",
+      "description": "Gjennomgå øvelser for sikkerhetskopiering, gjenoppretting, overvåking og recovery før normal drift."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — din Tinfoil API-nøkkel for den lokale proxyen.",
+      "apiKeyLabel": "Tinfoil API-nøkkel",
+      "ariaLabel": "Hjelp for Sage runtime-konfigurasjon",
+      "exampleConfig": "Eksempelkonfigurasjon",
+      "goToPage": "Gå til side",
+      "sageExtra": "Sett LLM_API_KEY til din Tinfoil-nøkkel fra {{tinfoilSignupUrl}}. Stakken mapper den til Sage og den lokale Tinfoil-proxyen.",
+      "sageHint": "Denne prototypen ruter Agent Runtime-trafikk gjennom Sage og Tinfoil. LLM_API_KEY er den kanoniske Model Provider-nøkkelen.",
+      "modelField": "TINFOIL_MODEL — Tinfoil-modellidentifikator som Sage skal bruke (for eksempel: glm-5-2).",
+      "overviewDesc": "Denne prototypen bruker Sage som den offentlige Agent Runtime og Tinfoil som Model Provider-transport. Konfigurer Model Provider gjennom LLM_* Deployment Settings; stakken mapper dem til Sages Tinfoil runtime.",
+      "overviewTitle": "Oversikt over Sage Runtime",
+      "providerField": "LLM_PROVIDER — settes til \"sage\" for denne prototypen."
+    },
+    "inferenceVerification": {
+      "current": "Gjeldende",
+      "missing": "Mangler",
+      "expired": "Utløpt",
+      "failed": "Mislykket",
+      "success": "Vellykket",
+      "statusLoadFailed": "Kunne ikke laste status for inferensverifisering",
+      "historyLoadFailed": "Kunne ikke laste historikk for inferensverifisering",
+      "loadFailed": "Kunne ikke laste inferensverifisering",
+      "manualFailed": "Manuell verifisering mislyktes",
+      "manualSucceeded": "Manuell verifisering lyktes",
+      "detailLoadFailed": "Kunne ikke laste attestasjonsdetaljer",
+      "ariaLabel": "Inferensverifisering",
+      "title": "Inferensverifisering",
+      "summary": "Kun for administrator: bevis på at beskyttet inferens kjører på forventet Model Provider.",
+      "verifyNow": "Verifiser nå",
+      "status": "Status",
+      "checkedAt": "Kontrollert",
+      "expiresAt": "Utløper",
+      "expectedClaims": "Forventede krav",
+      "expectedClaimsValue": "Forventede krav: {{fingerprint}}",
+      "providerClaims": "Leverandørkrav",
+      "provider": "Leverandør",
+      "model": "Modell",
+      "endpoint": "Endepunkt",
+      "history": "Verifiseringshistorikk",
+      "emptyHistory": "Ingen verifiseringsposter ennå.",
+      "recordTitle": "Post #{{id}}",
+      "inspectAttestation": "Inspiser attestasjon",
+      "fullAttestation": "Fullstendig attestasjonsmateriale"
+    },
+    "lifecycle": {
+      "notStarted": "Ikke startet",
+      "notConfigured": "Ikke konfigurert",
+      "plaintextByOperatorChoice": "Klartekst etter operatørens valg",
+      "allTombstones": "Alle",
+      "allTombstonesLabel": "Alle tombstones",
+      "incompleteTombstonesFilter": "Ufullstendige",
+      "incompleteTombstonesLabel": "Ufullstendige tombstones",
+      "completedTombstonesFilter": "Fullførte",
+      "completedTombstonesLabel": "Fullførte tombstones",
+      "title": "Status for datalivssyklus",
+      "description": "Nåværende operatørstyrte personverndekning på tvers av instansdata.",
+      "scopeExcludes": "Ekskluderer: {{excludes}}",
+      "secureEraseStatus": "Sikker sletting: {{status}}",
+      "readinessStatus": "Livssyklus-beredskap: {{status}}",
+      "readinessNonBlocking": "Brukerkonversasjoner blokkeres ikke av advarsler om livssyklus-beredskap i v1.",
+      "readinessStaleReason": "Årsak: {{reason}}",
+      "contentEncryptionKey": "Nøkkel for innholdskryptering: {{status}}",
+      "artifactEncryptionPosture": "Krypteringsstatus for artefakter: {{status}}",
+      "artifactPostureLabel": "Krypteringsstatus for artefakter",
+      "artifactPostureRequired": "Påkrevd",
+      "artifactPostureDisabled": "Deaktivert",
+      "retentionSchedulerStatus": "Planlegger for oppbevaring: {{status}}",
+      "schedulerObservation": "Observasjon: {{status}}",
+      "schedulerEnabledClasses": "Klasser aktivert i planlegger: {{classes}}",
+      "schedulerLastRunStatus": "Status for forrige kjøring: {{status}}",
+      "schedulerLastRun": "Siste kjøring: {{trigger}} av {{actor}}",
+      "previewRetention": "Forhåndsvis oppbevaring",
+      "runScheduledRetention": "Kjør planlagt",
+      "previewRetentionResult": "Forhåndsvisning: {{conversations}} konversasjoner, {{artifacts}} dokumentartefakter, {{skipped}} klasser hoppet over.",
+      "scheduledRetentionResult": "Planlagt kjøring: {{status}} med {{retries}} forsøk på tombstone.",
+      "scheduledRetentionStatus": "Planlagte klasser: {{classes}}",
+      "auditCoverageStatus": "Revisjonsdekning: {{audited}} revidert, {{exceptions}} unntak, {{missing}} mangler.",
+      "owner": "Eier: {{owner}}",
+      "deletion": "Sletting: {{status}}",
+      "retention": "Oppbevaring: {{status}}",
+      "audit": "Revisjon: {{status}}",
+      "confidentiality": "Konfidensialitet: {{status}}",
+      "incompleteTombstones": "Ufullstendige tombstones: {{count}}",
+      "completedTombstones": "Fullførte tombstones: {{count}}",
+      "retentionEnabled": "Aktivert",
+      "retentionWindow": "Tidsvindu",
+      "retentionDays": "dager",
+      "scheduledEnforcement": "Planlagt",
+      "saveRetentionPolicy": "Lagre policy",
+      "empty": "Livssyklstatus er ikke tilgjengelig.",
+      "retentionPolicySaveFailed": "Kunne ikke lagre oppbevaringspolicy.",
+      "retentionPreviewFailed": "Kunne ikke forhåndsvise oppbevaring.",
+      "scheduledRetentionFailed": "Kunne ikke kjøre planlagt oppbevaring.",
+      "artifactPostureFailed": "Kunne ikke oppdatere krypteringsstatus for artefakter.",
+      "unsupportedSurfacesTitle": "Ustøtt distribusjonsflate",
+      "unsupportedSurfacesDescription": "Disse operasjonelle sporene er oppgitt her, men ligger utenfor kontrollen for produktets livssyklus.",
+      "unsupportedSurfaceAckFailed": "Kunne ikke oppdatere bekreftelse.",
+      "acknowledgedSurface": "Bekreftet",
+      "acknowledgeSurface": "Bekreft",
+      "tombstonesTitle": "Slettemarkører",
+      "tombstonesDescription": "Forsøk på nytt ufullstendige slettinger i livssyklusen uten å eksponere slettet innhold.",
+      "tombstoneStatusFilter": "Filter for slettemarkørstatus",
+      "tombstoneRetryFailed": "Forsøk mislyktes.",
+      "tombstonesFetchFailed": "Kunne ikke laste slettemarkører.",
+      "tombstoneClass": "Klasse: {{className}}",
+      "tombstoneSource": "Kilde: {{source}}",
+      "tombstoneRetries": "Forsøk: {{count}}",
+      "tombstoneUpdated": "Oppdatert: {{updated}}",
+      "retryTombstoneLabel": "Forsøk på nytt slettemarkør {{id}}",
+      "retry": "Prøv på nytt",
+      "tombstonesEmpty": "Ingen slettemarkører venter på nytilsyn."
+    },
+    "runtimeEnv": {
+      "unknown": "Ukjent",
+      "title": "Samsvar for kjøretidskonfigurasjon",
+      "description": "Sammenligner ønskede distribusjonsinnstillinger, generert Sage-miljø og observerbar kjøretidsstatus.",
+      "desired": "Ønsket",
+      "configuredKeys": "{{count}} av {{total}} nøkler konfigurert",
+      "generated": "Generert",
+      "exportedAt": "Eksportert {{time}}",
+      "notExported": "Ingen Sage-miljøeksport registrert",
+      "running": "Kjører",
+      "runningUnknown": "Kjøretidsstatus er ikke direkte undersøkt ennå.",
+      "coreBackend": "Kjerne-backend",
+      "coreBackendHint": "Justering av backend-prosessmiljø",
+      "coreDesired": "Ønsket kjerne",
+      "coreConfiguredKeys": "Kjerne-backend: {{count}} av {{total}} nøkler konfigurert",
+      "coreGenerated": "Generert kjerne",
+      "coreNotExported": "Ingen eksport av kjerne-backend-miljø registrert",
+      "coreRunning": "Kjerne kjører",
+      "coreRunningUnknown": "Kjerne-backend sin kjøretilstand er ikke direkte inspisert ennå.",
+      "coreExportedTitle": "Kjerne-backend-miljø eksportert",
+      "coreSensitiveArtifact": "Behandle core-backend.env som sensitivt distribusjonsmateriale.",
+      "coreExportDoesNotApply": "Eksport av artefakten endrer ikke den kjørende backend-prosessen før en operatør anvender den og starter core-backend på nytt.",
+      "exportedTitle": "Sage-miljø eksportert",
+      "sensitiveArtifact": "Behandle sage.env som sensitivt distribusjonsmateriale.",
+      "exportDoesNotApply": "Eksport av artefakten endrer ikke den kjørende Sage-prosessen før en operatør anvender den og starter Sage på nytt."
+    },
+    "categorySettingsAria": "{{category}} Innstillinger",
+    "exportCoreBackendRuntimeEnv": "Eksporter core-backend-miljø",
+    "restartCurrent": "Ingen omstart nødvendig",
+    "restartCurrentDesc": "Ingen omstart-nødvendige distribusjonsinnstillinger har endret seg siden tjenesten startet.",
+    "saveError": "Kunne ikke lagre",
+    "openHelpAria": "Åpne hjelp for {{label}}"
   },
   "upload": {
     "invalidFileType": "Ugyldig filtype. Tillatt: {{extensions}}",
@@ -1124,7 +1935,8 @@
       "processing": "Behandler",
       "chunked": "Oppdelt",
       "complete": "Fullført",
-      "failed": "Feilet"
+      "failed": "Feilet",
+      "completedWithErrors": "Fullført med feil"
     },
     "chunks": "{{processed}}/{{total}} deler",
     "deleteDocument": "Slett dokument",
@@ -1173,7 +1985,21 @@
     "serverBusy": "Serveren er opptatt",
     "tryRefresh": "Prøv igjen",
     "uploadedSuccess": "Opplastingen var vellykket — behandling startet",
-    "uploadingStatus": "Laster opp til server..."
+    "uploadingStatus": "Laster opp til server...",
+    "uploadError": "Opplasting mislyktes",
+    "documentDeletionError": "Feil ved sletting av dokument",
+    "navigationWarning": "Dokumentet ditt blir fortsatt overført. Forlat kun etter at behandlingen har startet, ellers blir kanskje ikke opplastingen lagret.",
+    "duplicateInBatch": "Duplisert dokumentnavn i dette partiet",
+    "documentsSelected": "{{count}} dokumenter",
+    "queueSummary": "{{valid}} klare, {{rejected}} hoppet over",
+    "skipped": "Hoppet over",
+    "uploadedPartialSuccess": "{{count}} i kø, {{rejected}} hoppet over",
+    "chooseFiles": "Velg filer",
+    "chooseFolder": "Velg mappe",
+    "uploadDocuments": "Last opp dokumenter",
+    "replacingDocument": "Erstatter {{filename}}",
+    "recentDocumentsShowing": "Viser {{shown}} av {{total}} dokumenter",
+    "showMore": "Vis mer"
   },
   "configCategories": {
     "embedding": {
@@ -1215,6 +2041,11 @@
       "description": "Konfigurer SSL-sertifikater og HTTPS-innstillinger",
       "hint": "Konfigurer TLS- og proxy-innstillinger når du serverer over HTTPS. Standardinnstillingene er trygge for lokal utvikling; aktiver HTTPS først etter at sertifikater er montert.",
       "label": "SSL og sikkerhet"
+    },
+    "llm": {
+      "label": "Sage-agentens kjøremiljø",
+      "description": "Konfigurer Sage + Tinfoil-inferens",
+      "hint": "Denne prototypen ruter Agent Runtime-trafikk gjennom Sage og bruker Tinfoil som transport for Model Provider. Endringer krever omstart."
     }
   },
   "promptSections": {
@@ -1241,6 +2072,12 @@
       "description": "Hvordan AI-en strukturerer sine svar",
       "hint": "Kontrollerer formateringspreferanser som om man skal bruke punktlister, overskrifter eller samtalepregede avsnitt. Dette påvirker hvordan svar presenteres visuelt.",
       "placeholder": "Bruk punktlister for lister, overskrifter for seksjoner..."
+    },
+    "prompt_system": {
+      "label": "System-prompt",
+      "description": "Kjerneidentitet og instruksjoner for AI-en",
+      "hint": "Bruk denne for assistentens identitet, oppdrag og overordnede rammer som skal gjelde før tone, regler, verktøy eller dokumentkontekst. Endringer påvirker nye samtaler.",
+      "placeholder": "Du er Sage, en privat assistent for denne instansen..."
     }
   },
   "parameters": {
@@ -1253,6 +2090,11 @@
       "label": "Kunnskapsdybde",
       "description": "Hvor mange dokumentseksjoner som skal refereres",
       "hint": "Når AI-en svarer på spørsmål, søker den gjennom opplastede dokumenter og henter relevante seksjoner. Høyere tall betyr mer kontekst, men tregere svar. Lavere tall er raskere, men kan gå glipp av relevant informasjon. Standard: 5"
+    },
+    "max_tokens": {
+      "label": "Maks antall tokens",
+      "description": "Maksimal lengde for hvert AI-svar",
+      "hint": "Begrenser hvor langt et svar kan være. Lavere verdier gir korte svar og reduserer kostnader; høyere verdier tillater lengre forklaringer. Standard: 2048"
     }
   },
   "defaults": {
@@ -1260,6 +2102,21 @@
       "label": "Nettsøk",
       "description": "Tillat AI å søke på internett",
       "hint": "Når aktivert kan AI-en søke på nettet etter aktuell informasjon som ikke finnes i dokumentene dine. Deaktiver dette hvis du vil at svar kun skal komme fra din opplastede kunnskapsbase."
+    },
+    "knowledgeSource": {
+      "none": "Ingen",
+      "selected": "Valgte standarddokumenter",
+      "all": "Alle tilgjengelige dokumenter"
+    },
+    "knowledge_source_default": {
+      "label": "Kunnskapskilder",
+      "description": "Velg hvilke opplastede kunnskapskilder som er aktive i bruker-samtaler",
+      "hint": "Bruk \"none\" for ingen opplastet kunnskap som standard, \"selected\" for dokumenter merket som 'Aktiv som standard', eller \"all\" for alle tilgjengelige dokumenter."
+    },
+    "user_default_tool_ids": {
+      "label": "Brukerens verktøysett",
+      "description": "Verktøysett som er aktive som standard i bruker-samtaler",
+      "hint": "JSON-array som bruker enten \"curated-resources\", \"knowledge-search\", og \"web-search\". Knowledge Search styres også av Kunnskapskilder."
     }
   },
   "colors": {
@@ -1438,6 +2295,51 @@
       "description": "Grunn-URL for webhook-tilbakekall",
       "hint": "Grunn-URL brukt til å konstruere webhook-tilbakekall. Eksempel: https://api.example.com/webhooks. Standard: http://localhost:8000.",
       "label": "Webhook-URL"
+    },
+    "LLM_PROVIDER": {
+      "label": "Modellleverandør",
+      "description": "Model Provider-etikett på Python-siden",
+      "hint": "Bruk \"sage\" for denne prototypen. Denne distribusjonsinnstillingen støtter diagnostikk og verifiseringsmetadata på Python-siden."
+    },
+    "LLM_MODEL": {
+      "label": "Modellnavn",
+      "description": "Modellnavn/identifikator",
+      "hint": "Tinfoil-modellidentifikatoren Sage skal bruke (f.eks. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API-endepunkt",
+      "description": "Base-URL for Model Provider API",
+      "hint": "Base-URL for Tinfoil-proxy. Standard: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API-nøkkel",
+      "description": "Tinfoil API-nøkkel (hemmelig)",
+      "hint": "La den stå tom for å holde gjeldende utrullingsinnstillinger hemmelige."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Hastighetsbegrensning for chat",
+      "description": "Chat-forespørsler per minutt",
+      "hint": "Maksimalt antall /llm/chat-forespørsler per minutt per stabil bruker, admin, token eller klient-IP. Krever omstart. Standard: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Hastighetsbegrensning for søk",
+      "description": "Søketall for retrieval per minutt",
+      "hint": "Maksimalt antall /query-forespørsler per minutt per stabil bruker, token eller klient-IP. Krever omstart. Standard: 9    0."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Hastighetsbegrensning for opplasting",
+      "description": "Dokumentopplastinger per minutt",
+      "hint": "Maksimalt antall dokumentopplastinger per minutt per stabil admin, token eller klient-IP. Krever omstart. Standard: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Hastighetsbegrensning for vektorsøk",
+      "description": "Vektorsøk-forespørsler per minutt",
+      "hint": "Maksimalt antall vektorsøk-forespørsler per minutt per stabil bruker, token eller klient-IP. Krever omstart. Standard: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Hastighetsbegrensning for eksport av konfigurasjon",
+      "description": "Eksport av utrullingskonfigurasjon per time",
+      "hint": "Maksimalt antall .env-eksportasjoner per time per admin-sesjon eller klient-IP. Krever omstart. Standard: 5."
     }
   },
   "instanceInitiation": {
@@ -1474,7 +2376,11 @@
       "title": "Klar til å koble til"
     },
     "subtitle": "Sett opp din private kunnskapsbase i noen få steg.",
-    "title": "Velkommen til Enclave"
+    "title": "Velkommen til Enclave",
+    "keySafety": {
+      "title": "Bruk en instansspesifikk Nostr-nøkkel",
+      "body": "Ikke bruk din personlige Nostr-nøkkel. Opprett eller velg en dedikert admin-nøkkel for denne instansen for å redusere overvåkingsrisiko og holde operasjonell tilgang adskilt."
+    }
   },
   "reachout": {
     "errors": {
@@ -1482,7 +2388,8 @@
       "notConfigured": "Denne funksjonen er ikke konfigurert.",
       "rateLimited": "For mange meldinger. Vennligst prøv igjen senere.",
       "required": "Melding er påkrevd.",
-      "unavailable": "Kontakt er utilgjengelig."
+      "unavailable": "Kontakt er utilgjengelig.",
+      "formErrorLabel": "Feil i Reachout-skjema"
     },
     "form": {
       "messageLabel": "Melding",
@@ -1490,7 +2397,8 @@
       "send": "Send inn"
     },
     "status": {
-      "success": "Takk. Meldingen din ble sendt."
+      "success": "Takk. Meldingen din ble sendt.",
+      "successLabel": "Reachout vellykket"
     },
     "mode": {
       "feedback": {
@@ -1525,7 +2433,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Serverdelen returnerte en feil under validering av autentisering. Dette behandles ikke som en utlogging.",
       "unable_to_verify_admin_session_5f87b8": "Kan ikke bekrefte administratorøkt",
       "verifying_admin_session_87c53b": "Bekrefter administratorøkt..."
-    }
+    },
+    "loadingAssistant": "Laster inn admin-assistent"
   },
   "initiationGate": {
     "extracted": {
@@ -1739,7 +2648,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Bekreft et magisk lenke-token og hent øktinformasjon (informasjonskapselbasert økt).",
       "verify_magic_link_token_183cf5": "Bekreft magisk lenke-token",
       "view_all_users_manage_approval_status_and_delete_03feec": "Vis alle brukere, administrer godkjenningsstatus og slett brukere.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Vis og oppdater instans-dekkende konfigurasjonsinnstillinger."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Vis og oppdater instans-dekkende konfigurasjonsinnstillinger.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Tester tilkobling til den konfigurerte Model Provider-stien."
+    },
+    "labels": {
+      "themePreference": "Tema-preferanse",
+      "endpointGuidance": "Endepunkt-veiledning",
+      "healthResponseOutput": "Utdata for helsesvar",
+      "jobs": "Jobber",
+      "chunks": "Databiter",
+      "rateLimitTestType": "Type hastighetsbegrensningstest",
+      "successfulRequests": "Vellykkede forespørsler",
+      "successful": "Vellykket",
+      "blockedRequests": "Blokkerte forespølgselser"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Samtalelogger"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logo"
+  },
+  "language": {
+    "english": "Engelsk",
+    "spanish": "Spansk",
+    "french": "Fransk",
+    "german": "Tysk",
+    "portuguese": "Portugisisk"
+  },
+  "home": {
+    "checkingInstanceStatus": "Sjekker instansstatus..."
+  },
+  "adminGuidedSetup": {
+    "title": "Sett opp din instans",
+    "subtitle": "Assistenten din vil samle de grunnleggende opplysningene i én omgang.",
+    "manual": "Konfigurer manuelt i stedet",
+    "finish": "Fullfør og start testing",
+    "comingSoon": "Denne fasen kommer snart og bygges separat.",
+    "steps": {
+      "initialize": {
+        "label": "Initialiser",
+        "title": "Initialiser",
+        "subtitle": "La oss gå gjennom det grunnleggende i ditt område, slik at agenten din starter med riktig fundament."
+      },
+      "docs": {
+        "label": "Last opp dokumenter",
+        "title": "Last opp din feltguide",
+        "subtitle": "Legg til kildematerialet agenten din svarer ut fra — bøker, guider og referansedokumenter."
+      },
+      "resources": {
+        "label": "Kuraterte ressurser",
+        "title": "Kuraterte ressurser",
+        "subtitle": "Legg til pålitelige ressurser fra den virkelige verden — nøkkelkontakter, advokater, utdannings- og psykisk helsehjelp — som agenten kan henvise folk til."
+      },
+      "test": {
+        "label": "Test som bruker",
+        "title": "Test som en bruker",
+        "subtitle": "Kommer snart — prøv assistenten som en av dine brukertyper og vurder svarene."
+      },
+      "feedback": {
+        "label": "Tilbakemelding",
+        "title": "Tilbakemeldingssløyfe",
+        "subtitle": "Kommer snart — vurder svarkvaliteten og forbedre oppsettet ditt."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Test & Tilbakemelding",
+    "subtitle": "Kjør en testbrukersesjon, og gå deretter gjennom krypterte betalogger og tilbakemeldinger fra lagrede samtaler.",
+    "tabs": {
+      "test": "Test som bruker",
+      "feedback": "Tilbakemelding"
+    },
+    "test": {
+      "pickPersona": "Velg en persona for å teste",
+      "pickPersonaBody": "Opprett en testbruker for en av dine brukertyper, og chat deretter som dem. Sesjonen lagres som en krypert prøve som du kan vurdere under Tilbakemelding.",
+      "userType": "Brukertype",
+      "genericUser": "Generisk bruker (ingen type)",
+      "start": "Start sesjon",
+      "admin": "Administrator",
+      "testUserId": "Testbruker",
+      "endSave": "Avslutt & lagre prøve",
+      "previewNotice": "Forhåndsvisningsmodus — ekte etterligning er ikke ferdig integrert ennå, så denne chatten kjører under din admin-sesjon. Transkripsjonen lagres likevel for gjennomgang.",
+      "chatEmpty": "Send en melding som denne brukeren for å starte prøven.",
+      "inputPlaceholder": "Send melding til assistenten som denne brukeren...",
+      "saved": "Prøve lagret (kryptert). Se den under Tilbakemelding.",
+      "startError": "Kunne ikke starte en testsesjon",
+      "saveError": "Kunne ikke lagre prøve",
+      "impersonationUnavailable": "Etterligning av testbruker er ikke tilgjengelig ennå",
+      "sessionTokenError": "Kunne ikke opprette en syntetisk brukersesjonstoken",
+      "testingAs": "Tester som {{persona}}",
+      "authFailed": "Den syntetiske brukersesjonen er ikke lenger autorisert.",
+      "discardUnsavedConfirm": "Kaste fullførte turer som ikke har blitt lagret?",
+      "workspaceAria": "Arbeidsområde for testbrukersamtale"
+    },
+    "feedback": {
+      "trials": "Beta-logger",
+      "untitled": "Uten tittel",
+      "turns": "omganger",
+      "turn": "Omgang",
+      "empty": "Ingen lagrede beta-logger ennå. Kjør en Test User Session eller vent på brukerkonversasjoner.",
+      "selectPrompt": "Velg en beta-logg for å gjennomgå transkripsjonen og vurdere hver omgang.",
+      "noNip04": "Koble til en Nostr-utvidelse (Alby, nos2x) for å dekryptere transkripsjoner — de er kryptert med din admin-nøkkel.",
+      "sourceUser": "Brukerkonversasjon",
+      "sourceTest": "Testbrukerøkt",
+      "thumbUp": "Godt svar",
+      "thumbDown": "Trenger forbedring",
+      "notePlaceholder": "Valgfri note (lagres kryptert)…",
+      "exportNotDecrypted": "Åpne og dekrypter transkripsjonen før eksport.",
+      "exportFeedbackNotDecrypted": "Noen tilbakemeldingskommentarer kunne ikke dekrypteres. Åpne transkripsjonen på nytt og godkjenn alle dekrypteringsforespørsler før eksport.",
+      "exportNeedsExtension": "Eksport krever en Nostr-utvidelse. Transkripsjoner er kryptert ved lagring, og det er utvidelsen din som dekrypterer dem.",
+      "exportDecrypting": "Dekrypterer fortsatt. Eksport blir tilgjengelig når alle forespørsler er godkjent.",
+      "exportWhyDisabled": "Hvorfor er eksport deaktivert?",
+      "retryDecryption": "Prøv dekryptering på nytt",
+      "decryptPendingTitle": "Sjekk din Nostr-utvidelse",
+      "decryptPendingBody": "Den ber om tillatelse til å dekryptere denne transkripsjonen. Den åpnes kanskje ikke automatisk — klikk på utvidelsesikonet hvis du ikke ser den. Velg alternativet for å huske valget ditt, slik at den bare spør én gang.",
+      "decryptProgress": "Dekryptert {{done}} av {{total}}.",
+      "loadTrialsError": "Kunne ikke laste forsøk",
+      "loadTranscriptError": "Kunne ikke lasse transkripsjon",
+      "saveError": "Tilbakemelding kunne ikke lagres",
+      "deleteError": "Sesjonsloggen kunne ikke slettes",
+      "exportError": "Eksport av sesjon mislyktes",
+      "transcriptIntegrityError": "Transkripsjonen er utilgjengelig eller ufullstendig og kan ikke eksporteres.",
+      "decryptTranscriptError": "Kunne ikke dekryptere transkripsjonen. Godkjenn dekrypteringsforespørselen i din Nostr-utvidelse."
+    }
+  },
+  "adminResources": {
+    "title": "Ressurskatalog",
+    "subtitle": "Vedlikehold manuelt kvalitetssikrede henvisningsressurser som assistenten kan nevne når en samtale eskalerer. Kun \"ready\" ressurser vises for sluttbrukere.",
+    "add": "Legg til ressurs",
+    "addTitle": "Legg til ressurs",
+    "editTitle": "Rediger ressurs",
+    "empty": "Ingen ressurser ennå. Legg til en manuelt når du har en kvalitetssikret henvisning.",
+    "verified": "verifisert",
+    "missing": "Mangler for å gå live",
+    "name": "Navn",
+    "type": "Ressurstype",
+    "languages": "Språk (komma-separerte ISO-koder)",
+    "description": "Beskrivelse",
+    "descriptionHint": "Hva assistenten skal fortelle personen om denne ressursen.",
+    "scopeLevel": "Dekningsnivå",
+    "scopeCode": "Dekningskode",
+    "scopeCodeHint": "Land: ISO-kode (NI). Subregion/region: UN M4CC-kode (013 = Mellom-Amerika). Globalt: la det stå tomt.",
+    "helpTypes": "Typer hjelp",
+    "contact": "Kontaktmetoder",
+    "vettedBy": "Kontrollert av",
+    "sourceNote": "Kildenotat",
+    "markVerified": "Merk som verifisert (rangerer først)",
+    "archive": "Arkiver (skjul for sluttbrukere)",
+    "deleteTitle": "Slette ressurs?",
+    "deleteBody": "Dette fjerner oppføringen for {{name}} i katalogen",
+    "coverage": "Dekning",
+    "coverageHint": "Velg et dekningsnivå, og søk deretter etter navn eller kode.",
+    "coverageCodePlaceholder": "Søk etter navn eller kode...",
+    "coverageLevelFirst": "Velg et dekningsnivå først",
+    "coverageClear": "Tøm dekningskode",
+    "regionDirectoryUnavailable": "Regionkatalog ikke tilgjengelig. Skriv inn en kode manuelt.",
+    "level": {
+      "country": "Land",
+      "subregion": "Subregion",
+      "region": "Region",
+      "global": "Globalt"
+    },
+    "addPointer": "Legg til peker",
+    "addRegion": "Legg til region",
+    "displayOrder": "Visningsrekkefølge",
+    "displayOrderHint": "Lavere tall vises først etter relevans og verifisering.",
+    "kind": "Type",
+    "noSearchResults": "Ingen ressurser samsvarer med dette søket.",
+    "order": "Rekkefølge",
+    "pointerLabel": "Peker {{number}} etikett",
+    "pointerType": "Peker {{number}} type",
+    "pointerValue": "Peiker {{number}} verdi",
+    "pointers": "Peikere",
+    "regionNumber": "Region {{number}}",
+    "regions": "Regioner",
+    "removePointer": "Fjern peiker",
+    "removeRegion": "Fjern region",
+    "search": "Søk etter ressurser",
+    "searchPlaceholder": "Navn, type, tag, peiker eller beskrivelse",
+    "tags": "Tagger (komma-separert)",
+    "namePlaceholder": "f.eks. Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, utdanning, lokal",
+    "loadError": "Kunne ikke laste ressurser",
+    "loadDirectoryError": "Kunne ikke laste mappe",
+    "saveError": "Kunne ikke lagre ressurs",
+    "deleteError": "Kunne ikke slette ressurs"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Tilbake til admin-dashbord",
+    "eyebrow": "Admin-operasjoner",
+    "title": "Brukerbehandler",
+    "subtitle": "Se oversikt over brukere, forstå deres status og godkjenn tilgang fra ett enkelt dashbord.",
+    "unlockDetails": "Lås opp detaljer",
+    "refreshRoster": "Oppdater liste",
+    "exportVisible": "Eksporter synlig liste",
+    "prepareVisible": "Klargjør synlig liste",
+    "downloadPrepared": "Last ned klargjort liste",
+    "exportPrepared": "Den komplette synlige listen er klargjort. Nedlasting er nå aktivert.",
+    "rosterTitle": "Brukerliste",
+    "rosterShown": "Viser {{shown}} av {{total}} totalt.",
+    "tableLabel": "Brukerliste",
+    "tableRowsLabel": "Brukerlistens rader",
+    "loadingLabel": "Laster brukerliste",
+    "loadingUsers": "Laster brukere...",
+    "loadRetry": "Brukerlisten kunne ikke lastes. Bruk 'Oppdater liste' for å prøve igjen.",
+    "emptyNoUsers": "Ingen brukere ennå. Nye autentiserte brukere vil vises her.",
+    "emptyFiltered": "Ingen brukere samsvarer med disse filtrene.",
+    "noUserType": "Ingen brukertype",
+    "unknown": "Ukjent",
+    "userFallback": "Bruker #{{id}}",
+    "approvalSuccess": "{{name}} er godkjent.",
+    "exportSuccess": "Brukerliste-regneark er nedlastet.",
+    "metrics": {
+      "total": "Totalt antall brukere",
+      "totalDetail": "i listen",
+      "pendingApproval": "Venter på godkjenning",
+      "pendingDetail": "{{count}} venter",
+      "approved": "Godkjent",
+      "approvedDetail": "kan delta i chat",
+      "incompleteProfiles": "Ufullstendige profiler",
+      "incompleteDetail": "trenger påkrevde svar"
+    },
+    "callouts": {
+      "loadFailed": "Kunne ikke laste brukerliste",
+      "approvalUpdated": "Brukergodkjenning oppdatert",
+      "approvalFailed": "Oppdatering av brukergodkjenning mislyktes",
+      "exportReady": "Eksport av brukerliste er klar",
+      "exportFailed": "Eksport av brukerliste mislyktes"
+    },
+    "filters": {
+      "search": "Søk etter brukere",
+      "searchPlaceholder": "Navn, e-post, offentlig nøkkel eller #ID",
+      "approvalStatus": "Godkjenningsstatus",
+      "allApprovalStates": "Alle godkjenningsstatusser",
+      "pendingApproval": "Venter på godkjenning",
+      "approved": "Godkjent",
+      "allUserTypes": "Alle brukertyper"
+    },
+    "columns": {
+      "user": "Bruker",
+      "approval": "Godkjenning",
+      "userType": "Brukertype",
+      "userProfile": "Brukerprofil",
+      "joined": "Tidligere med",
+      "action": "Handling"
+    },
+    "status": {
+      "approved": "Godkjent",
+      "pending": "Venter"
+    },
+    "actions": {
+      "approve": "Godkjenn",
+      "approveUser": "Godkjenn {{name}}",
+      "viewUserDetails": "Se detaljer for {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Ingen spørsmål",
+      "noQuestionsDetail": "Ingen onboarding-spørsmål er relevante.",
+      "needsProfile": "Trenger profil",
+      "missingRequiredOne": "1 påkrevd svar mangler",
+      "missingRequiredMany": "{{count}} påkrevde svar mangler",
+      "noProfileYet": "Ingen profil ennå",
+      "noAnswersSaved": "Ingen svar er lagret.",
+      "ready": "Profil klar",
+      "answersSavedOne": "1 svar lagret",
+      "answersSavedMany": "{{count}} svar lagret"
+    },
+    "identity": {
+      "decrypting": "Dekrypterer navn og e-post...",
+      "failed": "Kunne ikke låse opp krypterte detaljer.",
+      "unavailable": "Krypterte detaljer krever en signatur i nettleseren.",
+      "locked": "Krypterte detaljer er låst."
+    },
+    "errors": {
+      "loadUsers": "Kunne ikke laste brukere.",
+      "loadUserTypes": "Kunne ikke laste brukertyper.",
+      "loadQuestions": "Kunne ikke laste onboarding-spørsmål.",
+      "approvalUpdate": "Kunne ikke oppdatere brukergodkjenning.",
+      "decryptUnavailable": "En nettleserutvidelse med NIP-04-dekryptering er nødvendig for å klargjøre denne listen.",
+      "decryptRoster": "En kryptert listeverdi kunne ikke dekrypteres. Ingen regneark ble opprettet.",
+      "prepareRequired": "Klargjør den nåværende synlige listen før nedlasting.",
+      "exportAudit": "Eksport av brukerliste kunne ikke revideres.",
+      "exportRoster": "Kunne ikke eksportere brukerliste."
+    },
+    "detail": {
+      "booleanYes": "Ja",
+      "booleanNo": "Nei",
+      "fieldUnlocked": "Kryptert svar er låst opp i denne nettleseren.",
+      "decryptingField": "Dekrypterer svar...",
+      "encryptedFieldUnavailable": "Kryptert svar krever en signatur i nettleseren.",
+      "encryptedFieldFailed": "Kunne ikke låse opp kryptert svar.",
+      "encryptedFieldLocked": "Kryptert svar er låst.",
+      "notAnswered": "Ikke besvart",
+      "requiredMissing": "Nødvendig svar mangler.",
+      "backToUserManager": "Tilbake til brukerbehandler",
+      "backToRoster": "Tilbake til brukerliste",
+      "eyebrow": "Brukerdetaljer",
+      "notFoundTitle": "Bruker ikke funnet",
+      "notFoundBody": "Denne brukeren er ikke i den nåværende admin-listen.",
+      "subtitle": "Se gjennom denne brukerens status, profil-svar og tilgangsdetaljer.",
+      "approvalStatus": "Godkjenningsstatus",
+      "waitingApproval": "venter på godkjenning",
+      "identityTitle": "Identitet",
+      "name": "Navn",
+      "nameUnavailable": "Ikke tilgjengelig",
+      "email": "E-post",
+      "emailUnavailable": "Ikke tilgjengelig",
+      "userId": "Bruker-ID",
+      "publicKey": "Offentlig nøkkel",
+      "noPublicKey": "Ingen offentlig nøkkel",
+      "fieldsTitle": "Profilfelt",
+      "fieldsShown_one": "{{count}} felt gjelder for denne brukeren.",
+      "fieldsShown_other": "{{count}} felt gjelder for denne brukeren.",
+      "noFields": "Ingen onboarding-felt gjelder for denne brukeren.",
+      "required": "Obligatorisk",
+      "optional": "Valgfritt",
+      "encrypted": "Kryptert",
+      "plain": "Ukryptert",
+      "chatContext": "Chat-kontekst"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Dekrypterer {{done}} av {{total}}",
+    "checkExtension": "sjekk din Nostr-utvidelse",
+    "persistentApproval": "Velg alternativet 'husk' eller 'alltid' slik at den bare spør én gang."
   }
 }

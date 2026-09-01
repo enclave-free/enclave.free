@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useAuthFlow } from '../hooks/useAuthFlow'
-import { fetchInstanceStatus } from '../utils/instanceStatus'
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuthFlow } from '../hooks/useAuthFlow';
+import { fetchInstanceStatus } from '../utils/instanceStatus';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Smart home redirect component.
@@ -12,46 +13,52 @@ import { fetchInstanceStatus } from '../utils/instanceStatus'
  * - Not authenticated → /login
  */
 export function HomeRedirect() {
-  const navigate = useNavigate()
-  const { redirectPath } = useAuthFlow()
-  const [instanceInitialized, setInstanceInitialized] = useState<boolean | null>(null)
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { redirectPath } = useAuthFlow();
+  const [instanceInitialized, setInstanceInitialized] = useState<
+    boolean | null
+  >(null);
 
   useEffect(() => {
-    let active = true
+    let active = true;
 
     const loadStatus = async () => {
       try {
-        const status = await fetchInstanceStatus()
-        if (!active) return
-        setInstanceInitialized(status.initialized)
+        const status = await fetchInstanceStatus();
+        if (!active) return;
+        setInstanceInitialized(status.initialized);
       } catch (error) {
-        console.error('Failed to fetch instance status (home redirect):', error)
-        if (!active) return
+        console.error(
+          'Failed to fetch instance status (home redirect):',
+          error
+        );
+        if (!active) return;
         // Fail open: proceed with normal auth flow on status failure.
-        setInstanceInitialized(true)
+        setInstanceInitialized(true);
       }
-    }
+    };
 
-    void loadStatus()
+    void loadStatus();
 
     return () => {
-      active = false
-    }
-  }, [])
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    if (instanceInitialized === null) return
+    if (instanceInitialized === null) return;
 
     // If no admin exists yet, show the admin initiation flow.
     if (instanceInitialized === false) {
-      navigate('/admin', { replace: true })
-      return
+      navigate('/admin', { replace: true });
+      return;
     }
 
     if (redirectPath) {
-      navigate(redirectPath, { replace: true })
+      navigate(redirectPath, { replace: true });
     }
-  }, [instanceInitialized, redirectPath, navigate])
+  }, [instanceInitialized, redirectPath, navigate]);
 
   // Show loading state while redirecting
   return (
@@ -59,9 +66,11 @@ export function HomeRedirect() {
       <div className="flex flex-col items-center gap-3">
         <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
         <p className="text-text-muted text-sm">
-          {instanceInitialized === null ? 'Checking instance status...' : 'Loading...'}
+          {instanceInitialized === null
+            ? t('home.checkingInstanceStatus', 'Checking instance status...')
+            : t('common.loading')}
         </p>
       </div>
     </div>
-  )
+  );
 }

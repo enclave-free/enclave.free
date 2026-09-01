@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher'
 import { Button, Callout, TextField } from '../components/ui'
 import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
 import { useInstanceConfig } from '../context/InstanceConfigContext'
+import { getExplicitLanguageChoice } from '../utils/languages'
 
 type TabType = 'signup' | 'login'
 type FormState = 'idle' | 'submitting' | 'success' | 'error'
@@ -165,6 +166,7 @@ export function UserAuth() {
 
     try {
       // Call the magic link API
+      const locale = getExplicitLanguageChoice()
       const response = await fetch(`${API_BASE}/auth/magic-link`, {
         method: 'POST',
         headers: {
@@ -173,6 +175,7 @@ export function UserAuth() {
         body: JSON.stringify({
           email: formData.email,
           name: activeTab === 'signup' ? formData.name : '',
+          ...(locale ? { locale } : {}),
         }),
       })
 

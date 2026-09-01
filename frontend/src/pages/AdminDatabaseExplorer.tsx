@@ -426,7 +426,10 @@ export function AdminDatabaseExplorer() {
     } catch (error) {
       setQueryResult({
         success: false,
-        error: error instanceof Error ? error.message : 'Query execution failed',
+        error:
+          error instanceof Error
+            ? error.message
+            : t('errors.queryExecutionFailed', 'Query execution failed'),
       })
     } finally {
       isRunningQueryRef.current = false

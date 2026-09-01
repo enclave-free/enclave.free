@@ -36,7 +36,17 @@
     "retry": "Coba Lagi",
     "saved": "Tersimpan",
     "sending": "Mengirim...",
-    "gotIt": "Mengerti"
+    "gotIt": "Mengerti",
+    "send": "Kirim",
+    "backToAdminDashboard": "Kembali ke Dashboard Admin",
+    "loadingPage": "Memuat halaman",
+    "pageLoadError": "Gagal memuat halaman. Silakan segarkan.",
+    "export": "Ekspor",
+    "reset": "Atur ulang",
+    "exit": "Keluar",
+    "none": "Tidak ada",
+    "all": "Semua",
+    "warning": "Peringatan"
   },
   "settings": {
     "title": "Pengaturan",
@@ -59,8 +69,23 @@
       "deploymentConfig": "Konfigurasi Deployment",
       "deploymentConfigDesc": "Layanan, SMTP, penyimpanan",
       "userConfig": "Konfigurasi Pengguna",
-      "userConfigDesc": "Jenis pengguna dan pertanyaan orientasi"
-    }
+      "userConfigDesc": "Jenis pengguna dan pertanyaan orientasi",
+      "guidedSetup": "Panduan Pengaturan",
+      "guidedSetupDesc": "Panduan langkah demi langkah untuk pengaturan, dokumen, sumber daya, dan pengujian.",
+      "guides": "Panduan Admin",
+      "guidesDesc": "Pahami apa yang dikonfigurasi admin dan di mana.",
+      "testUserSession": "Sesi Pengguna Tes",
+      "testUserSessionDesc": "Chat sebagai pengguna simulasi dan tinjau umpan balik beta.",
+      "diagnostics": "Diagnostik",
+      "diagnosticsDesc": "Jalankan smoke check saat menyelidiki masalah.",
+      "resourceDirectory": "Direktori Sumber Daya",
+      "resourceDirectoryDesc": "Kurasi sumber daya referensi terpercaya secara manual."
+    },
+    "diagnostics": "Diagnostik",
+    "adminWorkflows": "Alur Kerja Admin",
+    "settingsSection": "Pengaturan",
+    "dataAndContent": "Data & Konten",
+    "operations": "Operasi"
   },
   "admin": {
     "confirmDelete": "Apakah Anda yakin ingin menghapus catatan ini?",
@@ -102,7 +127,12 @@
       "instanceSectionTitle": "Konfigurasi Instance",
       "onboardingFieldsHint": "Buat pertanyaan yang dijawab pengguna selama orientasi.",
       "userSectionDesc": "Konfigurasi jenis pengguna dan pertanyaan yang dijawab pengguna selama orientasi.",
-      "userSectionTitle": "Konfigurasi Pengguna"
+      "userSectionTitle": "Konfigurasi Pengguna",
+      "fieldScopeFilterLabel": "Filter pertanyaan berdasarkan tipe pengguna",
+      "noFieldsForScope": "Belum ada pertanyaan yang berlaku untuk tipe pengguna ini.",
+      "reorderNeedsAllScope": "Tampilkan semua pertanyaan untuk mengurutkannya kembali",
+      "fieldScopeGlobalHint": "Pertanyaan yang dijawab oleh setiap pengguna, apa pun tipenya.",
+      "fieldScopeTypeHint": "Semua yang ditanyakan kepada tipe pengguna ini: pertanyaan global yang dijawab semua orang, ditambah pertanyaan khusus mereka sendiri."
     },
     "database": {
       "backToSetup": "Kembali ke Pengaturan Admin",
@@ -187,7 +217,14 @@
       "nip07Unavailable": "Ekstensi Nostr tidak terdeteksi",
       "plaintextFieldIcon": "Field teks biasa",
       "primaryKeyIcon": "Kunci primer",
-      "unlockDecryption": "Buka Dekripsi"
+      "unlockDecryption": "Buka Dekripsi",
+      "safeQueryResults": "Hasil kueri aman",
+      "queryError": "Kesalahan kueri",
+      "writeResult": "Hasil penulisan database",
+      "emptyQueryResult": "Hasil kueri kosong",
+      "readOnly": "Hanya baca",
+      "tableLoadError": "Kesalahan pemuatan tabel",
+      "readOnlyHint": "Pengeditan database secara langsung dinonaktifkan; gunakan alur admin yang diaudit untuk melakukan perubahan."
     },
     "fields": {
       "nameRequired": "Nama field wajib diisi",
@@ -277,7 +314,11 @@
       "removeFieldFailed": "Gagal menghapus field",
       "reorderFailed": "Gagal mengurutkan ulang field",
       "loadUsersFailed": "Gagal memuat pengguna",
-      "updateTypeFailed": "Gagal memperbarui jenis pengguna"
+      "updateTypeFailed": "Gagal memperbarui jenis pengguna",
+      "loadSettingsFailed": "Gagal memuat pengaturan",
+      "externalConfigConflict": "Sage atau admin lain mengubah pengaturan ini saat Anda sedang mengedit. Muat ulang halaman ini sebelum menyimpan agar Anda tidak menimpa nilai terbaru.",
+      "externalSettingsConflict": "Sage atau admin lain mengubah pengaturan ini saat Anda sedang mengedit. Muat ulang halaman ini sebelum menyimpan.",
+      "externalUserConfigConflict": "Sage atau admin lain mengubah Tipe Pengguna atau Pertanyaan Onboarding saat Anda sedang mengedit. Muat ulang halaman ini sebelum menyimpan draf Anda."
     },
     "userMigration": {
       "title": "Migrasi Tipe Pengguna",
@@ -312,7 +353,10 @@
       "emailEncryptedHint": "Email (terenkripsi)",
       "nameEncryptedHint": "Nama (terenkripsi)",
       "noUsersHint": "Coba ubah filter di atas atau segarkan.",
-      "pubkeyPresent": "Nostr pubkey hadir"
+      "pubkeyPresent": "Nostr pubkey hadir",
+      "usersErrorLabel": "Kesalahan migrasi tipe pengguna",
+      "errorLabel": "Kesalahan migrasi tipe pengguna",
+      "summaryLabel": "Ringkasan migrasi tipe pengguna"
     },
     "configAssistant": {
       "openAria": "Buka asisten admin",
@@ -350,8 +394,40 @@
         "restartRequiredFor": "Perlu restart untuk: {{keys}}.",
         "restartRequiredNo": "Perlu restart: tidak.",
         "restartCheckFailedHttp": "Pemeriksaan kebutuhan restart gagal (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Pemeriksaan kebutuhan restart gagal (kesalahan jaringan)."
-      }
+        "restartCheckFailedNetwork": "Pemeriksaan kebutuhan restart gagal (kesalahan jaringan).",
+        "pageRefreshRecommended": "Segarkan halaman ini untuk melihat pembaruan tema."
+      },
+      "onboardingWelcome": "Selamat datang — mari atur ruang Anda. Jawab sebanyak yang Anda mau dalam satu pesan (beri nomor, dan lewati apa pun yang Anda ragukan):\n\n1. **Nama** — apa nama untuk ruang ini? (muncul di header & tab browser)\n2. **Deskripsi** — satu kalimat tentang kegunaannya (catatan pribadi, tidak terlihat oleh pengguna)\n3. **Nama asisten** — siapa nama asisten AI ini?\n4. **Warna aksen** — warna sorotan untuk tombol & tautan (nama seperti biru/teal, atau kode hex seperti #3B82F6)\n5. **Tema** — terang, gelap, atau sistem (sesuaikan dengan perangkat)?\n6. **Bahasa default** — misal: Inggris atau Spanyol (opsional)\n7. **Tagline** — baris singkat untuk header (opsional)\n8. **Pengguna baru** — izinkan mereka langsung masuk, atau setujui setiap orang?\n9. **Tipe pengguna** — jenis orang non-admin apa yang akan menggunakan ini? (misal: Guru dan Siswa) — Saya akan membuatkan masing-masing untuk Anda\n\nContoh: \"9. Guru dan Siswa\". Saya akan menyimpan semuanya dalam satu langkah — dan Anda dapat beralih ke pengaturan manual kapan saja.",
+      "collapseSidebar": "Sembunyikan sidebar asisten",
+      "expandSidebar": "Buka sidebar asisten admin",
+      "resize": "Ubah ukuran panel asisten admin",
+      "railLabel": "Asisten",
+      "shareSecretsHint": "Nonaktif secara default. Aktifkan alat Konfigurasi terlebih dahulu. Jika diaktifkan, nilai konfigurasi deployment rahasia akan diungkap di sisi klien dan dikirim ke Sage untuk alur prototiper ini.",
+      "applyIntentUsePanel": "Gunakan panel perubahan tertunda di bawah dan klik Terapkan untuk mengonfirmasi pembaruan konfigurasi ini.",
+      "applyIntentNoPending": "Tidak ada perubahan konfigurasi tertunda untuk diterapkan. Mintalah asisten untuk mengusulkan set perubahan terlebih dahulu.",
+      "startNewConversation": "Mulai percakapan asisten baru",
+      "reducedContextNoticeLabel": "Pemberitahuan konteks berkurang",
+      "sessionMemoryNoticeLabel": "Pemberitahuan pemadatan Memori Sesi",
+      "sessionMemoryNotice": "Konteks lama telah diringkas agar percakapan ini dapat terus berlanjut.",
+      "reducedContextNotice": "Beberapa konteks dikurangi agar sesuai dengan anggaran Model Provider ({{sections}}). Jawaban mungkin kurang lengkap sampai Anda memulai percakapan asisten baru.",
+      "reducedContextSections": {
+        "recentConversation": "riwayat percakapan terbaru"
+      },
+      "approvalCardTitle": "Setujui perubahan konfigurasi",
+      "applying": "Menerapkan",
+      "applied": "Berhasil diterapkan",
+      "rejected": "Ditolak",
+      "failed": "Gagal",
+      "superseded": "Digantikan",
+      "hideDetails": "Sembunyikan detail",
+      "reviewDetails": "Tinjau detail",
+      "reject": "Tolak",
+      "approve": "Setujui",
+      "applyErrorLabel": "Kesalahan penerapan konfigurasi",
+      "onboardingTitle": "Chat Panduan Pengaturan",
+      "onboardingContext": "Percakapan pengaturan terfokus",
+      "directShareSecretsHint": "Opsional: sertakan nilai rahasia deployment yang tersimpan dalam konteks Percakapan ini. Pembacaan rahasia secara langsung tidak memerlukan ini.",
+      "directWritePrompt": "Tanyakan tentang konfigurasi admin. Sage dapat memeriksa pengaturan dan, setelah konfirmasi dengan Anda dalam percaksaapan, menerapkan perubahan yang didukung secara langsung."
     },
     "reachout": {
       "badgeDefault": "Bawaan",
@@ -518,7 +594,16 @@
       "typographyTitle": "Tipografi",
       "userIconLabel": "Ikon pengguna",
       "userLabelLabel": "Label pengguna",
-      "userLabelPlaceholder": "misalnya, Anda"
+      "userLabelPlaceholder": "misalnya, Anda",
+      "publicEmailDisplayNameLabel": "Nama tampilan email publik (opsional)",
+      "publicEmailDisplayNameHint": "Digunakan dalam email login magic-link. Biarkan kosong untuk menggunakan nama Instance.",
+      "defaultsTitle": "Default Instance",
+      "defaultsDesc": "Atur bahasa dan tema dasar yang digunakan sebelum kontrol browser lokal diterapkan.",
+      "defaultLanguageLabel": "Bahasa default",
+      "defaultThemeLabel": "Tema default",
+      "themeSystem": "Sistem",
+      "themeLight": "Terang",
+      "themeDark": "Gelap"
     },
     "userConfig": {
       "subtitle": "Konfigurasi jenis pengguna dan pertanyaan yang dijawab pengguna selama orientasi.",
@@ -526,6 +611,55 @@
       "typeDescription": "Deskripsi",
       "typeIcon": "Ikon Tipe",
       "typeName": "Nama Tipe"
+    },
+    "userApproval": {
+      "updateFailed": "Gagal memperbarui persetujuan pengguna.",
+      "approvedUser": "Pengguna #{{id}} disetujui.",
+      "revokedUser": "Pengguna #{{id}} dikembalikan ke status tertunda.",
+      "title": "Persetujuan Pengguna",
+      "subtitle": "Pilih apakah Pengguna terautentikasi baru dapat langsung masuk ke obrolan atau menunggu persetujuan Admin.",
+      "requireManualLabel": "Wajibkan persetujuan manual untuk pengguna baru",
+      "requireManualHint": "Jika diaktifkan, Pengguna baru akan diarahkan ke layar menunggu persetujuan hingga disetujui oleh Admin.",
+      "loadingHint": "Memuat...",
+      "saveButton": "Simpan persetujuan pengguna",
+      "savedCalloutLabel": "Persetujuan pengguna berhasil disimpan",
+      "errorCalloutLabel": "Kesalahan persetujuan pengguna",
+      "pendingTitle": "Menunggu persetujuan",
+      "pendingCount_zero": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "pendingCount_one": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "pendingCount_two": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "pendingCount_few": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "pendingCount_many": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "pendingCount_other": "{{count}} pengguna memerlukan persetujuan sebelum dapat mengakses obrolan.",
+      "nonePending": "Tidak ada pengguna yang sedang menunggu persetujuan.",
+      "actionSavedCalloutLabel": "Persetujuan pengguna telah diperbarui",
+      "actionErrorCalloutLabel": "Pembaruan persetujuan pengguna gagal",
+      "loadingUsers": "Memuat pengguna...",
+      "emptyState": "Pengguna baru yang menunggu persetujuan akan muncul di sini jika persetujuan manual diperlukan.",
+      "emailOnFile": "Email yang terdaftar",
+      "nameOnFile": "Nama yang terdaftar",
+      "approveButton": "Setujui",
+      "revokeButton": "Cabut"
+    },
+    "userRosterExport": {
+      "auditFailed": "Ekspor daftar pengguna tidak dapat diaudit. Spreadsheet tidak berhasil diunduh.",
+      "decryptUnavailable": "Ekstensi browser dengan dekripsi NIP-0br diperlukan untuk menyiapkan daftar ini.",
+      "decryptFailed": "Nilai daftar terenkripsi tidak dapat didekripsi. Spreadsheet tidak berhasil dibuat.",
+      "prepared": "Daftar lengkap telah siap. Unduhan kini telah aktif.",
+      "prepareRequired": "Siapkan daftar saat ini sebelum mengunduhnya.",
+      "prepareButton": "Siapkan daftar pengguna",
+      "downloadButton": "Unduh daftar yang telah siap",
+      "success": "Spreadsheet daftar pengguna berhasil diunduh.",
+      "failed": "Gagal mengekspor daftar pengguna.",
+      "button": "Ekspor pengguna",
+      "successLabel": "Ekspor daftar pengguna siap",
+      "errorLabel": "Ekspor daftar pengguna gagal"
+    },
+    "userIdentity": {
+      "decrypting": "Mendekripsi nama/email...",
+      "decryptFailed": "Gagal mendekripsi nama/email",
+      "unlockDetails": "Buka kunci untuk menampilkan nama/email",
+      "unlockButton": "Buka kunci detail"
     }
   },
   "adminOnboarding": {
@@ -550,7 +684,9 @@
     "legalResponsibilityNotice": "Anda bertanggung jawab atas konfigurasi yang sah secara hukum, pengungkapan kepada pengguna, dan kebijakan penanganan data untuk instance ini.",
     "extracted": {
       "change_language_789b14": "Ubah bahasa"
-    }
+    },
+    "statusError": "Gagal memeriksa status instance",
+    "connectionError": "Gagal terhubung"
   },
   "onboarding": {
     "nostr": {
@@ -575,7 +711,8 @@
       "title": "Apa yang paling menggambarkan Anda?",
       "description": "Pilih opsi yang paling sesuai dengan kebutuhan Anda",
       "loadError": "Gagal memuat tipe pengguna. Silakan coba lagi.",
-      "selectionLabel": "Pilihan tipe pengguna"
+      "selectionLabel": "Pilihan tipe pengguna",
+      "errorLabel": "Kesalahan pemuatan tipe pengguna"
     },
     "language": {
       "selectLabel": "Pilih bahasa",
@@ -618,7 +755,8 @@
       "encryptionBody": "Field profil dienkripsi secara bawaan, tetapi administrator instance ini mengontrol pengaturan tingkat field dan dapat mengizinkan data tertentu disimpan atau dibagikan secara berbeda.",
       "adminControlNotice": "Penanganan data dikonfigurasi oleh administrator instance ini, termasuk data apa yang boleh disimpan tanpa enkripsi atau dibagikan dengan alat AI.",
       "noWarrantyNotice": "Perangkat lunak Enclave disediakan apa adanya tanpa jaminan. Penggunaan instance ini tunduk pada kebijakan administrator.",
-      "retentionNotice": "Jangka waktu penyimpanan dan penghapusan data ditetapkan oleh administrator instans ini. Hubungi mereka untuk permintaan akses, koreksi, atau penghapusan."
+      "retentionNotice": "Jangka waktu penyimpanan dan penghapusan data ditetapkan oleh administrator instans ini. Hubungi mereka untuk permintaan akses, koreksi, atau penghapusan.",
+      "errorLabel": "Kesalahan permintaan magic link"
     },
     "verify": {
       "verifying": "Memverifikasi tautan Anda...",
@@ -678,20 +816,28 @@
       "databaseName": "Basis Data",
       "knowledgeGraph": "Query graf pengetahuan",
       "config": "Konfigurasi",
-      "configName": "Konfigurasi"
+      "configName": "Konfigurasi",
+      "knowledgeSearch": "Cari dokumen yang diunggah dan potongan pengetahuan",
+      "knowledgeSearchName": "Pengetahuan",
+      "curatedResources": "Temukan sumber rujukan yang telah diverifikasi admin dan organisasi terpercaya",
+      "curatedResourcesName": "Sumber Daya"
     },
     "documentScope": {
       "title": "Basis Pengetahuan",
       "description": "Pilih sumber untuk disertakan dalam konteks",
       "noSources": "Tidak ada sumber tersedia",
       "clearAll": "Hapus semua",
-      "docsLabel": "Dokumen"
+      "docsLabel": "Dokumen",
+      "clearAllSelectedAria": "Hapus semua dokumen yang dipilih",
+      "docsLabelWithCount": "Dokumen {{count}}"
     },
     "messages": {
       "searching": "Mencari \"{{term}}\"...",
       "searchingPrefix": "Mencari",
       "searchResults": "Saya mencari \"{{term}}\" untuk Anda:",
-      "newConversation": "Percakapan baru"
+      "newConversation": "Percakapan baru",
+      "copy": "Salin pesan",
+      "copied": "Pesan disalin"
     },
     "code": {
       "copy": "Salin",
@@ -710,7 +856,87 @@
       "roleUser": "Anda",
       "roleAssistant": "Asisten",
       "footer": "Diekspor dari {{instanceName}}",
-      "exportedOn": "Diekspor pada {{timestamp}}"
+      "exportedOn": "Diekspor pada {{timestamp}}",
+      "copiedExportNotice": "Ekspor ini meninggalkan penyimpanan produk aktif dan berada di luar Active Storage Lifecycle setelah diunduh."
+    },
+    "new": "Chat baru",
+    "listTitle": "Chat",
+    "contextTitle": "Konteks",
+    "messageActions": "Tindakan pesan",
+    "actions": {
+      "stop": "Hentikan respons",
+      "stopDisabled": "Tidak ada respons untuk dihentikan.",
+      "regenerate": "Buat ulang respons",
+      "edit": "Edit pesan",
+      "waitForResponse": "Tunggu respons saat ini selesai terlebih dahulu.",
+      "startConversation": "Mulai atau lanjutkan Percakapan terlebih dahulu.",
+      "resolveConfirmation": "Selesaikan Konfirmasi Perubahan yang tertunda sebelum mengubah riwayat."
+    },
+    "composerContextAria": "Konteks komposer",
+    "sessions": {
+      "ariaLabel": "Sesi obrolan",
+      "current": "Obrolan saat ini",
+      "empty": "Kosong",
+      "messageCount_one": "{{count}} pesan",
+      "messageCount_other": "{{count}} pesan",
+      "deleteConfirmTitle": "Hapus \"{{title}}\"?",
+      "rename": "Ubah nama {{title}}",
+      "delete": "Hapus {{title}}",
+      "resumeInvalid": "Tidak dapat memuat Percakapan tersebut.",
+      "renameEmpty": "Judul Percakapan wajib diisi.",
+      "renameError": "Tidak dapat mengubah nama Percakapan.",
+      "deleteError": "Tidak dapat menghapus Percakapan.",
+      "loading": "Memuat obrolan...",
+      "error": "Tidak dapat memuat obrolan",
+      "saved": "Obrolan tersimpan",
+      "deleteConfirmBody": "Ini akan menghapus Percakapan yang tersimpan beserta Session Memory-nya.",
+      "deleteCancel": "Batalkan penghapusan percakapan",
+      "cancel": "Batal",
+      "deleteConfirm": "Hapus percakapan",
+      "deleteDeleting": "Menghapus...",
+      "renameInput": "Judul Percakapan",
+      "renameCancel": "Batalkan pengubahan nama percakapan",
+      "renameSave": "Simpan judul percakapan",
+      "renameSaving": "Mengubah nama...",
+      "open": "Buka sesi obrolan",
+      "close": "Tutup sesi obrolan"
+    },
+    "currentChatAria": "Obrolan saat ini",
+    "newFromCurrent": "Mulai obrolan baru",
+    "documentsContextTitle": "Dokumen",
+    "errors": {
+      "requestLabel": "Kesalahan permintaan obrolan"
+    },
+    "trace": {
+      "finalizing": "Menyelesaikan respons...",
+      "collapse": "Sembunyikan",
+      "expand": "Perluas",
+      "reasoning": "Penalaran",
+      "thinking": "Berpikir",
+      "transcript": "Transkrip {{label}}",
+      "reasoningSummaryAria": "Ringkasan penalaran",
+      "reasoningTranscriptAria": "Transkrip penalaran",
+      "label": "Pelacakan",
+      "toolCalls": "Pemanggilan alat",
+      "retrieval": "Pengambilan",
+      "input": "Masukan",
+      "output": "Keluaran",
+      "retrievedSource": "Sumber yang diambil",
+      "score": "skor {{score}}",
+      "optionalDetailsAria": "detail opsional {{label}}"
+    },
+    "conversationMessagesAria": "Pesan percakapan",
+    "conversationSurfaceAria": "Permukaan percakapan",
+    "conversationThreadAria": "Thread percakapan",
+    "activity": {
+      "label": "Aktivitas",
+      "summaryAria": "Ringkasan aktivitas",
+      "detailsAria": "Detail aktivitas",
+      "timelineAria": "Lini masa aktivitas",
+      "show": "Tampilkan Aktivitas",
+      "hide": "Sembunyikan Aktivitas",
+      "showOptional": "Tampilkan detail opsional",
+      "hideOptional": "Sembunyikan detail opsional"
     }
   },
   "errors": {
@@ -745,11 +971,228 @@
     "adminSessionExpired": "Sesi admin kedaluwarsa",
     "authenticationFailed": "Autentikasi gagal",
     "noNostrExtension": "Ekstensi Nostr tidak ditemukan",
-    "exportFailed": "Ekspor Gagal"
+    "exportFailed": "Ekspor Gagal",
+    "failedToRetryDeletionTombstone": "Gagal mencoba kembali penghapusan tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Gagal mengonfirmasi surface deployment yang tidak didukung",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Gagal mengonfirmasi kategori surface deployment yang tidak didukung",
+    "failedToPreviewRetention": "Gagal melihat pratinjau kebijakan retensi",
+    "failedToUpdateRetentionPolicy": "Gagal memperbarui kebijakan retensi",
+    "failedToRunScheduledRetention": "Gagal menjalankan retensi terjadwal",
+    "failedToUpdateArtifactEncryptionPosture": "Gagal memperbarui postur enkripsi artefak",
+    "queryExecutionFailed": "Eksekusi kueri gagal"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Admin dapat"
+    },
+    "summary": {
+      "brand": {
+        "title": "Branding instansi",
+        "body": "Nama, logo, tema, identitas asisten, dan tampilan email publik."
+      },
+      "people": {
+        "title": "Kontrol pengguna",
+        "body": "Tipe pengguna, pertanyaan onboarding, persetujuan, migrasi, dan akses."
+      },
+      "agent": {
+        "title": "Bentuk Sage",
+        "body": "Aturan prompt, pengaturan respons, akses dokumen, dan default alat."
+      },
+      "launch": {
+        "title": "Luncurkan dengan aman",
+        "body": "Email, domain, CORS, HTTPS, perutean model, kesehatan, dan env runtime."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Merek",
+        "title": "Identitas dan tampilan",
+        "body": "Buat instance terasa seperti organisasi Anda.",
+        "detail1": "Nama, tagline, nama asisten, dan label pengguna.",
+        "detail2": "Logo, favicon, ikon, warna aksen, tema, tipografi, dan gaya chat.",
+        "detail3": "Bahasa default dan nama tampilan email publik.",
+        "link": "Buka Pengaturan Instance"
+      },
+      "people": {
+        "eyebrow": "Akses",
+        "title": "Orang dan akses",
+        "body": "Tentukan siapa yang menggunakan instance dan apa yang Anda minta dari mereka.",
+        "detail1": "Tipe pengguna untuk grup seperti staf, anggota, atau klien.",
+        "detail2": "Field onboarding, pertanyaan wajib, opsi, placeholder, dan field per-tipe.",
+        "detail3": "Persetujuan manual, migrasi pengguna, pencabutan akses, dan penghapusan.",
+        "link": "Buka Pengaturan Pengguna"
+      },
+      "agent": {
+        "eyebrow": "Perilaku",
+        "title": "Perilaku Agent",
+        "body": "Atur bagaimana Sage menjawab dan alat mana yang aktif secara default.",
+        "detail1": "Template prompt, aturan perilaku, topik terlarang, dan pengaturan respons.",
+        "detail2": "Default fitur untuk alat Knowledge, Resources, Web, Config, dan Database.",
+        "detail3": "Pengaturan global ditambah override per-tipe pengguna.",
+        "link": "Buka Pengaturan Agent"
+      },
+      "docs": {
+        "eyebrow": "Pengetahuan",
+        "title": "Pengetahuan dokumen",
+        "body": "Berikan materi sumber yang dapat dicari oleh agent.",
+        "detail1": "Unggah PDF, kebijakan, FAQ, buku panduan, dan panduan.",
+        "detail2": "Dokumen dipotong-potong, di-embed, dan dibuat dapat dicari.",
+        "detail3": "Akses Dokumen mengontrol apa yang dapat dipilih atau aktif secara default.",
+        "link": "Buka Unggah Dokumen"
+      },
+      "resources": {
+        "eyebrow": "Referensi",
+        "title": "Sumber terverifikasi",
+        "body": "Tambahkan referensi terpercaya yang dapat direkomendasikan oleh agen.",
+        "detail1": "Nama, deskripsi, tipe sumber daya, bahasa, cakupan, dan jenis bantuan.",
+        "detail2": "Telepon, email, URL, saluran aman, alamat, dan catatan.",
+        "detail3": "Sumber daya terverifikasi menempati peringkat pertama. Sumber daya yang diarsipkan tetap tersembunyi dari pengguna.",
+        "link": "Buka Direktori Sumber Daya"
+      },
+      "ops": {
+        "eyebrow": "Operasi",
+        "title": "Operasi dan runtime",
+        "body": "Jaga agar instance tetap terhubung, dapat dijangkau, dan sehat.",
+        "detail1": "SMTP untuk magic link email, domain, CORS, HTTPS, dan URL publik.",
+        "detail2": "Penyedia model, model embedding, pencarian, penyimpanan, dan kesehatan layanan.",
+        "detail3": "Ekspor env runtime, kesiapan, pengaturan usang, dan migrasi kunci admin.",
+        "link": "Buka Pengaturan Deployment"
+      },
+      "title": "Apa yang dikonfigurasi admin",
+      "body": "Ini adalah antarmuka kontrol utama. Anda dapat menggunakan halaman secara langsung atau meminta Admin Assistant untuk menyiapkan perubahan."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Tanya",
+        "title": "Asisten admin",
+        "body": "Ajukan pertanyaan tentang pengaturan saat ini dan minta perubahan konfigurasi.",
+        "detail1": "Pembacaan konfigurasi memeriksa status instance secara nyata, bukan sekadar menebak.",
+        "detail2": "Perubahan yang diusulkan disiapkan untuk ditinjau.",
+        "detail3": "Apply menjalankan endpoint admin yang telah disetujui tanpa putaran model lainnya.",
+        "link": "Buka Admin Assistant",
+        "directWriteDetail2": "Sage meminta konfirmasi percakapan sebelum penulisan yang didukung.",
+        "directWriteDetail3": "Setelah Anda mengonfirmasi, Sage memanggil Tools konfigurasi langsungnya dan melaporkan hasil aslinya."
+      },
+      "guided": {
+        "eyebrow": "Mulai",
+        "title": "Panduan Pengaturan",
+        "body": "Gunakan satu chat panduan untuk membuat konfigurasi pertama yang bermanfaat.",
+        "detail1": "Identitas, asisten, bahasa, kebijakan akses, tipe pengguna, pertanyaan, dan aturan perilaku.",
+        "detail2": "Kemudian unggah dokumen, tambahkan sumber daya, dan uji.",
+        "link": "Buka Panduan Pengaturan"
+      },
+      "test": {
+        "eyebrow": "Validasi",
+        "title": "Uji dan umpan balik",
+        "body": "Coba agen dari sudut pandang pengguna sebelum peluncuran.",
+        "detail1": "Pilih tipe pengguna, mulai sesi pengujian, dan simpan uji coba.",
+        "detail2": "Tinjau log beta terenkripsi dan beri peringkat pada jawaban.",
+        "link": "Buka Sesi Pengguna Pengujian"
+      },
+      "database": {
+        "eyebrow": "Inspeksi",
+        "title": "Penjelajah basis data",
+        "body": "Inspeksi data SQLite yang tersimpan saat melakukan debugging.",
+        "detail1": "Gunakan kueri SELECT read-only untuk inspeksi.",
+        "detail2": "Jangan gunakan ini sebagai jalur mutasi produk.",
+        "link": "Buka Database Explorer"
+      },
+      "title": "Alur kerja admin umum",
+      "body": "Gunakan ini saat Anda sedang melakukan pengaturan, pengecekan kualitas, atau investigasi data."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Lingkungan eksekusi",
+        "title": "Satu runtime percakapan",
+        "body": "Knowledge, Resources, Web, Config, dan Database adalah set alat yang terlihat, bukan sistem chat terpisah.",
+        "detail1": "Model dapat memanggil alat yang diaktifkan jika alat tersebut membantu.",
+        "detail2": "Config dan Database hanya muncul untuk admin yang divalidasi server."
+      },
+      "auth": {
+        "eyebrow": "Masuk",
+        "title": "Jalur masuk yang berbeda",
+        "body": "Admin menggunakan NIP-07. Pengguna menggunakan magic link email.",
+        "detail1": "Private key Admin tetap berada di browser signer.",
+        "detail2": "SMTP harus berfungsi sebelum magic link pengguna berfungsi di produksi."
+      },
+      "data": {
+        "eyebrow": "Privasi",
+        "title": "Batasan data itu penting",
+        "body": "Field profil yang terenkripsi tetap berada di luar konteks chat.",
+        "detail1": "Hanya field yang tidak terenkripsi yang dapat ditandai untuk konteks chat AI.",
+        "detail2": "Secret deployment disimpan secara terenkripsi dan ditampilkan dalam bentuk masked secara default."
+      },
+      "ops": {
+        "eyebrow": "Operasi",
+        "title": "Beberapa perubahan memerlukan operator",
+        "body": "Aplikasi dapat menyimpan pengaturan runtime yang diinginkan; aplikasi tidak akan memulai ulang layanan secara diam-diam.",
+        "detail1": "Ekspor runtime env setelah perubahan provider, origin, CORS, atau search.",
+        "detail2": "Gunakan readiness dan kesehatan layanan untuk mengonfirmasi apa yang sebenarnya berjalan."
+      },
+      "title": "Hal penting mengenai produk untuk diingat",
+      "body": "Aturan ini menjaga integritas pengaturan dan mencegah penyalahgunaan yang tidak disengaja."
+    },
+    "ask": {
+      "prompt1": "Apa yang masih kurang sebelum instance ini siap digunakan oleh pengguna?",
+      "prompt2": "Tinjau tipe pengguna saat ini, pertanyaan onboarding, dokumentasi, dan sumber daya.",
+      "prompt3": "Siapkan perubahan untuk ditinjau: atur nada asisten dan bahasa default.",
+      "title": "Hal-hal baik untuk ditanyakan kepada Admin Assistant",
+      "body": "Mintalah peninjauan sebelum meminta perubahan. Ia dapat memeriksa pengaturan dan menyiapkan paket perubahan.",
+      "directWriteBody": "Mintalah Sage untuk memeriksa atau mengubah konfigurasi yang didukung. Ia akan mengonfirmasi perubahan yang dimaksudkan kepada Anda sebelum menulis.",
+      "directWritePrompt3": "Atur nada asisten dan bahasa default, dan konfirmasikan perubahan yang dimaksudkan kepada saya terlebih dahulu."
+    },
+    "hero": {
+      "eyebrow": "Peta kontrol Admin",
+      "shortVersion": {
+        "title": "Versi singkat",
+        "body": "Admin mengatur identitas, pengguna, pengetahuan, alat, dan pengaturan peluncuran. Beberapa perubahan runtime tetap memerlukan restart operator."
+      }
+    },
+    "title": "Panduan Admin",
+    "subtitle": "Peta sederhana tentang apa yang dikonfigurasi admin, apa yang dapat dilakukan produk, dan apa yang perlu diperhatikan sebelum peluncuran.",
+    "quickStart": {
+      "title": "Mulai di sini",
+      "body": "Lakukan pengaturan kecil yang bermanfaat terlebih dahulu. Sempurnakan setelah pengujian dengan pertanyaan nyata."
+    },
+    "safety": {
+      "title": "Dasar-dasar keamanan",
+      "body": "Admin mengontrol akses, data, perilaku, dan pengaturan runtime. Lakukan perubahan berisiko dengan hati-hati.",
+      "items": {
+        "0": "Admin masuk dengan NIP-07. Pengguna masuk dengan tautan ajaib email.",
+        "1": "Field pengguna dienkripsi secara default. Hanya field teks biasa yang dapat dibagikan ke chat.",
+        "2": "Secret tetap tersembunyi kecuali Anda membagikannya untuk sesi admin saat ini.",
+        "3": "Perubahan asisten adalah usulan. Anda tetap meninjau dan mengklik Terapkan.",
+        "4": "Deployment Settings menyimpan nilai runtime yang diinginkan. Operator tetap mengekspor env dan me-restart layanan jika diperlukan."
+      },
+      "directItems": {
+        "0": "Admin masuk dengan NIP-07. Pengguna masuk dengan tautan ajaib email.",
+        "1": "Field pengguna dienkripsi secara default. Hanya field teks biasa yang dapat dibagikan ke chat.",
+        "2": "Secret tetap tersembunyi kecuali Anda membagikannya untuk sesi admin saat ini.",
+        "3": "Sage mengonfirmasi perubahan konfigurasi dengan Anda di chat, lalu menerapkan perubahan yang didukung secara langsung.",
+        "4": "Deployment Settings menyimpan nilai runtime yang diinginkan. Operator tetap mengekspor env dan me-restart layanan jika diperlukan."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Masuk sebagai admin",
+        "body": "Gunakan kunci NIP-07 admin. Jaga kerahasiaannya."
+      },
+      "1": {
+        "title": "Atur dasar-dasarnya",
+        "body": "Beri nama instance, pilih tampilan, dan atur identitas asisten."
+      },
+      "2": {
+        "title": "Tentukan pengguna Anda",
+        "body": "Buat tipe pengguna, pertanyaan onboarding, dan aturan persetujuan."
+      },
+      "3": {
+        "title": "Tambahkan pengetahuan terpercaya",
+        "body": "Unggah dokumen dan tambahkan sumber daya yang telah diverifikasi."
+      },
+      "4": {
+        "title": "Uji sebelum peluncuran",
+        "body": "Chat sebagai pengguna, tinjau umpan balik, lalu undang orang sungguhan."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1229,55 @@
     "securityStep3Primary": "Jalankan validasi konfigurasi",
     "securityStep3Secondary": "Tinjau data tersimpan",
     "user": "Konfigurasi Pengguna",
-    "userDesc": "Tentukan jenis pengguna dan pertanyaan orientasi"
+    "userDesc": "Tentukan jenis pengguna dan pertanyaan orientasi",
+    "subtitleSimple": "Pilih tempat Anda ingin bekerja pada instance ini.",
+    "workflowsSectionLabel": "Alur Kerja Admin",
+    "adminAssistant": "Asisten Admin",
+    "adminAssistantDesc": "Gunakan chat admin untuk bantuan konfigurasi dan peninjauan perubahan.",
+    "guidedSetup": "Setup Terpandu",
+    "guidedSetupDesc": "Panduan langkah demi langkah untuk setup, dokumen, sumber daya, dan pengujian.",
+    "guides": "Panduan Admin",
+    "guidesDesc": "Pahami apa yang dikonfigurasi admin dan di mana.",
+    "testUserSession": "Sesi Pengguna Uji Coba",
+    "testUserSessionDesc": "Chat sebagai pengguna simulasi dan tinjau log beta yang tersimpan.",
+    "aiSetupTitle": "Setup dengan asisten AI",
+    "aiSetupBody": "Biarkan asisten mengumpulkan data dasar untuk penamaan dan konfigurasi instance Anda dalam satu langkah. Anda dapat beralih ke setup manual kapan saja.",
+    "aiSetupAction": "Mulai setup terpandu",
+    "readinessTitle": "Kesiapan Deployment",
+    "readinessDesc": "Tinjau kesiapan sebelum mengundang pengguna. Periksa hambatan, peringatan, perubahan yang memerlukan restart, dan status pemulihan di satu tempat.",
+    "readinessPrimary": "Buka Peninjauan Kesiapan",
+    "firstRunPathTitle": "Alur pertama kali menjalankan Admin",
+    "firstRunStep1Title": "Konfigurasi baseline Instance",
+    "firstRunStep1Body": "Atur branding, bahasa, tema, field pengguna, dan Agent Settings sebelum peninjauan.",
+    "firstRunStep1Action": "Buka Pengaturan Instance",
+    "firstRunStep2Title": "Tinjau Kesiapan Deployment",
+    "firstRunStep2Body": "Periksa hambatan, peringatan, perubahan yang memerlukan restart, dan status pemulihan sebelum mengundang pengguna.",
+    "firstRunStep2Action": "Buka Wizard Deployment",
+    "firstRunStep3Title": "Gunakan diagnostik hanya saat melakukan investigasi",
+    "firstRunStep3Body": "Pastikan smoke test dan diagnostik tetap dapat diakses tanpa menjadikannya jalur produk utama.",
+    "firstRunStep3Action": "Buka Diagnostik",
+    "instanceDescSimple": "Nama, identitas email publik, tema, dan kontrol brand.",
+    "aiDescSimple": "Prompt, perilaku model, dan default dokumen.",
+    "deploymentDescSimple": "Pengaturan runtime, kesehatan, dan detail kesiapan.",
+    "resources": "Direktori Sumber Daya",
+    "resourcesDesc": "Kurasi pengacara terpercaya, LSM, dan sumber daya rujukan",
+    "resourcesDescSimple": "Kurasi sumber daya rujukan terpercaya secara manual.",
+    "testFeedback": "Uji & Umpan Balik",
+    "testFeedbackDesc": "Chat sebagai pengguna uji dan beri peringkat jawaban untuk menyempurnakan pengaturan Anda",
+    "diagnosticsSectionLabel": "Diagnostik",
+    "operationsSectionLabel": "Operasi",
+    "testDashboard": "Diagnostik",
+    "testDashboardDesc": "Jalankan smoke check pengembangan dan periksa modul diagnostik",
+    "testDashboardDescSimple": "Jalankan smoke check saat menyelidiki masalah.",
+    "iaChecklistTitle": "Checklist tinjauan arsitektur informasi Admin",
+    "iaChecklistBody": "Pastikan Pengaturan Deployment, Pengaturan Instance, Pengaturan Agent, Lifecycle Readiness, Deployment Readiness, dan permukaan diagnostik tetap terpisah selama peninjauan manusia.",
+    "humanReviewTitle": "Serah terima peninjauan manusia",
+    "humanReviewStatus": "Dukungan deployment premium diperlukan",
+    "humanReviewBody": "Penerapan env runtime tetap eksplisit: ekspor artefak, terapkan dengan dukungan operator, mulai ulang layanan yang terdampak, dan verifikasi bukti kesiapan.",
+    "humanReviewAction": "Tinjau Deployment Readiness",
+    "settingsSectionLabel": "Pengaturan",
+    "userManager": "Manajer Pengguna",
+    "userManagerDesc": "Tinjau pengguna, periksa status, ekspor daftar, dan setujui akses."
   },
   "adminAI": {
     "title": "Konfigurasi AI",
@@ -871,7 +1362,18 @@
       "userInfoPlaceholder": "{user_info} — diganti dengan field profil pengguna saat ini, jika tersedia"
     },
     "revert": "Kembalikan",
-    "revertToGlobal": "Kembalikan Ke Global"
+    "revertToGlobal": "Kembalikan Ke Global",
+    "knowledgeSearchDisabledLabel": "Pencarian Pengetahuan nonaktif",
+    "knowledgeSearchDisabledMessage": "Dokumen default yang aktif tidak akan digunakan sampai Sumber Pengetahuan diatur ke dokumen default terpilih atau semua dokumen yang tersedia.",
+    "assembledPromptOutput": "Output prompt yang disusun",
+    "saveError": "Gagal menyimpan",
+    "revertError": "Gagal membatalkan",
+    "toggleError": "Gagal mengubah status",
+    "loadErrorLabel": "Kesalahan pemuatan Pengaturan Agen",
+    "previewErrorLabel": "Kesalahan pratinjual Pengaturan Agen",
+    "documentToggleErrorLabel": "Kesalahan pengalihan dokumen Pengaturan Agen",
+    "documentDefaultsHintV2": "Dokumen bertanda \"Tersedia\" dapat digunakan oleh Pencarian Pengetahuan. Dokumen bertanda \"Aktif secara Default\" akan disertakan saat Sumber Pengetahuan diatur ke dokumen default terpilih.",
+    "externalChangeConflict": "Sage atau admin lain mengubah pengaturan ini saat Anda sedang mengedit. Batalkan dan buka kembali editor sebelum menyimpan."
   },
   "adminDeployment": {
     "title": "Konfigurasi Deployment",
@@ -969,7 +1471,9 @@
       "unknown": "Tidak diketahui",
       "usersMigrated": "Pengguna berhasil dimigrasikan",
       "usersToMigrate": "Pengguna yang akan dimigrasikan",
-      "warning": "Ini adalah operasi lanjutan. Migrasi yang salah dapat mengunci Anda dari data terenkripsi. Lanjutkan hanya jika Anda memahami konsekuensinya."
+      "warning": "Ini adalah operasi lanjutan. Migrasi yang salah dapat mengunci Anda dari data terenkripsi. Lanjutkan hanya jika Anda memahami konsekuensinya.",
+      "inputWarningLabel": "Peringatan migrasi kunci Admin",
+      "destructiveWarningLabel": "Peringatan destruktif migrasi kunci Admin"
     },
     "revealFailed": "Gagal menampilkan nilai. Periksa koneksi ekstensi Nostr Anda.",
     "searchHelp": {
@@ -1000,7 +1504,8 @@
       "overviewDesc": "Pengaturan keamanan mengontrol autentikasi, penanganan sesi, dan pintasan pengembangan. Default dikonfigurasi untuk pengembangan lokal.",
       "overviewNote": "Di produksi, pastikan flag simulasi dinonaktifkan dan FRONTEND_URL sesuai dengan domain nyata Anda.",
       "overviewTitle": "Gambaran Umum Keamanan",
-      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik."
+      "overviewWhen": "Tinjau pengaturan ini sebelum men-deploy ke server yang menghadap publik.",
+      "devNote": "Gunakan MOCK_EMAIL untuk pengujian email lokal; sesi pengguna dan admin tetap memerlukan alur verifikasi normal."
     },
     "sslHelp": {
       "ariaLabel": "Bantuan konfigurasi SSL dan HTTPS",
@@ -1101,7 +1606,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Folder Unggahan",
       "vector_database_eb5526": "Basis Data Vektor"
-    }
+    },
+    "exportSageRuntimeEnv": "Ekspor env Sage",
+    "readiness": {
+      "title": "Kesiapan Deployment",
+      "statusTitle": "Kesiapan Deployment: {{status}}",
+      "description": "Tinjau bukti yang diperlukan sebelum Single-Instance Deployment ini siap untuk operasi normal.",
+      "openWizard": "Buka Tinjauan Kesiapan",
+      "blockerCount": "{{count}} penghambat",
+      "warningCount": "{{count}} peringatan",
+      "readyCount": "{{count}} siap",
+      "empty": "Belum ada pemeriksaan Kesiapan Deployment yang tersedia.",
+      "conversationBlocking": "Memblokir Percakapan normal",
+      "blocker": "Penghambat",
+      "warning": "Peringatan",
+      "ready": "Siap",
+      "reviewInferenceVerification": "Tinjau Verifikasi Inferensi",
+      "reviewDataLifecycleStatus": "Tinjau Status Siklus Hidup Data",
+      "reviewDeploymentValidation": "Tinjau Pengaturan Deployment",
+      "reviewRestartRequired": "Tinjau Perlu Restart",
+      "reviewOperationalReadiness": "Tinjau Kesiapan Operasional",
+      "reviewServiceHealth": "Tinjau Kesehatan Layanan",
+      "reviewRuntimeEnv": "Tinjau Ekspor Runtime Env",
+      "deployment_settings_validation": {
+        "label": "Validasi Pengaturan Deployment",
+        "status": {
+          "invalid": {
+            "summary": "Validasi Pengaturan Deployment memiliki kesalahan yang harus diperbaiki.",
+            "nextAction": "Tinjau kesalahan validasi Pengaturan Deployment."
+          },
+          "warnings": {
+            "summary": "Validasi Pengaturan Deployment memiliki peringatan advisori.",
+            "nextAction": "Tinjau peringatan validasi Pengaturan Deployment."
+          },
+          "valid": {
+            "summary": "Validasi Pengaturan Deployment tidak memiliki kesalahan atau peringatan.",
+            "nextAction": "Tidak diperlukan tindakan."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inferensi yang Dapat Diverifikasi",
+        "status": {
+          "current": {
+            "summary": "Model Provider yang dikonfigurasi memiliki Rekaman Verifikasi Inferensi saat ini.",
+            "nextAction": "Tidak diperlukan tindakan. Tinjau Rekaman Verifikasi Inferensi saat klaim provider berubah."
+          },
+          "deferred_missing": {
+            "summary": "Inferensi Terenkripsi dan Terverifikasi saat ini belum diverifikasi untuk Model Provider yang dikonfigurasi.",
+            "nextAction": "Konfigurasikan Model Provider yang didukung dan jalankan Verifikasi Inferensi sebelum menganggap Kesiapan Deployment selesai."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Tinjauan Siklus Hidup Data",
+        "status": {
+          "needs_review": {
+            "summary": "Tinjauan Siklus Hidup Data memerlukan tinjauan Admin.",
+            "nextAction": "Tinjau postur Active Storage Lifecycle dan catat Tinjauan Siklus Hidup Data."
+          },
+          "stale": {
+            "summary": "Rekaman Tinjauan Siklus Hidup Data sudah usang setelah adanya perubahan siklus hidup yang didukung.",
+            "nextAction": "Tinjau postur Active Storage Lifecycle saat ini dan catat Tinjauan Siklus Hidup Data yang baru."
+          },
+          "reviewed": {
+            "summary": "Peninjauan Siklus Hidup Data telah selesai.",
+            "nextAction": "Tidak diperlukan tindakan kecuali jika postur siklus hidup yang didukung berubah."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Pengakuan Deployment Surface",
+        "status": {
+          "acknowledged": {
+            "summary": "Kategori Deployment Surface yang tidak didukung telah diakui.",
+            "nextAction": "Tidak diperlukan tindakan."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Kategori Deployment Surface yang tidak didukung memerlukan pengakuan Operator.",
+            "nextAction": "Tinjau daftar kategori Deployment Surface dan akui masing-masing sebelum menganggap Kesiapan Deployment selesai."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Latihan Backup dan Restore",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Diperlukan catatan Latihan Backup dan Restore Operator yang terbaru.",
+            "nextAction": "Selesaikan dan catat Latihan Backup dan Restore untuk Deployment ini."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Restart Diperlukan",
+        "status": {
+          "current": {
+            "summary": "Tidak ada Pengaturan Deployment yang memerlukan restart yang berubah sejak layanan dimulai.",
+            "nextAction": "Tidak diperlukan tindakan."
+          },
+          "restart_required": {
+            "summary": "Pengaturan Deployment yang memerlukan restart telah berubah setelah layanan dimulai. ({{changedSettings}})",
+            "nextAction": "Terapkan Pengaturan Deployment yang diinginkan dan restart layanan yang terdampak sebelum menganggapnya sebagai yang terbaru."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Konfigurasi Runtime Sage",
+        "status": {
+          "not_generated": {
+            "summary": "Env runtime Sage belum dibuat dari Pengaturan Deployment.",
+            "nextAction": "Ekspor env runtime Sage sebelum menganggap Pengaturan Deployment telah diterapkan ke Sage."
+          },
+          "matches_desired": {
+            "summary": "Konfigurasi runtime Sage yang sedang berjalan sesuai dengan Pengaturan Deployment yang diinginkan.",
+            "nextAction": "Tidak diperlukan tindakan."
+          },
+          "drifted": {
+            "summary": "Konfigurasi runtime Sage yang sedang berjalan berbeda dari Pengaturan Deployment yang diinginkan.",
+            "nextAction": "Selidiki penyimpangan konfigurasi runtime Sage, terapkan env Sage yang telah dibuat, dan restart Sage."
+          },
+          "current": {
+            "summary": "Env runtime Sage telah dibuat dari Pengaturan Deployment saat ini.",
+            "nextAction": "Tidak diperlukan tindakan kecuali artefak yang dibuat belum diterapkan ke Deployment."
+          },
+          "stale": {
+            "summary": "Pengaturan Deployment berubah setelah env runtime Sage dibuat.",
+            "nextAction": "Ekspor env runtime Sage yang baru dan terapkan melalui jalur restart Deployment."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Konfigurasi Runtime Core Backend",
+        "status": {
+          "not_generated": {
+            "summary": "Env runtime core-backend belum dibuat dari Pengaturan Deployment.",
+            "nextAction": "Ekspor env runtime core-backend sebelum menganggap Pengaturan Deployment telah diterapkan ke core-backend."
+          },
+          "matches_desired": {
+            "summary": "Konfigurasi runtime core-backend yang sedang berjalan sesuai dengan Pengaturan Deployment yang diinginkan.",
+            "nextAction": "Tidak diperlukan tindakan."
+          },
+          "drifted": {
+            "summary": "Konfigurasi runtime core-backend yang sedang berjalan berbeda dari Pengaturan Deployment yang diinginkan.",
+            "nextAction": "Selidiki drift konfigurasi runtime core-backend, terapkan env core-backend yang dihasilkan, dan mulai ulang core-backend."
+          },
+          "current": {
+            "summary": "Env runtime core-backend telah dihasilkan dari Pengaturan Deployment saat ini.",
+            "nextAction": "Tidak diperlukan tindakan kecuali artefak yang dihasilkan belum diterapkan ke Deployment."
+          },
+          "stale": {
+            "summary": "Pengaturan Deployment berubah setelah env runtime core-backend dihasilkan.",
+            "nextAction": "Ekspor env runtime core-backend yang baru dan terapkan melalui jalur mulai ulang Deployment."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Wizard Deployment",
+      "step": "Langkah {{current}} dari {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Kesiapan Operasional",
+      "description": "Tinjau simulasi cadangan, pemulihan, pemantauan, dan recovery sebelum operasi normal."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — kunci API Tinfoil Anda untuk proxy lokal.",
+      "apiKeyLabel": "Kunci API Tinfoil",
+      "ariaLabel": "Bantuan konfigurasi runtime Sage",
+      "exampleConfig": "Contoh konfigurasi",
+      "goToPage": "Buka halaman",
+      "sageExtra": "Atur LLM_API_KEY ke kunci Tinfoil Anda dari {{tinfoilSignupUrl}}. Stack akan memetakannya ke Sage dan proxy Tinfoil lokal.",
+      "sageHint": "Prototipe ini mengarahkan lalu lintas Agent Runtime melalui Sage dan Tinfoil. LLM_API_KEY adalah kunci Model Provider utama.",
+      "modelField": "TINFOIL_MODEL — pengenal model Tinfoil yang harus digunakan Sage (contoh: glm-5-2).",
+      "overviewDesc": "Prototipe ini menggunakan Sage sebagai Agent Runtime publik dan Tinfoil sebagai transport Model Provider. Konfigurasikan Model Provider melalui Pengaturan Deployment LLM_*; stack akan memetakannya ke runtime Tinfoil milik Sage.",
+      "overviewTitle": "Ikhtisar Runtime Sage",
+      "providerField": "LLM_PROVIDER — atur ke \"sage\" untuk prototipe ini."
+    },
+    "inferenceVerification": {
+      "current": "Saat ini",
+      "missing": "Hilang",
+      "expired": "Kedaluwarsa",
+      "failed": "Gagal",
+      "success": "Berhasil",
+      "statusLoadFailed": "Gagal memuat status verifikasi inferensi",
+      "historyLoadFailed": "Gagal memuat riwayat verifikasi inferensi",
+      "loadFailed": "Gagal memuat verifikasi inferensi",
+      "manualFailed": "Verifikasi manual gagal",
+      "manualSucceeded": "Verifikasi manual berhasil",
+      "detailLoadFailed": "Gagal memuat detail atestasi",
+      "ariaLabel": "Verifikasi Inferensi",
+      "title": "Verifikasi Inferensi",
+      "summary": "Bukti khusus Admin bahwa inferensi yang dilindungi berjalan pada Model Provider yang diharapkan.",
+      "verifyNow": "Verifikasi Sekarang",
+      "status": "Status",
+      "checkedAt": "Diperiksa",
+      "expiresAt": "Kedaluwarsa",
+      "expectedClaims": "Klaim yang diharapkan",
+      "expectedClaimsValue": "Klaim yang diharapkan: {{fingerprint}}",
+      "providerClaims": "Klaim Penyedia",
+      "provider": "Penyedia",
+      "model": "Model",
+      "endpoint": "Endpoint",
+      "history": "Riwayat Verifikasi",
+      "emptyHistory": "Belum ada catatan verifikasi.",
+      "recordTitle": "Catatan #{{id}}",
+      "inspectAttestation": "Periksa Atestasi",
+      "fullAttestation": "Materi Atestasi Lengkap"
+    },
+    "lifecycle": {
+      "notStarted": "Belum Dimulai",
+      "notConfigured": "Belum Dikonfigurasi",
+      "plaintextByOperatorChoice": "Plaintext sesuai Pilihan Operator",
+      "allTombstones": "Semua",
+      "allTombstonesLabel": "Semua tombstone",
+      "incompleteTombstonesFilter": "Tidak Lengkap",
+      "incompleteTombstonesLabel": "Tombstone tidak lengkap",
+      "completedTombstonesFilter": "Selesai",
+      "completedTombstonesLabel": "Tombstone selesai",
+      "title": "Status Siklus Hidup Data",
+      "description": "Cakupan Privasi yang Dikendalikan Operator saat ini di seluruh data Instance.",
+      "scopeExcludes": "Mengecualikan: {{excludes}}",
+      "secureEraseStatus": "Penghapusan Aman: {{status}}",
+      "readinessStatus": "Kesiapan Siklus Hidup: {{status}}",
+      "readinessNonBlocking": "Percakapan Pengguna tidak terblokir oleh peringatan Kesiapan Siklus Hidup di v1.",
+      "readinessStaleReason": "Alasan: {{reason}}",
+      "contentEncryptionKey": "Kunci Enkripsi Konten: {{status}}",
+      "artifactEncryptionPosture": "Postur Enkripsi Artefak: {{status}}",
+      "artifactPostureLabel": "Postur enkripsi artefak",
+      "artifactPostureRequired": "Wajib",
+      "artifactPostureDisabled": "Nonaktif",
+      "retentionSchedulerStatus": "Penjadwal Retensi: {{status}}",
+      "schedulerObservation": "Observasi: {{status}}",
+      "schedulerEnabledClasses": "Kelas yang diaktifkan penjadwal: {{classes}}",
+      "schedulerLastRunStatus": "Status eksekusi terakhir: {{status}}",
+      "schedulerLastRun": "Eksekusi terakhir: {{trigger}} oleh {{actor}}",
+      "previewRetention": "Pratinjau Retensi",
+      "runScheduledRetention": "Jalankan Terjadwal",
+      "previewRetentionResult": "Pratinjau: {{conversations}} percakapan, {{artifacts}} artefak dokumen, {{skipped}} kelas terlewati.",
+      "scheduledRetentionResult": "Eksekusi terjadwal: {{status}} dengan {{retries}} percobaan tombstone.",
+      "scheduledRetentionStatus": "Kelas terjadwal: {{classes}}",
+      "auditCoverageStatus": "Cakupan Audit: {{audited}} diaudit, {{exceptions}} pengecualian, {{missing}} hilang.",
+      "owner": "Pemilik: {{owner}}",
+      "deletion": "Penghapusan: {{status}}",
+      "retention": "Retensi: {{status}}",
+      "audit": "Audit: {{status}}",
+      "confidentiality": "Kerahasiaan: {{status}}",
+      "incompleteTombstones": "Tombstone tidak lengkap: {{count}}",
+      "completedTombstones": "Tombstone selesai: {{count}}",
+      "retentionEnabled": "Aktif",
+      "retentionWindow": "Jendela",
+      "retentionDays": "hari",
+      "scheduledEnforcement": "Terjadwal",
+      "saveRetentionPolicy": "Simpan Kebijakan",
+      "empty": "Status siklus hidup tidak tersedia.",
+      "retentionPolicySaveFailed": "Gagal menyimpan kebijakan retensi.",
+      "retentionPreviewFailed": "Gagal melihat pratinjau retensi.",
+      "scheduledRetentionFailed": "Gagal menjalankan retensi terjadwal.",
+      "artifactPostureFailed": "Gagal memperbarui postur enkripsi artefak.",
+      "unsupportedSurfacesTitle": "Permukaan Deployment Tidak Didukung",
+      "unsupportedSurfacesDescription": "Jejak operasional ini diungkapkan di sini tetapi tetap berada di luar kendali siklus hidup produk.",
+      "unsupportedSurfaceAckFailed": "Gagal memperbarui konfirmasi.",
+      "acknowledgedSurface": "Sudah Dikonfirmasi",
+      "acknowledgeSurface": "Konfirmasi",
+      "tombstonesTitle": "Tombstone Penghapusan",
+      "tombstonesDescription": "Coba lagi penghapusan siklus hidup yang tidak lengkap tanpa mengekspos konten yang telah dihapus.",
+      "tombstoneStatusFilter": "Filter status tombstone",
+      "tombstoneRetryFailed": "Percobaan ulang gagal.",
+      "tombstonesFetchFailed": "Gagal memuat tombstone penghapusan.",
+      "tombstoneClass": "Kelas: {{className}}",
+      "tombstoneSource": "Sumber: {{source}}",
+      "tombstoneRetries": "Percobaan ulang: {{count}}",
+      "tombstoneUpdated": "Diperbarui: {{updated}}",
+      "retryTombstoneLabel": "Coba ulang tombstone penghapusan {{id}}",
+      "retry": "Coba Ulang",
+      "tombstonesEmpty": "Tidak ada tombstone penghapusan yang menunggu percobaan ulang."
+    },
+    "runtimeEnv": {
+      "unknown": "Tidak Diketahui",
+      "title": "Penyelarasan Konfigurasi Runtime",
+      "description": "Membandingkan Pengaturan Deployment yang diinginkan, env Sage yang dihasilkan, dan status berjalan yang dapat diamati.",
+      "desired": "Diinginkan",
+      "configuredKeys": "{{count}} dari {{total}} kunci dikonfigurasi",
+      "generated": "Dihasilkan",
+      "exportedAt": "Diekspor {{time}}",
+      "notExported": "Tidak ada ekspor env Sage yang tercatat",
+      "running": "Berjalan",
+      "runningUnknown": "Status berjalan belum dapat diinspeksi secara langsung.",
+      "coreBackend": "Backend Inti",
+      "coreBackendHint": "Penyelarasan env proses Backend",
+      "coreDesired": "Target Backend Inti",
+      "coreConfiguredKeys": "Backend inti: {{count}} dari {{total}} kunci dikonfigurasi",
+      "coreGenerated": "Backend Inti Dihasilkan",
+      "coreNotExported": "Tidak ada ekspor env backend inti yang tercatat",
+      "coreRunning": "Backend Inti Berjalan",
+      "coreRunningUnknown": "Status berjalan backend inti belum dapat diinspeksi secara langsung.",
+      "coreExportedTitle": "Env backend-inti telah diekspor",
+      "coreSensitiveArtifact": "Perlakukan core-backend.env sebagai materi deployment sensitif.",
+      "coreExportDoesNotApply": "Mengekspor artefak tidak mengubah proses backend yang sedang berjalan sampai Operator menerapkannya dan memulai ulang core-backend.",
+      "exportedTitle": "Env Sage telah diekspor",
+      "sensitiveArtifact": "Perlakukan sage.env sebagai materi deployment sensitif.",
+      "exportDoesNotApply": "Mengekspor artefak tidak mengubah proses Sage yang sedang berjalan sampai Operator menerapkannya dan memulai ulang Sage."
+    },
+    "categorySettingsAria": "Pengaturan {{category}}",
+    "exportCoreBackendRuntimeEnv": "Ekspor env core-backend",
+    "restartCurrent": "Tidak perlu restart",
+    "restartCurrentDesc": "Tidak ada Pengaturan Deployment yang memerlukan restart yang berubah sejak layanan dimulai.",
+    "saveError": "Gagal menyimpan",
+    "openHelpAria": "Buka bantuan untuk {{label}}"
   },
   "upload": {
     "invalidFileType": "Jenis file tidak valid. Diizinkan: {{extensions}}",
@@ -1123,7 +1934,8 @@
       "processing": "Memproses",
       "chunked": "Dipotong",
       "complete": "Selesai",
-      "failed": "Gagal"
+      "failed": "Gagal",
+      "completedWithErrors": "Selesai dengan kesalahan"
     },
     "chunks": "{{processed}}/{{total}} potongan",
     "deleteDocument": "Hapus dokumen",
@@ -1172,7 +1984,21 @@
     "serverBusy": "Server sedang sibuk",
     "tryRefresh": "Coba lagi",
     "uploadedSuccess": "Berhasil diunggah — pemrosesan dimulai",
-    "uploadingStatus": "Mengunggah ke server..."
+    "uploadingStatus": "Mengunggah ke server...",
+    "uploadError": "Unggah gagal",
+    "documentDeletionError": "Kesalahan penghapusan dokumen",
+    "navigationWarning": "Dokumen Anda sedang dalam proses transfer. Keluar hanya setelah pemrosesan dimulai, atau unggahan mungkin tidak tersimpan.",
+    "duplicateInBatch": "Nama dokumen duplikat dalam batch ini",
+    "documentsSelected": "{{count}} dokumen",
+    "queueSummary": "{{valid}} siap, {{rejected}} dilewati",
+    "skipped": "Dilewati",
+    "uploadedPartialSuccess": "{{count}} dalam antrean, {{rejected}} dilewati",
+    "chooseFiles": "Pilih file",
+    "chooseFolder": "Pilih folder",
+    "uploadDocuments": "Unggah dokumen",
+    "replacingDocument": "Mengganti {{filename}}",
+    "recentDocumentsShowing": "Menampilkan {{shown}} dari {{total}} dokumen",
+    "showMore": "Tampilkan lebih banyak"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2040,11 @@
       "description": "Konfigurasikan sertifikat SSL dan pengaturan HTTPS",
       "hint": "Konfigurasikan pengaturan TLS dan proxy saat melayani melalui HTTPS. Default aman untuk pengembangan lokal; aktifkan HTTPS hanya setelah sertifikat terpasang.",
       "label": "SSL & Keamanan"
+    },
+    "llm": {
+      "label": "Lingkungan eksekusi agen Sage",
+      "description": "Konfigurasi inferensi Sage + Tinfoil",
+      "hint": "Prototipe ini mengarahkan lalu lintas Agent Runtime melalui Sage dan menggunakan Tinfoil sebagai transport Model Provider. Perubahan memerlukan restart."
     }
   },
   "promptSections": {
@@ -1240,6 +2071,12 @@
       "description": "Bagaimana AI menyusun responsnya",
       "hint": "Mengontrol preferensi format seperti apakah menggunakan poin-poin, header, atau paragraf percakapan. Ini memengaruhi bagaimana jawaban disajikan secara visual.",
       "placeholder": "Gunakan poin-poin untuk daftar, header untuk bagian..."
+    },
+    "prompt_system": {
+      "label": "Prompt sistem",
+      "description": "Identitas inti dan instruksi operasional untuk AI",
+      "hint": "Gunakan ini untuk identitas asisten, misi, dan batasan tingkat tinggi yang harus diterapkan sebelum nada, aturan, alat, atau konteks dokumen. Perubahan akan memengaruhi percakapan baru.",
+      "placeholder": "Anda adalah Sage, asisten pribadi untuk instansi ini..."
     }
   },
   "parameters": {
@@ -1252,6 +2089,11 @@
       "label": "Kedalaman Pengetahuan",
       "description": "Berapa banyak bagian dokumen yang direferensikan",
       "hint": "Saat menjawab pertanyaan, AI mencari dokumen yang Anda unggah dan mengambil bagian yang relevan. Angka lebih tinggi berarti lebih banyak konteks tetapi respons lebih lambat. Angka lebih rendah lebih cepat tetapi mungkin melewatkan info relevan. Default: 5"
+    },
+    "max_tokens": {
+      "label": "Token Maksimum",
+      "description": "Panjang maksimum untuk setiap respons AI",
+      "hint": "Membatasi seberapa panjang sebuah respons. Nilai yang lebih rendah menjaga jawaban tetap singkat dan mengurangi biaya; nilai yang lebih tinggi memungkinkan penjelasan yang lebih panjang. Default: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2101,21 @@
       "label": "Pencarian Web",
       "description": "Izinkan AI mencari di internet",
       "hint": "Saat diaktifkan, AI dapat mencari web untuk informasi terkini yang tidak ada di dokumen Anda. Nonaktifkan ini jika Anda ingin respons hanya berasal dari basis pengetahuan yang diunggah."
+    },
+    "knowledgeSource": {
+      "none": "Tidak ada",
+      "selected": "Dokumen default yang dipilih",
+      "all": "Semua dokumen yang tersedia"
+    },
+    "knowledge_source_default": {
+      "label": "Sumber Pengetahuan",
+      "description": "Pilih sumber pengetahuan terunggah mana yang aktif dalam Percakapan Pengguna",
+      "hint": "Gunakan \"none\" jika tidak ada pengetahuan terunggah secara default, \"selected\" untuk dokumen yang ditandai Aktif secara Default, atau \"all\" untuk semua dokumen yang tersedia."
+    },
+    "user_default_tool_ids": {
+      "label": "Set Alat Pengguna",
+      "description": "Set Alat yang aktif secara default dalam Percakapan Pengguna",
+      "hint": "Array JSON menggunakan salah satu dari \"curated-resources\", \"knowledge-search\", dan \"web-search\". Knowledge Search juga dikendalikan oleh Sumber Pengetahuan."
     }
   },
   "colors": {
@@ -1437,6 +2294,51 @@
       "description": "URL dasar callback Webhook",
       "hint": "URL dasar yang digunakan untuk membuat callback webhook. Contoh: https://api.example.com/webhooks. Default: http://localhost:8000.",
       "label": "URL Webhook"
+    },
+    "LLM_PROVIDER": {
+      "label": "Penyedia model",
+      "description": "Label Model Provider di sisi Python",
+      "hint": "Gunakan \"sage\" untuk prototipe ini. Pengaturan deployment ini mendukung diagnostik sisi Python dan metadata verifikasi."
+    },
+    "LLM_MODEL": {
+      "label": "Nama Model",
+      "description": "Nama/pengenal model",
+      "hint": "Pengenal model Tinfoil yang harus digunakan Sage (misalnya, \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "Endpoint API",
+      "description": "URL dasar API Model Provider",
+      "hint": "URL dasar proxy Tinfoil. Default: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "Kunci API",
+      "description": "API key Tinfoil (rahasia)",
+      "hint": "Kosongkan untuk menjaga Pengaturan Deployment tetap rahasia."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Batas Laju Chat",
+      "description": "Permintaan chat per menit",
+      "hint": "Maksimum permintaan /llm/chat per menit per pengguna, admin, token, atau IP klien yang stabil. Memerlukan restart. Default: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Batas Laju Query Retrieval",
+      "description": "Permintaan query retrieval per menit",
+      "hint": "Maksimum permintaan /query per menit per pengguna, token, atau IP klien yang stabil. Memerlukan restart. Default: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Batas Laju Unggah",
+      "description": "Permintaan unggah dokumen per menit",
+      "hint": "Maksimum permintaan unggah dokumen per menit per admin, token, atau IP klien yang stabil. Memerlukan restart. Default: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Batas Laju Pencarian Vektor",
+      "description": "Permintaan pencarian vektor per menit",
+      "hint": "Maksimum permintaan pencarian vektor per menit per pengguna, token, atau IP klien yang stabil. Memerlukan restart. Default: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Batas Laju Ekspor Konfigurasi",
+      "description": "Ekspor konfigurasi Deployment per jam",
+      "hint": "Maksimum ekspor .env per jam per sesi admin atau IP klien. Memerlukan restart. Default: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2375,11 @@
       "title": "Siap terhubung"
     },
     "subtitle": "Siapkan basis pengetahuan pribadi Anda dalam beberapa langkah.",
-    "title": "Selamat Datang di Enclave"
+    "title": "Selamat Datang di Enclave",
+    "keySafety": {
+      "title": "Gunakan kunci Nostr khusus Instance",
+      "body": "Jangan gunakan kunci Nostr pribadi Anda. Buat atau pilih kunci admin khusus untuk Instance ini guna mengurangi risiko pengawasan dan menjaga akses operasional tetap terpisah."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2387,8 @@
       "notConfigured": "Fitur ini belum dikonfigurasi.",
       "rateLimited": "Terlalu banyak pesan. Silakan coba lagi nanti.",
       "required": "Pesan wajib diisi.",
-      "unavailable": "Jangkauan tidak tersedia."
+      "unavailable": "Jangkauan tidak tersedia.",
+      "formErrorLabel": "Kesalahan formulir Reachout"
     },
     "form": {
       "messageLabel": "Pesan",
@@ -1489,7 +2396,8 @@
       "send": "Kirim"
     },
     "status": {
-      "success": "Terima kasih. Pesan Anda telah terkirim."
+      "success": "Terima kasih. Pesan Anda telah terkirim.",
+      "successLabel": "Reachout berhasil"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2432,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Backend mengembalikan kesalahan saat memvalidasi otentikasi. Ini tidak dianggap sebagai logout.",
       "unable_to_verify_admin_session_5f87b8": "Tidak dapat memverifikasi sesi admin",
       "verifying_admin_session_87c53b": "Memverifikasi sesi admin..."
-    }
+    },
+    "loadingAssistant": "Memuat asisten admin"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2647,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "— Verifikasi token tautan ajaib dan dapatkan info sesi (sesi berbasis cookie).",
       "verify_magic_link_token_183cf5": "Verifikasi Token Tautan Ajaib",
       "view_all_users_manage_approval_status_and_delete_03feec": "Lihat semua pengguna, kelola status persetujuan, dan hapus pengguna.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Lihat dan perbarui pengaturan konfigurasi seluruh instance."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Lihat dan perbarui pengaturan konfigurasi seluruh instance.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Menguji konektivitas ke jalur Model Provider yang dikonfigurasi."
+    },
+    "labels": {
+      "themePreference": "Preferensi tema",
+      "endpointGuidance": "Panduan endpoint",
+      "healthResponseOutput": "Output respons kesehatan",
+      "jobs": "Pekerjaan",
+      "chunks": "Chunk",
+      "rateLimitTestType": "Tipe pengujian batas laju",
+      "successfulRequests": "Permintaan berhasil",
+      "successful": "Berhasil",
+      "blockedRequests": "Permintaan diblokir"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Jejak percakapan"
+  },
+  "branding": {
+    "logoAlt": "Logo {{name}}"
+  },
+  "language": {
+    "english": "Inggris",
+    "spanish": "Spanyol",
+    "french": "Prancis",
+    "german": "Jerman",
+    "portuguese": "Portugis"
+  },
+  "home": {
+    "checkingInstanceStatus": "Memeriksa status instansi..."
+  },
+  "adminGuidedSetup": {
+    "title": "Siapkan instance Anda",
+    "subtitle": "Asisten Anda akan mengumpulkan informasi dasar dalam satu tahap.",
+    "manual": "Konfigurasi secara manual sebagai gantinya",
+    "finish": "Selesai & mulai pengujian",
+    "comingSoon": "Tahap ini akan segera hadir dan sedang dibangun secara terpisah.",
+    "steps": {
+      "initialize": {
+        "label": "Inisialisasi",
+        "title": "Inisialisasi",
+        "subtitle": "Mari lengkapi dasar-dasar ruang Anda agar agen Anda memulai dengan fondasi yang tepat."
+      },
+      "docs": {
+        "label": "Unggah Dokumen",
+        "title": "Unggah panduan lapangan Anda",
+        "subtitle": "Tambahkan materi sumber tempat agen Anda menjawab — buku, panduan, dan dokumen referensi."
+      },
+      "resources": {
+        "label": "Sumber Terkurasi",
+        "title": "Sumber terkurasi",
+        "subtitle": "Tambahkan sumber dunia nyata yang terpercaya — kontak utama, pengacara, dukungan pendidikan dan kesehatan mental — yang dapat dirujuk oleh agen kepada orang lain."
+      },
+      "test": {
+        "label": "Uji sebagai Pengguna",
+        "title": "Uji sebagai pengguna",
+        "subtitle": "Segera hadir — coba asisten sebagai salah satu tipe pengguna Anda dan beri peringkat pada jawabannya."
+      },
+      "feedback": {
+        "label": "Umpan Balik",
+        "title": "Siklus Umpan Balik",
+        "subtitle": "Segera hadir — tinjau kualitas jawaban dan perbaiki pengaturan Anda."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Uji & Umpan Balik",
+    "subtitle": "Jalankan Sesi Pengguna Uji, lalu tinjau log beta terenkripsi dan umpan balik dari percakapan yang disimpan.",
+    "tabs": {
+      "test": "Uji sebagai Pengguna",
+      "feedback": "Umpan Balik"
+    },
+    "test": {
+      "pickPersona": "Pilih persona untuk diuji",
+      "pickPersonaBody": "Siapkan pengguna uji untuk salah satu tipe pengguna Anda, lalu mengobrollah sebagai mereka. Sesi ini disimpan sebagai uji coba terenkripsi yang dapat Anda beri peringkat di bagian Umpan Balik.",
+      "userType": "Tipe pengguna",
+      "genericUser": "Pengguna umum (tanpa tipe)",
+      "start": "Mulai sesi",
+      "admin": "Administrator",
+      "testUserId": "Pengguna uji",
+      "endSave": "Akhiri & simpan uji coba",
+      "previewNotice": "Mode pratinjau — penyamaran asli belum terhubung, jadi obrolan ini berjalan di bawah sesi admin Anda. Transkrip tetap disimpan untuk ditinjau.",
+      "chatEmpty": "Kirim pesan sebagai pengguna ini untuk memulai uji coba.",
+      "inputPlaceholder": "Kirim pesan ke asisten sebagai pengguna ini...",
+      "saved": "Uji coba disimpan (terenkripsi). Tinjau di bagian Umpan Balik.",
+      "startError": "Gagal memulai sesi uji",
+      "saveError": "Gagal menyimpan uji coba",
+      "impersonationUnavailable": "Penyamaran pengguna-uji belum tersedia",
+      "sessionTokenError": "Tidak dapat membuat token sesi pengguna sintetis",
+      "testingAs": "Menguji sebagai {{persona}}",
+      "authFailed": "Sesi User sintetis tidak lagi memiliki otorisasi.",
+      "discardUnsavedConfirm": "Buang giliran yang telah selesai namun belum disimpan?",
+      "workspaceAria": "Ruang kerja percakapan Pengguna Uji"
+    },
+    "feedback": {
+      "trials": "Log Beta",
+      "untitled": "Percakapan tanpa judul",
+      "turns": "giliran",
+      "turn": "Giliran",
+      "empty": "Belum ada log beta yang disimpan. Jalankan Sesi Pengguna Tes atau tunggu percakapan pengguna.",
+      "selectPrompt": "Pilih log beta untuk meninjau transkrip dan menilai setiap giliran.",
+      "noNip04": "Hubungkan ekstensi Nostr (Alby, nos2x) untuk mendekripsi transkrip — transkrip dienkripsi ke kunci admin Anda.",
+      "sourceUser": "Percakapan Pengguna",
+      "sourceTest": "Sesi Pengguna Tes",
+      "thumbUp": "Jawaban bagus",
+      "thumbDown": "Perlu diperbaiki",
+      "notePlaceholder": "Catatan opsional (disimpan terenkripsi)…",
+      "exportNotDecrypted": "Buka dan dekripsi transkrip sebelum mengekspor.",
+      "exportFeedbackNotDecrypted": "Beberapa komentar umpan balik tidak dapat didekripsi. Buka kembali transkrip dan setujui setiap permintaan dekripsi sebelum mengekspor.",
+      "exportNeedsExtension": "Ekspor memerlukan ekstensi Nostr. Transkrip dienkripsi saat disimpan dan ekstensi Anda adalah alat untuk mendekripsinya.",
+      "exportDecrypting": "Masih mendekripsi. Ekspor akan tersedia setelah setiap permintaan disetujui.",
+      "exportWhyDisabled": "Mengapa ekspor dinonaktifkan?",
+      "retryDecryption": "Coba lagi dekripsi",
+      "decryptPendingTitle": "Periksa ekstensi Nostr Anda",
+      "decryptPendingBody": "Ekstensi meminta izin untuk mendekripsi transkrip ini. Mungkin tidak terbuka secara otomatis — klik ikon ekstensi jika Anda tidak melihatnya. Pilih opsi untuk mengingat pilihan Anda agar hanya diminta sekali.",
+      "decryptProgress": "Telah didekripsi {{done}} dari {{total}}.",
+      "loadTrialsError": "Gagal memuat uji coba",
+      "loadTranscriptError": "Gagal memuat transkrip",
+      "saveError": "Umpan balik tidak dapat disimpan",
+      "deleteError": "Log sesi tidak dapat dihapus",
+      "exportError": "Ekspor sesi gagal",
+      "transcriptIntegrityError": "Transkrip tidak tersedia atau tidak lengkap dan tidak dapat diekspor.",
+      "decryptTranscriptError": "Tidak dapat mendekripsi transkrip. Setujui permintaan dekripsi di ekstensi Nostr Anda."
+    }
+  },
+  "adminResources": {
+    "title": "Direktori Sumber Daya",
+    "subtitle": "Kelola sumber daya rujukan terverifikasi secara manual yang dapat disebutkan asisten saat percakapan meningkat. Hanya sumber daya \"ready\" yang ditampilkan ke pengguna akhir.",
+    "add": "Tambah sumber daya",
+    "addTitle": "Tambah sumber daya",
+    "editTitle": "Edit sumber daya",
+    "empty": "Belum ada sumber daya. Tambahkan secara manual jika Anda memiliki rujukan terverifikasi.",
+    "verified": "terverifikasi",
+    "missing": "Kurang untuk mulai live",
+    "name": "Nama",
+    "type": "Tipe sumber daya",
+    "languages": "Bahasa (kode ISO dipisahkan koma)",
+    "description": "Deskripsi",
+    "descriptionHint": "Apa yang harus disampaikan asisten kepada orang tersebut mengenai sumber daya ini.",
+    "scopeLevel": "Tingkat cakupan",
+    "scopeCode": "Kode cakupan",
+    "scopeCodeHint": "Negara: kode ISO (NI). Subwilayah/wilayah: kode UN M49 (013 = Amerika Tengah). Global: biarkan kosong.",
+    "helpTypes": "Jenis bantuan",
+    "contact": "Metode kontak",
+    "vettedBy": "Diverifikasi oleh",
+    "sourceNote": "Catatan sumber",
+    "markVerified": "Tandai sebagai terverifikasi (peringkat pertama)",
+    "archive": "Arsip (sembunyikan dari pengguna akhir)",
+    "deleteTitle": "Hapus sumber daya?",
+    "deleteBody": "Ini akan menghapus entri direktori untuk {{name}}",
+    "coverage": "Cakupan",
+    "coverageHint": "Pilih tingkat cakupan, lalu cari nama atau kodenya.",
+    "coverageCodePlaceholder": "Cari berdasarkan nama atau kode...",
+    "coverageLevelFirst": "Pilih tingkat cakupan terlebih dahulu",
+    "coverageClear": "Hapus kode cakupan",
+    "regionDirectoryUnavailable": "Direktori wilayah tidak tersedia. Masukkan kode secara manual.",
+    "level": {
+      "country": "Negara",
+      "subregion": "Subwilayah",
+      "region": "Wilayah",
+      "global": "Global"
+    },
+    "addPointer": "Tambah penunjuk",
+    "addRegion": "Tambah wilayah",
+    "displayOrder": "Urutan tampilan",
+    "displayOrderHint": "Angka yang lebih rendah muncul lebih dulu setelah relevansi dan verifikasi.",
+    "kind": "Jenis",
+    "noSearchResults": "Tidak ada sumber daya yang cocok dengan pencarian ini.",
+    "order": "Urutan",
+    "pointerLabel": "Label penunjuk {{number}}",
+    "pointerType": "Jenis penunjuk {{number}}",
+    "pointerValue": "Nilai pointer {{number}}",
+    "pointers": "Pointer",
+    "regionNumber": "Wilayah {{number}}",
+    "regions": "Wilayah",
+    "removePointer": "Hapus pointer",
+    "removeRegion": "Hapus wilayah",
+    "search": "Cari sumber daya",
+    "searchPlaceholder": "Nama, jenis, tag, pointer, atau deskripsi",
+    "tags": "Tag (pisahkan dengan koma)",
+    "namePlaceholder": "misalnya Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, pendidikan, lokal",
+    "loadError": "Gagal memuat sumber daya",
+    "loadDirectoryError": "Gagal memuat direktori",
+    "saveError": "Gagal menyimpan sumber daya",
+    "deleteError": "Gagal menghapus sumber daya"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Kembali ke Dashboard Admin",
+    "eyebrow": "Operasi admin",
+    "title": "Manajer Pengguna",
+    "subtitle": "Tinjau pengguna, pahami status mereka, dan setujui akses dari satu dasbor sederhana.",
+    "unlockDetails": "Buka detail",
+    "refreshRoster": "Segarkan daftar",
+    "exportVisible": "Ekspor daftar yang terlihat",
+    "prepareVisible": "Siapkan daftar yang terlihat",
+    "downloadPrepared": "Unduh daftar yang telah disiapkan",
+    "exportPrepared": "Daftar lengkap yang terlihat telah disiapkan. Unduhan kini telah aktif.",
+    "rosterTitle": "Daftar pengguna",
+    "rosterShown": "{{shown}} ditampilkan dari total {{total}}.",
+    "tableLabel": "Daftar pengguna",
+    "tableRowsLabel": "Baris daftar pengguna",
+    "loadingLabel": "Memuat daftar pengguna",
+    "loadingUsers": "Memuat pengguna...",
+    "loadRetry": "Daftar pengguna tidak dapat dimuat. Gunakan Segarkan daftar untuk mencoba lagi.",
+    "emptyNoUsers": "Belum ada pengguna. Pengguna terautentikasi baru akan muncul di sini.",
+    "emptyFiltered": "Tidak ada pengguna yang cocok dengan filter ini.",
+    "noUserType": "Tidak Ada Tipe Pengguna",
+    "unknown": "Tidak Diketahui",
+    "userFallback": "Pengguna #{{id}}",
+    "approvalSuccess": "{{name}} telah disetujui.",
+    "exportSuccess": "Spreadsheet daftar pengguna berhasil diunduh.",
+    "metrics": {
+      "total": "Total pengguna",
+      "totalDetail": "dalam daftar",
+      "pendingApproval": "Menunggu persetujuan",
+      "pendingDetail": "{{count}} tertunda",
+      "approved": "Disetujui",
+      "approvedDetail": "dapat masuk ke obrolan",
+      "incompleteProfiles": "Profil tidak lengkap",
+      "incompleteDetail": "memerlukan jawaban wajib"
+    },
+    "callouts": {
+      "loadFailed": "Gagal memuat daftar pengguna",
+      "approvalUpdated": "Persetujuan pengguna diperbarui",
+      "approvalFailed": "Pembaruan persetujuan pengguna gagal",
+      "exportReady": "Ekspor daftar pengguna siap",
+      "exportFailed": "Ekspor daftar pengguna gagal"
+    },
+    "filters": {
+      "search": "Cari pengguna",
+      "searchPlaceholder": "Nama, email, kunci publik, atau #ID",
+      "approvalStatus": "Status persetujuan",
+      "allApprovalStates": "Semua status persetujuan",
+      "pendingApproval": "Menunggu persetujuan",
+      "approved": "Disetujui",
+      "allUserTypes": "Semua Tipe Pengguna"
+    },
+    "columns": {
+      "user": "Pengguna",
+      "approval": "Persetujuan",
+      "userType": "Tipe Pengguna",
+      "userProfile": "Profil Pengguna",
+      "joined": "Bergabung",
+      "action": "Tindakan"
+    },
+    "status": {
+      "approved": "Disetujui",
+      "pending": "Menunggu"
+    },
+    "actions": {
+      "approve": "Setujui",
+      "approveUser": "Setujui {{name}}",
+      "viewUserDetails": "Lihat detail {{name}}"
+    },
+    "profile": {
+      "noQuestions": "Tidak ada pertanyaan",
+      "noQuestionsDetail": "Tidak ada pertanyaan onboarding yang berlaku.",
+      "needsProfile": "Perlu profil",
+      "missingRequiredOne": "1 jawaban wajib hilang",
+      "missingRequiredMany": "{{count}} jawaban wajib hilang",
+      "noProfileYet": "Belum ada profil",
+      "noAnswersSaved": "Tidak ada jawaban yang disimpan.",
+      "ready": "Profil siap",
+      "answersSavedOne": "1 jawaban disimpan",
+      "answersSavedMany": "{{count}} jawaban disimpan"
+    },
+    "identity": {
+      "decrypting": "Mendekripsi nama dan email...",
+      "failed": "Detail terenkripsi tidak dapat dibuka.",
+      "unavailable": "Detail terenkripsi memerlukan browser signer.",
+      "locked": "Detail terenkripsi terkunci."
+    },
+    "errors": {
+      "loadUsers": "Gagal memuat pengguna.",
+      "loadUserTypes": "Gagal memuat tipe pengguna.",
+      "loadQuestions": "Gagal memuat pertanyaan onboarding.",
+      "approvalUpdate": "Persetujuan pengguna tidak dapat diperbarui.",
+      "decryptUnavailable": "Ekstensi browser dengan dekripsi NIP-04 diperlukan untuk menyiapkan daftar ini.",
+      "decryptRoster": "Nilai daftar terenkripsi tidak dapat didekripsi. Spreadsheet tidak dibuat.",
+      "prepareRequired": "Siapkan daftar yang terlihat saat ini sebelum mengunduhnya.",
+      "exportAudit": "Ekspor daftar pengguna tidak dapat diaudit.",
+      "exportRoster": "Gagal mengekspor daftar pengguna."
+    },
+    "detail": {
+      "booleanYes": "Ya",
+      "booleanNo": "Tidak",
+      "fieldUnlocked": "Jawaban terenkripsi telah terbuka di browser ini.",
+      "decryptingField": "Mendekripsi jawaban...",
+      "encryptedFieldUnavailable": "Jawaban terenkripsi memerlukan browser signer.",
+      "encryptedFieldFailed": "Jawaban terenkripsi tidak dapat dibuka.",
+      "encryptedFieldLocked": "Jawaban terenkripsi terkunci.",
+      "notAnswered": "Belum dijawab",
+      "requiredMissing": "Jawaban wajib tidak ditemukan.",
+      "backToUserManager": "Kembali ke User Manager",
+      "backToRoster": "Kembali ke daftar pengguna",
+      "eyebrow": "Detail pengguna",
+      "notFoundTitle": "Pengguna tidak ditemukan",
+      "notFoundBody": "Pengguna ini tidak ada dalam daftar admin saat ini.",
+      "subtitle": "Tinjau status pengguna, jawaban profil, dan detail akses ini.",
+      "approvalStatus": "Status persetujuan",
+      "waitingApproval": "menunggu persetujuan",
+      "identityTitle": "Identitas",
+      "name": "Nama",
+      "nameUnavailable": "Tidak tersedia",
+      "email": "Email",
+      "emailUnavailable": "Tidak tersedia",
+      "userId": "ID Pengguna",
+      "publicKey": "Kunci publik",
+      "noPublicKey": "Tidak ada kunci publik",
+      "fieldsTitle": "Bidang profil",
+      "fieldsShown_one": "{{count}} bidang berlaku untuk pengguna ini.",
+      "fieldsShown_other": "{{count}} bidang berlaku untuk pengguna ini.",
+      "noFields": "Tidak ada bidang onboarding yang berlaku untuk pengguna ini.",
+      "required": "Wajib",
+      "optional": "Opsional",
+      "encrypted": "Terenkripsi",
+      "plain": "Teks biasa",
+      "chatContext": "Konteks obrolan"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Mendekripsi {{done}} dari {{total}}",
+    "checkExtension": "periksa ekstensi Nostr Anda",
+    "persistentApproval": "Pilih opsi ingat atau selalu agar hanya muncul sekali."
   }
 }

@@ -8,6 +8,15 @@ export interface ConversationTransportCapabilities {
 
 export interface ConversationMessageAction {
   id: ConversationMessageActionId;
+  labelKey: string;
+  labelDefault: string;
+  disabled: boolean;
+  disabledReasonKey?: string;
+  disabledReasonDefault?: string;
+}
+
+export interface LocalizedConversationMessageAction {
+  id: ConversationMessageActionId;
   label: string;
   disabled: boolean;
   disabledReason?: string;
@@ -33,18 +42,23 @@ export function getConversationMessageActions({
   if (role === 'assistant' && transportCapabilities.stop) {
     actions.push({
       id: 'stop',
-      label: 'Stop response',
+      labelKey: 'chat.actions.stop',
+      labelDefault: 'Stop response',
       disabled: !isRunning,
-      disabledReason: !isRunning ? 'There is no response to stop.' : undefined,
+      disabledReasonKey: !isRunning ? 'chat.actions.stopDisabled' : undefined,
+      disabledReasonDefault: !isRunning
+        ? 'There is no response to stop.'
+        : undefined,
     });
   }
 
   if (role === 'assistant' && transportCapabilities.regenerate) {
     actions.push({
       id: 'regenerate',
-      label: 'Regenerate response',
+      labelKey: 'chat.actions.regenerate',
+      labelDefault: 'Regenerate response',
       disabled: isRunning || !hasSession || hasPendingApproval,
-      disabledReason: actionDisabledReason({
+      ...actionDisabledReason({
         isRunning,
         hasSession,
         hasPendingApproval,
@@ -55,9 +69,10 @@ export function getConversationMessageActions({
   if (role === 'user' && transportCapabilities.edit) {
     actions.push({
       id: 'edit',
-      label: 'Edit message',
+      labelKey: 'chat.actions.edit',
+      labelDefault: 'Edit message',
       disabled: isRunning || !hasSession || hasPendingApproval,
-      disabledReason: actionDisabledReason({
+      ...actionDisabledReason({
         isRunning,
         hasSession,
         hasPendingApproval,
@@ -75,11 +90,27 @@ function actionDisabledReason({
 }: Pick<
   ConversationMessageActionContext,
   'isRunning' | 'hasSession' | 'hasPendingApproval'
->): string | undefined {
-  if (isRunning) return 'Wait for the current response to finish first.';
-  if (!hasSession) return 'Start or resume a Conversation first.';
-  if (hasPendingApproval) {
-    return 'Resolve the pending Change Confirmation before changing history.';
+>):
+  | { disabledReasonKey: string; disabledReasonDefault: string }
+  | { disabledReasonKey?: undefined; disabledReasonDefault?: undefined } {
+  if (isRunning) {
+    return {
+      disabledReasonKey: 'chat.actions.waitForResponse',
+      disabledReasonDefault: 'Wait for the current response to finish first.',
+    };
   }
-  return undefined;
+  if (!hasSession) {
+    return {
+      disabledReasonKey: 'chat.actions.startConversation',
+      disabledReasonDefault: 'Start or resume a Conversation first.',
+    };
+  }
+  if (hasPendingApproval) {
+    return {
+      disabledReasonKey: 'chat.actions.resolveConfirmation',
+      disabledReasonDefault:
+        'Resolve the pending Change Confirmation before changing history.',
+    };
+  }
+  return {};
 }

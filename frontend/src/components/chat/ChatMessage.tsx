@@ -30,8 +30,8 @@ import { useInstanceConfig } from '../../context/InstanceConfigContext';
 import { DynamicIcon } from '../shared/DynamicIcon';
 import { Button } from '../ui';
 import type {
-  ConversationMessageAction,
   ConversationMessageActionId,
+  LocalizedConversationMessageAction,
 } from './ConversationMessageActions';
 import {
   presentConversationActivity,
@@ -108,7 +108,7 @@ export interface Message {
     selectedTools: string[];
     selectedDocuments: string[];
   };
-  actions?: ConversationMessageAction[];
+  actions?: LocalizedConversationMessageAction[];
 }
 
 interface ChatMessageProps {
@@ -229,6 +229,7 @@ function ConversationTracePanel({
   isStreaming?: boolean;
   defaultActivityOpen?: boolean;
 }) {
+  const { t } = useTranslation();
   const visibility = trace?.visibility;
   // User Activity is collapsed by default so product work stays available
   // without competing with the answer. Admin surfaces opt in to the expanded
@@ -289,7 +290,7 @@ function ConversationTracePanel({
     return (
       <div
         className="mt-3 flex flex-wrap gap-2 border-t border-border/70 pt-3 text-xs text-text-muted"
-        aria-label="Activity summary"
+        aria-label={t('chat.activity.summaryAria', 'Activity summary')}
       >
         {tools.map((tool) => (
           <div
@@ -310,7 +311,9 @@ function ConversationTracePanel({
               aria-hidden="true"
             />
             <span className="font-medium text-text">
-              {item.title || item.source_type || 'Retrieved source'}
+              {item.title ||
+                item.source_type ||
+                t('chat.trace.retrievedSource', 'Retrieved source')}
             </span>
           </div>
         ))}
@@ -321,14 +324,18 @@ function ConversationTracePanel({
   return (
     <section
       className="mt-3 overflow-hidden rounded-lg border border-border/80 bg-surface text-xs text-text-muted"
-      aria-label="Activity"
+      aria-label={t('chat.activity.label', 'Activity')}
     >
       <button
         type="button"
         onClick={() => setActivityOpen((open) => !open)}
         aria-expanded={activityOpen}
         aria-controls={activityBodyId}
-        aria-label={activityOpen ? 'Hide Activity' : 'Show Activity'}
+        aria-label={
+          activityOpen
+            ? t('chat.activity.hide', 'Hide Activity')
+            : t('chat.activity.show', 'Show Activity')
+        }
         className={`flex w-full items-center justify-between gap-3 bg-surface-raised px-3 py-2 text-left outline-none transition hover:bg-surface-overlay focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40 ${
           activityOpen ? 'border-b border-border/70' : ''
         }`}
@@ -345,7 +352,9 @@ function ConversationTracePanel({
               aria-hidden="true"
             />
           )}
-          <span className="font-medium text-text">Activity</span>
+          <span className="font-medium text-text">
+            {t('chat.activity.label', 'Activity')}
+          </span>
         </div>
         <div className="flex min-w-0 items-center gap-2">
           {liveStatus && (
@@ -365,7 +374,7 @@ function ConversationTracePanel({
       <div
         id={activityBodyId}
         role="region"
-        aria-label="Activity details"
+        aria-label={t('chat.activity.detailsAria', 'Activity details')}
         className="space-y-3 px-3 py-3"
         hidden={!activityOpen}
       >
@@ -382,22 +391,28 @@ function ConversationTracePanel({
               aria-hidden="true"
             />
             {optionalDetailsOpen
-              ? 'Hide optional details'
-              : 'Show optional details'}
+              ? t('chat.activity.hideOptional', 'Hide optional details')
+              : t('chat.activity.showOptional', 'Show optional details')}
           </button>
         )}
         {summary && reasoningSummaryId && (
           <div
             id={reasoningSummaryId}
             role="region"
-            aria-label="Reasoning summary"
+            aria-label={t(
+              'chat.trace.reasoningSummaryAria',
+              'Reasoning summary'
+            )}
             hidden={!optionalDetailsOpen}
           >
             <p className="leading-relaxed text-text-secondary">{summary}</p>
           </div>
         )}
         {hasActivity && (
-          <div className="space-y-2" aria-label="Activity timeline">
+          <div
+            className="space-y-2"
+            aria-label={t('chat.activity.timelineAria', 'Activity timeline')}
+          >
             {combinedActivitySteps.map((step) => (
               <ActivityStepRow key={step.id} step={step} />
             ))}
@@ -410,14 +425,14 @@ function ConversationTracePanel({
           />
         )}
         {operationalTraceDeltas.length > 0 && (
-          <TraceRows label="Trace">
+          <TraceRows label={t('chat.trace.label', 'Trace')}>
             {operationalTraceDeltas.map((delta) => (
               <TraceDeltaRow key={delta.id} delta={delta} />
             ))}
           </TraceRows>
         )}
         {tools.length > 0 && (
-          <TraceRows label="Tool calls">
+          <TraceRows label={t('chat.trace.toolCalls', 'Tool calls')}>
             {tools.map((tool, index) => (
               <ToolTraceRow
                 key={`${tool.id}-${tool.input_summary ?? ''}-${index}`}
@@ -429,7 +444,7 @@ function ConversationTracePanel({
           </TraceRows>
         )}
         {retrieval.length > 0 && (
-          <TraceRows label="Retrieval">
+          <TraceRows label={t('chat.trace.retrieval', 'Retrieval')}>
             {retrieval.map((item, index) => (
               <RetrievalTraceRow
                 key={`${item.title ?? item.source_type ?? 'retrieval'}-${index}`}
@@ -529,7 +544,10 @@ function ReasoningDisclosure({
           id={transcriptId}
           ref={transcriptRef}
           role="region"
-          aria-label="Reasoning transcript"
+          aria-label={t(
+            'chat.trace.reasoningTranscriptAria',
+            'Reasoning transcript'
+          )}
           tabIndex={0}
           className="mx-2.5 mb-2.5 max-h-64 overflow-y-auto rounded-md bg-surface/55 px-3 py-2.5 text-[12px] leading-relaxed text-text-secondary shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--color-border)_70%,transparent)] outline-none animate-fade-in focus-visible:ring-2 focus-visible:ring-accent/35"
         >
@@ -666,6 +684,7 @@ function ToolTraceRow({
   optionalDetailsOpen: boolean;
   optionalDetailsId?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
       <div className="flex items-start gap-2">
@@ -684,13 +703,19 @@ function ToolTraceRow({
             <div
               id={optionalDetailsId}
               role="region"
-              aria-label={`${tool.name} optional details`}
+              aria-label={t(
+                'chat.trace.optionalDetailsAria',
+                '{{label}} optional details',
+                {
+                  label: tool.name,
+                }
+              )}
               hidden={!optionalDetailsOpen}
             >
               {tool.input_summary && (
                 <p className="mt-1 leading-relaxed">
                   <span className="font-medium text-text-secondary">
-                    Input:
+                    {t('chat.trace.input', 'Input')}:
                   </span>{' '}
                   {tool.input_summary}
                 </p>
@@ -698,7 +723,7 @@ function ToolTraceRow({
               {tool.output_summary && (
                 <p className="mt-1 leading-relaxed">
                   <span className="font-medium text-text-secondary">
-                    Output:
+                    {t('chat.trace.output', 'Output')}:
                   </span>{' '}
                   {tool.output_summary}
                 </p>
@@ -721,6 +746,7 @@ function RetrievalTraceRow({
   optionalDetailsOpen: boolean;
   optionalDetailsId?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
       <div className="flex items-start gap-2">
@@ -731,11 +757,15 @@ function RetrievalTraceRow({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <span className="font-medium text-text">
-              {item.title || item.source_type || 'Retrieved source'}
+              {item.title ||
+                item.source_type ||
+                t('chat.trace.retrievedSource', 'Retrieved source')}
             </span>
             {typeof item.score === 'number' && (
               <span className="text-[11px] text-text-muted">
-                score {item.score.toFixed(2)}
+                {t('chat.trace.score', 'score {{score}}', {
+                  score: item.score.toFixed(2),
+                })}
               </span>
             )}
           </div>
@@ -743,7 +773,16 @@ function RetrievalTraceRow({
             <div
               id={optionalDetailsId}
               role="region"
-              aria-label={`${item.title || item.source_type || 'Retrieved source'} optional details`}
+              aria-label={t(
+                'chat.trace.optionalDetailsAria',
+                '{{label}} optional details',
+                {
+                  label:
+                    item.title ||
+                    item.source_type ||
+                    t('chat.trace.retrievedSource', 'Retrieved source'),
+                }
+              )}
               hidden={!optionalDetailsOpen}
             >
               <p className="mt-1 leading-relaxed text-text-secondary">

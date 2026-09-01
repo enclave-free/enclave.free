@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from '../i18n'
-import { STORAGE_KEY_LANGUAGE } from '../utils/languages'
+import { STORAGE_KEY_LANGUAGE, STORAGE_KEY_LANGUAGE_EXPLICIT } from '../utils/languages'
 import { UserAuth } from './UserAuth'
 
 vi.mock('../context/InstanceConfigContext', () => ({
@@ -30,6 +30,7 @@ describe('UserAuth', () => {
 
   afterEach(() => {
     cleanup()
+    vi.restoreAllMocks()
     vi.unstubAllGlobals()
   })
 
@@ -91,5 +92,66 @@ describe('UserAuth', () => {
       expect(continueButton).toBeEnabled()
       expect(continueButton).toHaveTextContent('Continue with Email')
     })
+  })
+
+  it('sends the persisted explicit locale instead of the browser locale', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(STORAGE_KEY_LANGUAGE, 'es')
+    localStorage.setItem(STORAGE_KEY_LANGUAGE_EXPLICIT, '1')
+    vi.spyOn(window.navigator, 'language', 'get').mockReturnValue('en-US')
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      Promise.resolve(Response.json({ success: true, message: 'Sent' }))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MemoryRouter initialEntries={['/auth']}>
+        <Routes>
+          <Route path="/auth" element={<UserAuth />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await user.type(screen.getByLabelText('Name'), 'Ada')
+    await user.type(screen.getByLabelText('Email'), 'ada@example.com')
+    await user.click(screen.getByRole('button', { name: 'Continue with Email' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      email: 'ada@example.com',
+      name: 'Ada',
+      locale: 'es',
+    })
+  })
+
+  it('omits an unmarked cached locale from the magic link request', async () => {
+    const user = userEvent.setup()
+    localStorage.setItem(STORAGE_KEY_LANGUAGE, 'es')
+    const fetchMock = vi.fn((_input: RequestInfo | URL, _init?: RequestInit) =>
+      Promise.resolve(Response.json({ success: true, message: 'Sent' }))
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(
+      <MemoryRouter initialEntries={['/auth']}>
+        <Routes>
+          <Route path="/auth" element={<UserAuth />} />
+        </Routes>
+      </MemoryRouter>
+    )
+
+    await user.type(screen.getByLabelText('Name'), 'Ada')
+    await user.type(screen.getByLabelText('Email'), 'ada@example.com')
+    await user.click(screen.getByRole('button', { name: 'Continue with Email' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce())
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
+      email: 'ada@example.com',
+      name: 'Ada',
+    })
+    expect(localStorage.setItem).not.toHaveBeenCalledWith(
+      STORAGE_KEY_LANGUAGE_EXPLICIT,
+      '1'
+    )
   })
 })

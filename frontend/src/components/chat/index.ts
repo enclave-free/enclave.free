@@ -12,6 +12,7 @@ export {
 export {
   getConversationMessageActions,
   type ConversationMessageAction,
+  type LocalizedConversationMessageAction,
   type ConversationMessageActionContext,
   type ConversationMessageActionId,
   type ConversationTransportCapabilities,

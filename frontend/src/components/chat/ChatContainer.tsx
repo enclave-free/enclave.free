@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ChatContainerProps {
   children: ReactNode;
@@ -13,6 +14,7 @@ export function ChatContainer({
   sidebar,
   topbar,
 }: ChatContainerProps) {
+  const { t } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
@@ -31,7 +33,7 @@ export function ChatContainer({
             <div className="md:hidden fixed left-3 bottom-24 z-40">
               <button
                 type="button"
-                aria-label="Open chat sessions"
+                aria-label={t('chat.sessions.open', 'Open chat sessions')}
                 onClick={() => setMobileSidebarOpen(true)}
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-surface-raised text-text shadow-lg"
               >
@@ -46,7 +48,7 @@ export function ChatContainer({
               <div className="fixed inset-0 z-50 md:hidden">
                 <button
                   type="button"
-                  aria-label="Close chat sessions"
+                  aria-label={t('chat.sessions.close', 'Close chat sessions')}
                   className="absolute inset-0 bg-black/30"
                   onClick={() => setMobileSidebarOpen(false)}
                 />

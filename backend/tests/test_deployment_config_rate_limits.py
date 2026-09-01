@@ -314,6 +314,17 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertGreaterEqual(body["summary"]["warnings"], 1)
 
         items_by_key = {item["key"]: item for item in body["items"]}
+        for item in items_by_key.values():
+            self.assertEqual(
+                item["label_key"],
+                f"adminDeployment.readiness.{item['key']}.label",
+            )
+            self.assertTrue(item["summary_key"].startswith("adminDeployment.readiness."))
+            self.assertTrue(item["summary_key"].endswith(".summary"))
+            self.assertTrue(item["next_action_key"].startswith("adminDeployment.readiness."))
+            self.assertTrue(item["next_action_key"].endswith(".nextAction"))
+            self.assertIsInstance(item["summary_values"], dict)
+            self.assertIsInstance(item["next_action_values"], dict)
         self.assertEqual(items_by_key["verifiable_inference"]["severity"], "warning")
         self.assertEqual(items_by_key["verifiable_inference"]["source"], "inference_verification")
         self.assertEqual(items_by_key["verifiable_inference"]["status"], "deferred_missing")
@@ -332,6 +343,29 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertNotIn("sage_runtime_env", items_by_key)
         self.assertNotIn("core_backend_runtime_env", items_by_key)
         self.assertNotIn("service_health", items_by_key)
+
+    def test_readiness_items_reject_undeclared_localization_keys(self) -> None:
+        item_kwargs = {
+            "label": "Test readiness item",
+            "source": "test",
+            "severity": "info",
+            "summary": "Summary",
+            "next_action": "Next action",
+        }
+
+        with self.assertRaisesRegex(ValueError, "Undeclared Deployment Readiness item"):
+            self.deployment_config._readiness_item(
+                key="new_unregistered_item",
+                status="current",
+                **item_kwargs,
+            )
+
+        with self.assertRaisesRegex(ValueError, "Undeclared Deployment Readiness status"):
+            self.deployment_config._readiness_item(
+                key="restart_required",
+                status="new_unregistered_status",
+                **item_kwargs,
+            )
 
     def test_deployment_readiness_counts_unacknowledged_unsupported_surfaces(self) -> None:
         lifecycle_status = {
@@ -362,6 +396,11 @@ class DeploymentConfigRateLimitsTest(unittest.TestCase):
         self.assertEqual(lifecycle_item["label"], "Data Lifecycle Review")
         self.assertEqual(lifecycle_item["severity"], "warning")
         self.assertIn("1 unsupported Deployment Surface", lifecycle_item["summary"])
+        self.assertEqual(
+            lifecycle_item["summary_key"],
+            "adminDeployment.readiness.deployment_surface_acknowledgements.status.needs_acknowledgement.summary",
+        )
+        self.assertEqual(lifecycle_item["summary_values"], {"count": 1})
 
     def test_deployment_readiness_reports_current_verifiable_inference_as_ready(self) -> None:
         from datetime import datetime, timezone

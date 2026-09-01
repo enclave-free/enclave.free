@@ -22,7 +22,8 @@
       "title": "Mikä kuvaa sinua parhaiten?",
       "description": "Valitse vaihtoehto, joka vastaa parhaiten tarpeitasi",
       "loadError": "Käyttäjätyyppien lataaminen epäonnistui. Yritä uudelleen.",
-      "selectionLabel": "Käyttäjätyypin valinta"
+      "selectionLabel": "Käyttäjätyypin valinta",
+      "errorLabel": "Käyttäjätyypin latausvirhe"
     },
     "language": {
       "selectLabel": "Valitse kieli",
@@ -65,7 +66,8 @@
       "encryptionBody": "Profilikentät salataan oletuksena, mutta tämän instanssin ylläpitäjä hallitsee kenttäkohtaisia asetuksia ja voi sallia valittujen tietojen tallentamisen tai jakamisen eri tavalla.",
       "adminControlNotice": "Tietojen käsittelyn määrittää tämän instanssin ylläpitäjä, mukaan lukien mitä voidaan tallentaa salaamattomana tai jakaa AI-työkalujen kanssa.",
       "noWarrantyNotice": "Enclave-ohjelmisto tarjotaan sellaisenaan ilman takuuta. Tämän instanssin käyttöön sovelletaan ylläpitäjän käytäntöjä.",
-      "retentionNotice": "Tietojen säilytys- ja poistoajat määrittää tämän instanssin ylläpitäjä. Ota heihin yhteyttä pääsy-, korjaus- tai poistopyyntöjen osalta."
+      "retentionNotice": "Tietojen säilytys- ja poistoajat määrittää tämän instanssin ylläpitäjä. Ota heihin yhteyttä pääsy-, korjaus- tai poistopyyntöjen osalta.",
+      "errorLabel": "Magic link -pyynnön virhe"
     },
     "verify": {
       "verifying": "Linkkiäsi vahvistetaan...",
@@ -125,20 +127,28 @@
       "databaseName": "Tietokanta",
       "knowledgeGraph": "Kysy tietograafista",
       "config": "Konfiguraatio",
-      "configName": "Konfiguraatio"
+      "configName": "Konfiguraatio",
+      "knowledgeSearch": "Etsi ladattuja dokumentteja ja tietopaloja",
+      "knowledgeSearchName": "Tieto",
+      "curatedResources": "Etsi ylläpidon tarkistamia suositusresursseja ja luotettavia organisaatioita",
+      "curatedResourcesName": "Resurssit"
     },
     "documentScope": {
       "title": "Tietokannat",
       "description": "Valitse lähteet sisällytettäväksi kontekstiin",
       "noSources": "Ei lähteitä saatavilla",
       "clearAll": "Tyhjennä kaikki",
-      "docsLabel": "Dokumentit"
+      "docsLabel": "Dokumentit",
+      "clearAllSelectedAria": "Tyhjennä kaikki valitut dokumentit",
+      "docsLabelWithCount": "Dokumenttia {{count}}"
     },
     "messages": {
       "searching": "Haetaan \"{{term}}\"...",
       "searchingPrefix": "Haetaan",
       "searchResults": "Hain \"{{term}}\" sinulle:",
-      "newConversation": "Uusi keskustelu"
+      "newConversation": "Uusi keskustelu",
+      "copy": "Kopioi viesti",
+      "copied": "Viesti kopioitu"
     },
     "code": {
       "copy": "Kopioi",
@@ -157,7 +167,87 @@
       "roleUser": "Sinä",
       "roleAssistant": "Avustaja",
       "footer": "Viety kohteesta {{instanceName}}",
-      "exportedOn": "Viety {{timestamp}}"
+      "exportedOn": "Viety {{timestamp}}",
+      "copiedExportNotice": "Tämä vienti poistuu aktiivisesta tuote tallennustilasta ja on Active Storage Lifecyclen ulkopuolella latauksen jälkeen."
+    },
+    "new": "Uusi keskustelu",
+    "listTitle": "Keskustelut",
+    "contextTitle": "Konteksti",
+    "messageActions": "Viestin toiminnot",
+    "actions": {
+      "stop": "Lopeta vastaus",
+      "stopDisabled": "Vastausta ei ole lopetettavaksi.",
+      "regenerate": "Generoi vastaus uudelleen",
+      "edit": "Muokkaa viestiä",
+      "waitForResponse": "Odota, että nykyinen vastaus on valmistunut.",
+      "startConversation": "Aloita tai jatka keskustelua ensin.",
+      "resolveConfirmation": "Hyväksy odottava muutosvahvistus (Change Confirmation) ennen historian muuttamista."
+    },
+    "composerContextAria": "Composer-konteksti",
+    "sessions": {
+      "ariaLabel": "Keskustelusessiot",
+      "current": "Nykyinen keskustelu",
+      "empty": "Tyhjä",
+      "messageCount_one": "{{count}} viesti",
+      "messageCount_other": "{{count}} viestiä",
+      "deleteConfirmTitle": "Poistetaanko \"{{title}}\"?",
+      "rename": "Nimeä uudelleen {{title}}",
+      "delete": "Poista {{title}}",
+      "resumeInvalid": "Keskustelun lataaminen epäonnistui.",
+      "renameEmpty": "Keskustelun otsikko on pakollinen.",
+      "renameError": "Keskustelun nimeäminen epäonnistui.",
+      "deleteError": "Keskustelun poistaminen epäonnistui.",
+      "loading": "Ladataan keskusteluja...",
+      "error": "Keskustelujen lataaminen epäonnistui",
+      "saved": "Tallennettu keskustelu",
+      "deleteConfirmBody": "Tämä poistaa tallennetun keskustelun ja sen istuntomuistin.",
+      "deleteCancel": "Peruuta keskustelun poisto",
+      "cancel": "Peruuta",
+      "deleteConfirm": "Poista keskustelu",
+      "deleteDeleting": "Poistetaan...",
+      "renameInput": "Keskustelun otsikko",
+      "renameCancel": "Peruuta keskustelun nimeäminen",
+      "renameSave": "Tallenna keskustelun otsikko",
+      "renameSaving": "Nimetään uudelleen...",
+      "open": "Avaa keskustelusessiot",
+      "close": "Sulje keskustelusessiot"
+    },
+    "currentChatAria": "Nykyinen keskustelu",
+    "newFromCurrent": "Aloita uusi keskustelu",
+    "documentsContextTitle": "Asiakirjat",
+    "errors": {
+      "requestLabel": "Virhe keskustelupyynnössä"
+    },
+    "trace": {
+      "finalizing": "Viimeistellään vastausta...",
+      "collapse": "Supista",
+      "expand": "Laajenna",
+      "reasoning": "Päättely",
+      "thinking": "Ajattelu",
+      "transcript": "{{label}} -transkriptio",
+      "reasoningSummaryAria": "Päättelyn yhteenveto",
+      "reasoningTranscriptAria": "Päättelyn transkriptio",
+      "label": "Jälki",
+      "toolCalls": "Työkalukutsut",
+      "retrieval": "Haku",
+      "input": "Syöte",
+      "output": "Tuloste",
+      "retrievedSource": "Haettu lähde",
+      "score": "pisteet {{score}}",
+      "optionalDetailsAria": "{{label}} valinnaiset tiedot"
+    },
+    "conversationMessagesAria": "Keskustelun viestit",
+    "conversationSurfaceAria": "Keskustelun pinta",
+    "conversationThreadAria": "Keskusteluketju",
+    "activity": {
+      "label": "Aktiviteetti",
+      "summaryAria": "Aktiviteetin yhteenveto",
+      "detailsAria": "Aktiviteetin tiedot",
+      "timelineAria": "Aktiviteetin aikajana",
+      "show": "Näytä aktiviteetti",
+      "hide": "Piilota aktiviteetti",
+      "showOptional": "Näytä valinnaiset tiedot",
+      "hideOptional": "Piilota valinnaiset tiedot"
     }
   },
   "common": {
@@ -197,7 +287,17 @@
     "retry": "Yritä uudelleen",
     "saved": "Tallennettu",
     "sending": "Lähetetään...",
-    "gotIt": "Selvä"
+    "gotIt": "Selvä",
+    "send": "Lähetä",
+    "backToAdminDashboard": "Takaisin hallintapaneeliin",
+    "loadingPage": "Ladataan sivua",
+    "pageLoadError": "Sivun lataaminen epäonnistui. Ole hyvä ja päivitä.",
+    "export": "Vie",
+    "reset": "Nollaa",
+    "exit": "Poistu",
+    "none": "Ei mitään",
+    "all": "Kaikki",
+    "warning": "Varoitus"
   },
   "settings": {
     "title": "Asetukset",
@@ -220,8 +320,23 @@
       "deploymentConfig": "Käyttöönottoasetukset",
       "deploymentConfigDesc": "Palvelut, SMTP, tallennus",
       "userConfig": "Käyttäjäkonfiguraatio",
-      "userConfigDesc": "Käyttäjätyypit ja perehdytyskysymykset"
-    }
+      "userConfigDesc": "Käyttäjätyypit ja perehdytyskysymykset",
+      "guidedSetup": "Opastettu asennus",
+      "guidedSetupDesc": "Käy läpi asennus, dokumentit, resurssit ja testaus.",
+      "guides": "Ylläpitäjän oppaat",
+      "guidesDesc": "Ymmärrä, mitä ylläpitäjät konfiguroivat ja missä.",
+      "testUserSession": "Testaa käyttäjäistuntoa",
+      "testUserSessionDesc": "Chattaa simuloituna käyttäjänä ja tarkastele beta-palautetta.",
+      "diagnostics": "Diagnostiikka",
+      "diagnosticsDesc": "Suorita nopeastiutestit (smoke checks) ongelmia tutkiessasi.",
+      "resourceDirectory": "Resurssihakemisto",
+      "resourceDirectoryDesc": "Kuratoi luotettavia lähdeviitteitä manuaalisesti."
+    },
+    "diagnostics": "Diagnostiikka",
+    "adminWorkflows": "Ylläpidon työnkulut",
+    "settingsSection": "Asetukset",
+    "dataAndContent": "Data ja sisältö",
+    "operations": "Toiminnot"
   },
   "admin": {
     "confirmDelete": "Haluatko varmasti poistaa tämän tietueen?",
@@ -263,7 +378,12 @@
       "instanceSectionTitle": "Instanssin asetukset",
       "onboardingFieldsHint": "Luo kysymykset, joihin käyttäjät vastaavat perehdytyksen aikana.",
       "userSectionDesc": "Määritä käyttäjätyypit ja kysymykset, joihin käyttäjät vastaavat perehdytyksen aikana.",
-      "userSectionTitle": "Käyttäjäkonfiguraatio"
+      "userSectionTitle": "Käyttäjäkonfiguraatio",
+      "fieldScopeFilterLabel": "Suodata kysymykset käyttäjätyypin mukaan",
+      "noFieldsForScope": "Tälle käyttäjätyypille ei ole vielä kysymyksiä.",
+      "reorderNeedsAllScope": "Näytä kaikki kysymykset uudelleenjärjestelyä varten",
+      "fieldScopeGlobalHint": "Kysymykset, joihin jokainen käyttäjä vastaa tyypistään riippumatta.",
+      "fieldScopeTypeHint": "Kaikki tälle käyttäjätyypille esitetyt kysymykset: globaalit kysymykset, joihin kaikki vastaavat, sekä käyttäjäkohtaiset kysymykset."
     },
     "database": {
       "backToSetup": "Takaisin ylläpidon asetuksiin",
@@ -348,7 +468,14 @@
       "nip07Unavailable": "Nostr-laajennusta ei havaittu",
       "plaintextFieldIcon": "Selkotekstikenttä",
       "primaryKeyIcon": "Pääavain",
-      "unlockDecryption": "Avaa salauksen purku"
+      "unlockDecryption": "Avaa salauksen purku",
+      "safeQueryResults": "Turvalliset kyselytulokset",
+      "queryError": "Kyselyvirhe",
+      "writeResult": "Tietokannan kirjoitustulos",
+      "emptyQueryResult": "Tyhjä kyselytulos",
+      "readOnly": "Vain luku",
+      "tableLoadError": "Taulukon latausvirhe",
+      "readOnlyHint": "Suorat tietokannan muokkaukset on poistettu käytöstä; käytä auditoituja ylläpitovirtauksia muutosten tekemiseen."
     },
     "fields": {
       "nameRequired": "Kentän nimi on pakollinen",
@@ -438,7 +565,11 @@
       "removeFieldFailed": "Kentän poistaminen epäonnistui",
       "reorderFailed": "Kentän järjestyksen muuttaminen epäonnistui",
       "loadUsersFailed": "Käyttäjien lataaminen epäonnistui",
-      "updateTypeFailed": "Käyttäjätyypin päivitys epäonnistui"
+      "updateTypeFailed": "Käyttäjätyypin päivitys epäonnistui",
+      "loadSettingsFailed": "Asetusten lataaminen epäonnistui",
+      "externalConfigConflict": "Sage tai toinen ylläpitäjä muutti näitä asetuksia muokatessasi niitä. Lataa sivu uudelleen ennen tallentamista, jotta et ylikirjoita uudempia arvoja.",
+      "externalSettingsConflict": "Sage tai toinen ylläpitäjä muutti näitä asetuksia muokatessasi niitä. Lataa sivu uudelleen ennen tallentamista.",
+      "externalUserConfigConflict": "Sage tai toinen ylläpitäjä muutti käyttäjätyyppejä tai aloituskysymyksiä muokatessasi niitä. Lataa sivu uudellleen ennen luonnoksen tallentamista."
     },
     "userMigration": {
       "title": "Käyttäjätyypin siirto",
@@ -473,7 +604,10 @@
       "emailEncryptedHint": "Sähköposti (salattu)",
       "nameEncryptedHint": "Nimi (salattu)",
       "noUsersHint": "Yritä muuttaa yllä olevaa suodatinta tai päivittää.",
-      "pubkeyPresent": "Nostr julkinen avain läsnä"
+      "pubkeyPresent": "Nostr julkinen avain läsnä",
+      "usersErrorLabel": "Käyttäjätyypin migraation käyttäjävirhe",
+      "errorLabel": "Käyttäjätyypin migraation virhe",
+      "summaryLabel": "Käyttäjätyypin migraation yhteenveto"
     },
     "configAssistant": {
       "openAria": "Avaa ylläpitoavustaja",
@@ -511,8 +645,40 @@
         "restartRequiredFor": "Uudelleenkäynnistys vaaditaan: {{keys}}.",
         "restartRequiredNo": "Uudelleenkäynnistys vaaditaan: ei.",
         "restartCheckFailedHttp": "Uudelleenkäynnistystarkistus epäonnistui (HTTP {{status}}).",
-        "restartCheckFailedNetwork": "Uudelleenkäynnistystarkistus epäonnistui (verkkovirhe)."
-      }
+        "restartCheckFailedNetwork": "Uudelleenkäynnistystarkistus epäonnistui (verkkovirhe).",
+        "pageRefreshRecommended": "Päivitä tämä sivu nähdäksesi teemaan tehdyt muutokset."
+      },
+      "onboardingWelcome": "Tervetuloa — asetetaan tilasi. Vastaa niin moneen kuin haluat yhdellä viestillä (numeroi vastaukset ja jätä väliin asiat, joista olet epävarma):\n\n1. **Nimi** — mitä kutsumme tätä tilaa? (näkyy otsikossa ja selaimen välilehdessä)\n2. **Kuvaus** — yksi lause siitä, mihin tila on tarkoitettu (yksityinen huomautus, ei näytetä käyttäjille)\n3. **Assistentin nimi** — mikä tekoälyavustajan nimi on?\n4. **Korostusväri** — painikkeiden ja linkkien korostusväri (nimi kuten sininen/turkoosi, tai hex-koodi kuten #3B82F6)\n5. **Teema** — vaalea, tumma tai järjestelmä (vastaamaan laitetta)?\n6. **Oletuskieli** — esim. englanti tai espanja (valinnainen)\n7. **Iskulause** — lyhyt teksti otsikkoon (valinnainen)\n8. **Uudet käyttäjät** — päästävätkö he heti sisään vai hyväksytäänkö jokainen henkilö erikseen?\n9. **Käyttäjätyypit** — mitä muita kuin ylläpitäjiä tulee käyttää? (esim. Opettaja ja Opiskelija) — luon jokaisen puolestasi.\n\nEsimerkki: \"9. Opettaja ja Opiskelija\". Tallennan kaiken yhdellä kertaa — ja voit siirtyä manuaaliseen asetukseen milloin tahansa.",
+      "collapseSidebar": "Supista assistentin sivupalkki",
+      "expandSidebar": "Avaa ylläpitäjän assistentin sivupalkki",
+      "resize": "Muuta ylläpitäjän assistentin paneelin kokoa",
+      "railLabel": "Assistentti",
+      "shareSecretsHint": "Oletusarvoisesti pois päältä. Ota Config-työkalu käyttöön ensin. Kun käytössä, salaiset käyttöönoton konfiguraatiotiedot paljastuvat asiakaspuolella ja lähetetään Sagelle tässä prototyyppivaiheessa.",
+      "applyIntentUsePanel": "Käytä alla olevaa muutospaneelia ja napsauta Soveta vahvistaaksesi nämä konfiguraatiopäivitykset.",
+      "applyIntentNoPending": "Sovitettavia konfiguraatiomuutoksia ei ole. Pyydä assistenttia ehdottamaan muutossarjaa ensin.",
+      "startNewConversation": "Aloita uusi keskustelu assistentin kanssa",
+      "reducedContextNoticeLabel": "Ilmoitus supistetusta kontekstista",
+      "sessionMemoryNoticeLabel": "Ilmoitus istunnon muistin tiivistämisestä",
+      "sessionMemoryNotice": "Vanhempi konteksti tiivistettiin, jotta tämä keskustelu voi jatkua.",
+      "reducedContextNotice": "Osa kontekstista supistettiin, jotta se mahtuu mallintarjoajan budjettiin ({{sections}}). Vastaukset voivat olla vähemmän kattavia, kunnes aloitat uuden keskustelun assistentin kanssa.",
+      "reducedContextSections": {
+        "recentConversation": "viimeisimmät keskusteluhistoriat"
+      },
+      "approvalCardTitle": "Hyväksy konfiguraatiomuutokset",
+      "applying": "Levytetään",
+      "applied": "Levytetty",
+      "rejected": "Hylätty",
+      "failed": "Epäonnistui",
+      "superseded": "Korvattu",
+      "hideDetails": "Piilota tiedot",
+      "reviewDetails": "Tarkista tiedot",
+      "reject": "Hylkää",
+      "approve": "Hyväksy",
+      "applyErrorLabel": "Konfiguraation levitysvirhe",
+      "onboardingTitle": "Ohjattu asennuschat",
+      "onboardingContext": "Kohdistettu asennuskeskustelu",
+      "directShareSecretsHint": "Valinnainen: sisällytä tallennetut käyttöönoton salaisuudet tämän keskustelun kontekstiin. Suorat salaisuuksien luvut eivät vaadi tätä.",
+      "directWritePrompt": "Kysy ylläpidon konfiguraatiosta. Sage voi tarkastaa asetukset ja, vahvistettuaan ne kanssasi keskustelussa, levittää tuetut muutokset suoraan."
     },
     "reachout": {
       "badgeDefault": "Oletus",
@@ -679,7 +845,16 @@
       "typographyTitle": "Typografia",
       "userIconLabel": "Käyttäjäkuvake",
       "userLabelLabel": "Käyttäjän tunniste",
-      "userLabelPlaceholder": "esim. Sinä"
+      "userLabelPlaceholder": "esim. Sinä",
+      "publicEmailDisplayNameLabel": "Julkinen sähköpostin näyttönimi (valinnainen)",
+      "publicEmailDisplayNameHint": "Käytetään magic-link-kirjautumisviesteissä. Jätä tyhjäksi käyttääksesi instanssin nimeä.",
+      "defaultsTitle": "Instanssin oletusasetukset",
+      "defaultsDesc": "Aseta peruskieli ja teema, joita käytetään ennen kuin paikalliset selainasetukset tulevat voimaan.",
+      "defaultLanguageLabel": "Oletuskieli",
+      "defaultThemeLabel": "Oletusteema",
+      "themeSystem": "Järjestelmä",
+      "themeLight": "Vaalea",
+      "themeDark": "Tumma"
     },
     "userConfig": {
       "subtitle": "Määritä käyttäjätyypit ja kysymykset, joihin käyttäjät vastaavat perehdytyksen aikana.",
@@ -687,6 +862,55 @@
       "typeDescription": "Kuvaus",
       "typeIcon": "Tyyppikuvake",
       "typeName": "Tyypin nimi"
+    },
+    "userApproval": {
+      "updateFailed": "Käyttäjän hyväksyminen epäonnistui.",
+      "approvedUser": "Käyttäjä #{{id}} hyväksytty.",
+      "revokedUser": "Käyttäjä #{{id}} palautettiin odottamaan.",
+      "title": "Käyttäjän hyväksyntä",
+      "subtitle": "Valitse, voivatko uudet tunnistetut käyttäjät liittyä chattiin välittömästi vai pitääkö heidän odottaa ylläpitäjän hyväksyntää.",
+      "requireManualLabel": "Vaadi uusilta käyttäjiltä manuaalinen hyväksyntä",
+      "requireManualHint": "Kun tämä on käytössä, uudet käyttäjät päätyvät odottamaan hyväksyntää, kunnes ylläpitäjä on hyväksynyt heidät.",
+      "loadingHint": "Ladataan...",
+      "saveButton": "Tallenna käyttäjän hyväksyntä",
+      "savedCalloutLabel": "Käyttäjän hyväksyntä tallennettu",
+      "errorCalloutLabel": "Käyttäjän hyväksynnän virhe",
+      "pendingTitle": "Odottavat hyväksynnät",
+      "pendingCount_zero": "{{count}} käyttäjää tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "pendingCount_one": "{{count}} käyttäjä tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "pendingCount_two": "{{count}} käyttäjää tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "pendingCount_few": "{{count}} käyttäjää tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "pendingCount_many": "{{count}} käyttäjää tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "pendingCount_other": "{{count}} käyttäjää tarvitsee hyväksynnän ennen chattiin pääsyä.",
+      "nonePending": "Ei käyttäjiä, jotka odottavat hyväksyntää.",
+      "actionSavedCalloutLabel": "Käyttäjän hyväksyntä päivitetty",
+      "actionErrorCalloutLabel": "Käyttäjän hyväksynnän päivitys epäonnistui",
+      "loadingUsers": "Ladataan käyttäjiä...",
+      "emptyState": "Uudet hyväksyntää odottavat käyttäjät näkyvät tässä, kun manuaalinen hyväksyntä on vaadittu.",
+      "emailOnFile": "Rekisteröity sähköpostiosoite",
+      "nameOnFile": "Rekisteröity nimi",
+      "approveButton": "Hyväksy",
+      "revokeButton": "Peruuta"
+    },
+    "userRosterExport": {
+      "auditFailed": "Käyttäjäluettelon vientiä ei voitu tarkastaa. Taulukkoa ei ladattu.",
+      "decryptUnavailable": "Tämän luettelon valmisteluun tarvitaan NIP-04-purkuun kykenevä selainlaajennus.",
+      "decryptFailed": "Salaattua luettelon arvoa ei voitu purkaa. Taulukkoa ei luotu.",
+      "prepared": "Koko luettelo on valmisteltu. Lataus on nyt käytettävissä.",
+      "prepareRequired": "Valmistele nykyinen luettelo ennen sen lataamista.",
+      "prepareButton": "Valmistele käyttäjäluettelo",
+      "downloadButton": "Lataa valmisteltu luettelo",
+      "success": "Käyttäjäluettelo (taulukko) ladattu.",
+      "failed": "Käyttäjäluettelon vienti epäonnistui.",
+      "button": "Vie käyttäjät",
+      "successLabel": "Käyttäjäluettelon vienti valmis",
+      "errorLabel": "Käyttäjäluettelon vienti epäonnistui"
+    },
+    "userIdentity": {
+      "decrypting": "Salataan nimeä/sähköpostia...",
+      "decryptFailed": "Nimen/sähköpostin purku epäonnistui",
+      "unlockDetails": "Avaa lukitus nimen/sähköpostin näyttämiseksi",
+      "unlockButton": "Avaa tiedot"
     }
   },
   "adminOnboarding": {
@@ -711,7 +935,9 @@
     "legalResponsibilityNotice": "Olet vastuussa tämän instanssin lainmukaisesta määrityksestä, käyttäjäilmoituksista ja tietojenkäsittelykäytännöistä.",
     "extracted": {
       "change_language_789b14": "Vaihda kieli"
-    }
+    },
+    "statusError": "Instanssin tilan tarkistus epäonnistui",
+    "connectionError": "Yhteys epäonnistui"
   },
   "errors": {
     "requestFailed": "Pyyntö epäonnistui",
@@ -745,11 +971,228 @@
     "adminSessionExpired": "Ylläpitäjän istunto vanhentunut",
     "authenticationFailed": "Todennus epäonnistui",
     "noNostrExtension": "Nostr-laajennusta ei löytynyt",
-    "exportFailed": "Vienti epäonnistui"
+    "exportFailed": "Vienti epäonnistui",
+    "failedToRetryDeletionTombstone": "Poistomerkinnän (tombstone) uudelleenyritys epäonnistui",
+    "failedToAcknowledgeUnsupportedSurface": "Tuetun käyttöympäristön vahvistaminen epäonnistui",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Tuetun käyttöympäristön kategorian vahvistaminen epäonnistui",
+    "failedToPreviewRetention": "Säilytyspolitiikan esikatselu epäonnistui",
+    "failedToUpdateRetentionPolicy": "Säilytyspolitiikan päivittäminen epäonnistui",
+    "failedToRunScheduledRetention": "Ajan varattu säilytyksen suorittaminen epäonnistui",
+    "failedToUpdateArtifactEncryptionPosture": "Artefaktin salausasetusten päivittäminen epäonnistui",
+    "queryExecutionFailed": "Kyselyn suoritus epäonnistui"
   },
   "adminGuides": {
     "card": {
       "adminsCan": "Ylläpitäjät voivat"
+    },
+    "summary": {
+      "brand": {
+        "title": "Brändää instanssi",
+        "body": "Nimi, logo, teema, assistentin identiteetti ja julkinen sähköpostiosoite."
+      },
+      "people": {
+        "title": "Hallitse käyttäjiä",
+        "body": "Käyttäjätyypit, aloituskysymykset, hyväksynnät, migraatio ja käyttöoikeudet."
+      },
+      "agent": {
+        "title": "Muotoile Sage",
+        "body": "Kehotteiden säännöt, vastausasetukset, asiakirjaoikeudet ja työkalujen oletusarvot."
+      },
+      "launch": {
+        "title": "Käynnistä turvallisesti",
+        "body": "Sähköposti, verkkotunnukset, CORS, HTTPS, mallien reititys, terveys ja ajonaikainen ympäristö."
+      }
+    },
+    "configure": {
+      "identity": {
+        "eyebrow": "Brändi",
+        "title": "Identiteetti ja ulkoasu",
+        "body": "Muokkaa instanssista organisaatiosi näköinen.",
+        "detail1": "Nimi, iskulause, avustajan nimi ja käyttäjäleima.",
+        "detail2": "Logo, favicon, kuvake, korostusväri, teema, typografia ja keskustelutyyli.",
+        "detail3": "Oletuskieli ja julkinen sähköpostiosoitteen näyttönimi.",
+        "link": "Avaa instanssin asetukset"
+      },
+      "people": {
+        "eyebrow": "Pääsy",
+        "title": "Ihmiset ja käyttöoikeudet",
+        "body": "Määritä, kuka käyttää instanssia ja mitä heiltä kysytään.",
+        "detail1": "Käyttäjätyypit ryhmille, kuten henkilöstö, jäsenet tai asiakkaat.",
+        "detail2": "Perehdytyskentät, pakolliset kysymykset, vaihtoehdot, paikkamerkit ja tyypikohtaiset kentät.",
+        "detail3": "Manuaalinen hyväksyntä, käyttäjien migraatio, käyttöoikeuksien peruuttaminen ja poistaminen.",
+        "link": "Avaa käyttäjäasetukset"
+      },
+      "agent": {
+        "eyebrow": "Käyttäytyminen",
+        "title": "Agentin käyttäytyminen",
+        "body": "Määritä, miten Sage vastaa ja mitkä työkalut ovat oletuksena käytössä.",
+        "detail1": "Kehotepohja, käyttäytymissäännöt, kielletyt aiheet ja vastausasetukset.",
+        "detail2": "Oletusasetukset Knowledge-, Resources-, Web-, Config- ja Database-työkaluille.",
+        "detail3": "Globaalit asetukset sekä käyttäjätyypikohtaiset ylikirjoitukset.",
+        "link": "Avaa agentin asetukset"
+      },
+      "docs": {
+        "eyebrow": "Tieto",
+        "title": "Asiakirjatiedot",
+        "body": "Anna agentille lähdemateriaalia, jota se voi hakea.",
+        "detail1": "Lataa PDF-tiedostoja, käytäntöjä, UKK-osioita, käsikirjoja ja oppaita.",
+        "detail2": "Asiakakirjat pilkotaan, upotetaan ja niistä tehdään haettavia.",
+        "detail3": "Document Access määrittää, mikä on oletuksena valittavissa tai käytössä.",
+        "link": "Avaa asiakirjojen lataus"
+      },
+      "resources": {
+        "eyebrow": "Viittaukset",
+        "title": "Tarkistetut resurssit",
+        "body": "Lisää luotettavia suosittelijoita, joita agentti voi suositella.",
+        "detail1": "Nimet, kuvaukset, resurssityyppi, kielet, kattavuus ja aputyypit.",
+        "detail2": "Puhelin, sähköposti, URL, suojattu kanava, osoite ja muistiinpanot.",
+        "detail3": "Vahvistetut resurssit ovat ensimmäisenä. Arkistoidut resurssit pysyvät piilotettuina käyttäjiltä.",
+        "link": "Avaa resurssihakemisto"
+      },
+      "ops": {
+        "eyebrow": "Toiminnot",
+        "title": "Toiminnot ja ajonaika",
+        "body": "Pidä instanssi yhdistettynä, tavoitettavissa ja toimintakykyisenä.",
+        "detail1": "SMTP sähköpostin magic-linkkejä varten, verkkotunnukset, CORS, HTTPS ja julkiset URL-osoitteet.",
+        "detail2": "Mallin tarjoaja, upotusmalli, haku, tallennus ja palvelun tila.",
+        "detail3": "Ajonaikaisen ympäristön vienti, valmius, vanhentuneet asetukset ja admin-avaimen migraatio.",
+        "link": "Avaa käyttöönottoasetukset"
+      },
+      "title": "Mitä ylläpitäjät konfiguroivat",
+      "body": "Nämä ovat pääasialliset hallintapinnat. Voit käyttää sivuja suoraan tai pyytää Admin Assistantia valmistelemaan muutokset."
+    },
+    "workflows": {
+      "assistant": {
+        "eyebrow": "Kysy",
+        "title": "Ylläpitoavustaja",
+        "body": "Kysy kysymyksiä nykyisestä asetuksesta ja pyydä konfiguraatiomuutoksia.",
+        "detail1": "Konfiguraation luku tarkistaa todellisen instanssin tilan arvailun sijaan.",
+        "detail2": "Ehdotetut muutokset valmistellaan tarkastettavaksi.",
+        "detail3": "Apply suorittaa hyväksytyt admin-päätepisteet ilman uutta mallin vuorovaikutusta.",
+        "link": "Avaa Admin Assistant",
+        "directWriteDetail2": "Sage pyytää keskustelupohjaisen vahvistuksen ennen tuettua kirjoitustoimintoa.",
+        "directWriteDetail3": "Vahvistuksen jälkeen Sage kutsuu suoria konfiguraatiotyökalujaan ja raportoi todellisen tuloksen."
+      },
+      "guided": {
+        "eyebrow": "Aloita",
+        "title": "Ohjattu käyttöönotto",
+        "body": "Käytä yhtä ohjattua keskustelua luodaksesi hyödyllisen ensimmäisen konfiguraation.",
+        "detail1": "Identiteetti, assistentti, kieli, käyttöoikeuspolitiikka, käyttäjätyypit, kysymykset ja toimintasäännöt.",
+        "detail2": "Lataa sitten dokumentit, lisää resursseja ja testaa.",
+        "link": "Avaa ohjattu käyttöönotto"
+      },
+      "test": {
+        "eyebrow": "Varmista",
+        "title": "Testaus ja palaute",
+        "body": "Kokeile agenttia käyttäjän näkökulmasta ennen julkaisua.",
+        "detail1": "Valitse käyttäjätyyppi, aloita testisessio ja tallenna koe.",
+        "detail2": "Tarkista salatut beta-logit ja arvioi vastaukset.",
+        "link": "Avaa testikäyttäjän sessio"
+      },
+      "database": {
+        "eyebrow": "Tarkastele",
+        "title": "Tietokantaselain",
+        "body": "Tarkastele tallennettuja SQLite-tietoja vianmäärityksen yhteydessä.",
+        "detail1": "Käytä vain luku -tyyppisiä SELECT-kyselyitä tarkastamiseen.",
+        "detail2": "Älä käytä tätä tuotteen muokkausreittinä.",
+        "link": "Avaa tietokantaselain"
+      },
+      "title": "Yleiset ylläpitotyönkulut",
+      "body": "Käytä näitä asetusten määrittämisessä, laadun tarkistamisessa tai tietojen tutkimisessa."
+    },
+    "truths": {
+      "conversation": {
+        "eyebrow": "Ajoaika",
+        "title": "Yksi keskustelun ajoaika",
+        "body": "Knowledge, Resources, Web, Config ja Database ovat näkyviä työkalusarjoja, eivät erillisiä chat-järjestelmiä.",
+        "detail1": "Malli voi kutsua käytössä olevia työkaluja, kun ne ovat hyödyllisiä.",
+        "detail2": "Config ja Database näkyvät vain palvelimen vahvistamille ylläpitäjille."
+      },
+      "auth": {
+        "eyebrow": "Kirjautuminen",
+        "title": "Erilaiset kirjautumisreitit",
+        "body": "Ylläpitäjät käyttävät NIP-07-standardia. Käyttäjät käyttävät sähköpostin magic link -linkkejä.",
+        "detail1": "Ylläpitäjän yksityiset avaimet pysyvät selaimen allekirjoittajassa.",
+        "detail2": "SMTP:n on toimittava, ennen kuin käyttäjien magic linkit toimivat tuotannossa."
+      },
+      "data": {
+        "eyebrow": "Yksityisyys",
+        "title": "Tietorajojen merkitys",
+        "body": "Salatut profiilikentät pysyvät pois chat-kontekstista.",
+        "detail1": "Vain salaamattomia kenttiä voidaan merkitä AI-chat-kontekstia varten.",
+        "detail2": "Käyttöönoton salaisuudet tallennetaan salattuina ja ne näytetään oletuksena peitettyinä."
+      },
+      "ops": {
+        "eyebrow": "Operointi",
+        "title": "Jotkut muutokset vaativat operaattorin",
+        "body": "Sovellus voi tallentaa halutut ajoaikasetukset; se ei käynnistä palveluita uudelleen hiljaisesti.",
+        "detail1": "Vie ajoaikaympäristö (env) provider-, origin-, CORS- tai search-muutosten jälkeen.",
+        "detail2": "Käytä valmiusastetta (readiness) ja palvelun terveyttä (service health) varmistaaksesi, mikä on todellisuudessa käynnissä."
+      },
+      "title": "Tuotteen perusperiaatteet muistettavaksi",
+      "body": "Nämä säännöt pitävät asetukset luotettavina ja estävät tahattoman ylilyönnin."
+    },
+    "ask": {
+      "prompt1": "Mitä tästä instanssista puuttuu vielä, jotta se on valmis käyttäjille?",
+      "prompt2": "Tarkista nykyiset käyttäjätyypit, perehdytyskysymyksekset, dokumentaatio ja resurssit.",
+      "prompt3": "Valmistele muutokset tarkistettavaksi: määritä avustajan sävy ja oletuskieli.",
+      "title": "Hyviä kysymyksiä Admin Assistantille",
+      "body": "Pyydä tarkistusta ennen kuin pyydät muutoksia. Se voi tarkastaa asetukset ja valmistella muutossarjan.",
+      "directWriteBody": "Pyydä Sagea tarkastamaan tai muuttamaan tuettua konfiguraatiota. Se vahvistaa suunnitellun muutoksen kanssasi ennen kirjoittamista.",
+      "directWritePrompt3": "Määritä avustajan sävy ja oletuskieli, ja vahvista suunniteltu muutos ensin kanssani."
+    },
+    "hero": {
+      "eyebrow": "Ylläpidon ohjauskartta",
+      "shortVersion": {
+        "title": "Lyhyt versio",
+        "body": "Ylläpitäjät määrittävät identiteetin, käyttäjät, tiedot, työkalut ja käynnistysasetukset. Jotkut ajonaikaiset muutokset vaativat yhä operaattorin uudelleenkäynnistyksen."
+      }
+    },
+    "title": "Ylläpitäjän oppaat",
+    "subtitle": "Yksinkertainen kartta siitä, mitä ylläpitäjät konfiguroivat, mitä tuote voi tehdä ja mitä on huomioitava ennen julkaisua.",
+    "quickStart": {
+      "title": "Aloita tästä",
+      "body": "Tee ensin pienet hyödylliset asetukset. Hio niitä testauksen jälkeen oikeilla kysymyksillä."
+    },
+    "safety": {
+      "title": "Turvallisuuden perusteet",
+      "body": "Ylläpitäjät hallitsevat pääsyä, tietoja, toimintaa ja ajonaikaisia asetuksia. Ole varovainen riskialttiiden muutosten kanssa.",
+      "items": {
+        "0": "Ylläpitäjät kirjautuvat NIP-07:llä. Käyttäjät kirjautuvat sähköpostin taikalinkkien avulla.",
+        "1": "Käyttäjäkentät on salattu oletuksena. Vain selkokieliset kentät voidaan jakaa chatin kanssa.",
+        "2": "Salaisuudet pysyvät piilotettuina, ellei niitä jaeta nykyistä ylläpitäjäistuntoa varten.",
+        "3": "Avustajan muutokset ovat ehdotuksia. Tarkastat ne ja klikkaat Apply.",
+        "4": "Deployment Settings tallentaa halutut ajonaikaiset arvot. Operaattajat vievät yhä env-muuttujat ja käynnistävät palvelut uudelleen tarvittaessa."
+      },
+      "directItems": {
+        "0": "Ylläpitäjät kirjautuvat NIP-07:llä. Käyttäjät kirjautuvat sähköpostin taikalinkkien avulla.",
+        "1": "Käyttäjäkentät on salattu oletuksena. Vain selkokieliset kentät voidaan jakaa chatin kanssa.",
+        "2": "Salaisuudet pysyvät piilotettuina, ellei niitä jaeta nykyistä ylläpitäjäistuntoa varten.",
+        "3": "Sage vahvistaa konfiguraatiomuutokset kanssasi chatissa ja soveltaa sitten tuetut muutokset suoraan.",
+        "4": "Deployment Settings tallentaa halutut ajonaikaiset arvot. Operaattajat vievät yhä env-muuttujat ja käynnistävät palvelut uudelleen tarvittaessa."
+      }
+    },
+    "quickSteps": {
+      "0": {
+        "title": "Kirjaudu sisään ylläpitäjänä",
+        "body": "Käytä ylläpitäjän NIP-07-avainta. Pidä se yksityisenä."
+      },
+      "1": {
+        "title": "Määritä perusteet",
+        "body": "Nimeä instanssi, valitse ulkoasu ja määritä avustajan identiteetti."
+      },
+      "2": {
+        "title": "Määrittele käyttäjäsi",
+        "body": "Luo käyttäjätyypit, perehdytyskysymykset ja hyväksymissäännöt."
+      },
+      "3": {
+        "title": "Lisää luotettavaa tietoa",
+        "body": "Lataa dokumentteja ja lisää tarkistettuja resursseja."
+      },
+      "4": {
+        "title": "Testaa ennen julkaisua",
+        "body": "Keskustele käyttäjän roolissa, tarkista palaute ja kutsu sitten oikeat ihmiset."
+      }
     }
   },
   "adminDashboard": {
@@ -786,7 +1229,55 @@
     "securityStep3Primary": "Suorita asetusten vahvistus",
     "securityStep3Secondary": "Tarkastele tallennettuja tietoja",
     "user": "Käyttäjäkonfiguraatio",
-    "userDesc": "Määritä käyttäjätyypit ja perehdytyskysymykset"
+    "userDesc": "Määritä käyttäjätyypit ja perehdytyskysymykset",
+    "subtitleSimple": "Valitse, missä haluat työskennellä tässä instanssissa.",
+    "workflowsSectionLabel": "Ylläpidon työnkulut",
+    "adminAssistant": "Ylläpitäjän avustaja",
+    "adminAssistantDesc": "Käytä ylläpitäjän chatia konfigurointiavun ja muutosten tarkistuksen saamiseksi.",
+    "guidedSetup": "Ohjattu asennus",
+    "guidedSetupDesc": "Käy läpi asennus, dokumentit, resurssit ja testaus.",
+    "guides": "Ylläpitäjän oppaat",
+    "guidesDesc": "Ymmärrä, mitä ylläpitäjät konfiguroivat ja missä.",
+    "testUserSession": "Testaa käyttäjäistunto",
+    "testUserSessionDesc": "Keskustele simuloituna käyttäjänä ja tarkista tallennetut beta-logit.",
+    "aiSetupTitle": "Määritä asennus tekoälyavustajan avulla",
+    "aiSetupBody": "Anna avustajan kerätä perustiedot instanssin nimeämistä ja konfigurointia varten yhdellä kertaa. Voit siirtyä manuaaliseen asennukseen milloin tahansa.",
+    "aiSetupAction": "Aloita ohjattu asennus",
+    "readinessTitle": "Käyttöönoton valmius",
+    "readinessDesc": "Tarkista valmius ennen käyttäjien kutsumista. Tarkista esteet, varoitukset, uudelleenkäynnistystä vaativat muutokset ja palautusvalmius yhdestä paikasta.",
+    "readinessPrimary": "Avaa valmiustarkastus",
+    "firstRunPathTitle": "Ylläpitäjän ensikertalaispolku",
+    "firstRunStep1Title": "Konfiguroi instanssin perusasetukset",
+    "firstRunStep1Body": "Määritä brändäys, kieli, teema, käyttäjäkentät ja Agent Settings ennen tarkistusta.",
+    "firstRunStep1Action": "Avaa instanssin asetukset",
+    "firstRunStep2Title": "Tarkista käyttöönoton valmius",
+    "firstRunStep2Body": "Tarkista esteet, varoitukset, uudelleenkäynnistystä vaativat muutokset ja palautusvalmius ennen käyttäjien kutsumista.",
+    "firstRunStep2Action": "Avaa käyttöönoton ohjatun toiminnon velho",
+    "firstRunStep3Title": "Käytä diagnostiikkaa vain tutkimustilanteissa",
+    "firstRunStep3Body": "Pidä savutestit ja diagnostiikka saatavilla tekemättä niistä ensisijaista tuote polkua.",
+    "firstRunStep3Action": "Avaa diagnostiikka",
+    "instanceDescSimple": "Nimi, julkinen sähköpostitunnus, teema ja brändin hallinta.",
+    "aiDescSimple": "Kehotteet, mallin käyttäytyminen ja asiakirjojen oletusarvot.",
+    "deploymentDescSimple": "Ajon asetukset, terveys ja valmiustiedot.",
+    "resources": "Resurssihakemisto",
+    "resourcesDesc": "Kuratoi luotettavia asianajajia, järjestöjä ja lähetevirtoja",
+    "resourcesDescSimple": "Kuratoi luotettavia lähetevirtoja manuaalisesti.",
+    "testFeedback": "Testaus & Palaute",
+    "testFeedbackDesc": "Keskustele testikäyttäjänä ja arvioi vastauksia parantaaksesi asetuksia",
+    "diagnosticsSectionLabel": "Diagnostiikka",
+    "operationsSectionLabel": "Toiminnot",
+    "testDashboard": "Diagnostiikka",
+    "testDashboardDesc": "Suorita kehityksen savutestit ja tarkasta diagnostiikkamoduulit",
+    "testDashboardDescSimple": "Suorita savutestit ongelmia tutkiessa.",
+    "iaChecklistTitle": "Ylläpitäjän informaatioarkkitehtuurin tarkistuslista",
+    "iaChecklistBody": "Pidä Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness ja diagnostiikkapinnat erillisinä ihmistarkastuksen aikana.",
+    "humanReviewTitle": "Ihmistarkastuksen siirto",
+    "humanReviewStatus": "Vaatii ensiluokkaista käyttöönottoapua",
+    "humanReviewBody": "Ajon ympäristön soveltaminen pysyy eksplisiittisenä: vie artefaktit, sovelta ne operaattorin tuella, käynnistä vaikutetut palvelut uudelleen ja varmista valmiusnäytöt.",
+    "humanReviewAction": "Tarkista Deployment Readiness",
+    "settingsSectionLabel": "Asetukset",
+    "userManager": "Käyttäjänhallinta",
+    "userManagerDesc": "Tarkastele käyttäjiä, tarkista tila, vie luettelot ja hyväksy käyttöoikeudet."
   },
   "adminAI": {
     "title": "Tekoälyn asetukset",
@@ -871,7 +1362,18 @@
       "userInfoPlaceholder": "{user_info} — korvataan nykyisen käyttäjän profiilitiedoilla, jos saatavilla"
     },
     "revert": "Palauta",
-    "revertToGlobal": "Palauta globaaliksi"
+    "revertToGlobal": "Palauta globaaliksi",
+    "knowledgeSearchDisabledLabel": "Tiedonhaku on pois päältä",
+    "knowledgeSearchDisabledMessage": "Aktiivisia oletusasiakirjoja ei käytetä, ennen kuin tietolähteiksi on asetettu valitut oletusasiakirjat tai kaikki saatavilla olevat asiakirjat.",
+    "assembledPromptOutput": "Koottu kehotteen tuloste",
+    "saveError": "Tallentaminen epäonnistui",
+    "revertError": "Peruuttaminen epäonnistui",
+    "toggleError": "Vaihto epäonnistui",
+    "loadErrorLabel": "Agentin asetusten latausvirhe",
+    "previewErrorLabel": "Agentin asetusten esikatseluvirhe",
+    "documentToggleErrorLabel": "Agentin asetusten asiakirjan vaihto epäonnistui",
+    "documentDefaultsHintV2": "\"Saatavilla\"-merkityt asiakirjat ovat tiedonhaun käytettävissä. \"Oletuksena aktiiviset\"-merkityt asiakirjat sisällytetään, kun tietolähteiksi on asetettu valitut oletusasiakirjat.",
+    "externalChangeConflict": "Sage tai toinen ylläpitäjä muutti tätä asetusta muokatessasi sitä. Peruuta ja avaa editori uudelleen ennen tallentamista."
   },
   "adminDeployment": {
     "title": "Käyttöönoton asetukset",
@@ -969,7 +1471,9 @@
       "unknown": "Tuntematon",
       "usersMigrated": "Käyttäjiä siirretty",
       "usersToMigrate": "Siirrettäviä käyttäjiä",
-      "warning": "Tämä on edistynyt toiminto. Virheellinen siirto voi estää pääsyn salattuihin tietoihin. Jatka vain, jos ymmärrät seuraukset."
+      "warning": "Tämä on edistynyt toiminto. Virheellinen siirto voi estää pääsyn salattuihin tietoihin. Jatka vain, jos ymmärrät seuraukset.",
+      "inputWarningLabel": "Admin-avaimen migraation varoitus",
+      "destructiveWarningLabel": "Admin-avaimen migraation tuhoisa varoitus"
     },
     "revealFailed": "Arvon paljastaminen epäonnistui. Tarkista Nostr-laajennuksesi yhteys.",
     "searchHelp": {
@@ -1000,7 +1504,8 @@
       "overviewDesc": "Turvallisuusasetukset ohjaavat todennusta, istunnonhallintaa ja kehitysoikoteitä. Oletusarvot on määritetty paikallista kehitystä varten.",
       "overviewNote": "Varmista tuotannossa, että todellisen todennuksen käyttöönoton vaiheet on suoritettu ja FRONTEND_URL vastaa todellista verkkotunnustasi.",
       "overviewTitle": "Turvallisuuden yleiskatsaus",
-      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa."
+      "overviewWhen": "Tarkista nämä asetukset ennen julkiselle palvelimelle käyttöönottoa.",
+      "devNote": "Käytä MOCK_EMAIL-arvoa paikalliseen sähköpostitestaukseen; käyttäjä- ja ylläpitäjäistunnot vaativat edelleen normaalin vahvistusprosessin."
     },
     "sslHelp": {
       "ariaLabel": "SSL- ja HTTPS-konfiguraation ohje",
@@ -1101,7 +1606,313 @@
       "test_example_com_567159": "test@example.com",
       "uploads_folder_5402a4": "Latauskansio",
       "vector_database_eb5526": "Vektoritietokanta"
-    }
+    },
+    "exportSageRuntimeEnv": "Vie Sage-ympäristö",
+    "readiness": {
+      "title": "Käyttöönoton valmius",
+      "statusTitle": "Käyttöönoton valmius: {{status}}",
+      "description": "Tarkista tarvittavat todisteet ennen kuin tämä Single-Instance-käyttöönotto on valmis normaaliin käyttöön.",
+      "openWizard": "Avaa valmiuden tarkistus",
+      "blockerCount": "{{count}} estettä",
+      "warningCount": "{{count}} varoitusta",
+      "readyCount": "{{count}} valmis",
+      "empty": "Deployment Readiness -tarkistuksia ei ole vielä saatavilla.",
+      "conversationBlocking": "Estää normaalit keskustelut",
+      "blocker": "Este",
+      "warning": "Varoitus",
+      "ready": "Valmis",
+      "reviewInferenceVerification": "Tarkista päättelytodistus",
+      "reviewDataLifecycleStatus": "Tarkista tiedon elinkaaren tila",
+      "reviewDeploymentValidation": "Tarkista käyttöönottoasetukset",
+      "reviewRestartRequired": "Tarkista uudelleenkäynnistysvaatimus",
+      "reviewOperationalReadiness": "Tarkista toiminnallinen valmius",
+      "reviewServiceHealth": "Tarkista palvelun terveydentila",
+      "reviewRuntimeEnv": "Tarkista ajoympäristön vienti",
+      "deployment_settings_validation": {
+        "label": "Käyttöönottoasetusten validointi",
+        "status": {
+          "invalid": {
+            "summary": "Käyttöönottoasetusten validoinnissa on korjattavia virheitä.",
+            "nextAction": "Tarkista käyttöönottoasetusten validointivirheet."
+          },
+          "warnings": {
+            "summary": "Käyttöönottoasetusten validoinnissa on huomautuksia.",
+            "nextAction": "Tarkista käyttöönottoasetusten validointivaroitukset."
+          },
+          "valid": {
+            "summary": "Käyttöönottoasetusten validoinnissa ei ole virheitä tai varoituksia.",
+            "nextAction": "Toimenpiteitä ei tarvita."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Varmistettava päättely",
+        "status": {
+          "current": {
+            "summary": "Konfiguroidulla mallintarjoajalla on voimassa oleva päättelytodistus.",
+            "nextAction": "Toimenpiteitä ei tarvita. Tarkista nykyinen päättelytodistus, jos tarjoajan väitteet muuttuvat."
+          },
+          "deferred_missing": {
+            "summary": "Salaus ja varmistettava päättely ei ole tällä hetkellä varmistettu konfiguroidulle mallintarjoajalle.",
+            "nextAction": "Konfiguroi tuettu mallintarjoaja ja suorita päättelytodistus ennen kuin pidät Deployment Readiness -tilaa valmiina."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Tiedon elinkaaren tarkastus",
+        "status": {
+          "needs_review": {
+            "summary": "Tiedon elinkaaren tarkastus vaatii ylläpitäjän tarkastusta.",
+            "nextAction": "Tarkista aktiivisen tallennuksen elinkaaren tila ja kirjaa tiedon elinkaaren tarkastus."
+          },
+          "stale": {
+            "summary": "Kirjattu tiedon elinkaaren tarkastus on vanhentunut tuetun elinkaarimuutoksen jälkeen.",
+            "nextAction": "Tarkista aktiivisen tallennuksen elinkaaren nykyinen tila ja kirjaa uusi tiedon elinkaaren tarkastus."
+          },
+          "reviewed": {
+            "summary": "Tiedon elinkaaren tarkastus on suoritettu.",
+            "nextAction": "Toimenpiteitä ei tarvita, ellei tuettua elinkaaren tilaa muuteta."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Käyttöönoton kattavuuden vahvistukset",
+        "status": {
+          "acknowledged": {
+            "summary": "Ei-tuettuja käyttöönottopintoja (Deployment Surface) on vahvistettu.",
+            "nextAction": "Toimenpiteitä ei tarvita."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Ei-tuettavat käyttöönottopinnat vaativat operaattorin vahvistuksen.",
+            "nextAction": "Tarkista luetellut käyttöönottopinnat ja vahvista jokainen ennen kuin pidät käyttöönottovalmiutta valmiina."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Varmuuskopiointi- ja palautusharjoitus",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Tuore operaattorin varmuuskopiointi- ja palautusharjoitusmerkintä on vaadittu.",
+            "nextAction": "Suorita ja kirjaa ylös varmuuskopiointi- ja palautusharjoitus tätä käyttöönantoa varten."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Uudelleenkäynnistys vaaditaan",
+        "status": {
+          "current": {
+            "summary": "Käyttöönottoasetuksia, jotka vaativat uudelleenkäynnistyksen, ei ole muutettu palvelun käynnistyksen jälkeen.",
+            "nextAction": "Toimenpiteitä ei tarvita."
+          },
+          "restart_required": {
+            "summary": "Käyttöönottoasetuksia, jotka vaativat uudelleenkäynnistyksen, on muutettu palvelun käynnistyksen jälkeen. ({{changedSettings}})",
+            "nextAction": "Ota käyttöön halutut käyttöönottoasetukset ja käynnistä vaikutetut palvelut uudelleen ennen kuin pidät niitä ajan tasalla."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage-ajonaikainen konfiguraatio",
+        "status": {
+          "not_generated": {
+            "summary": "Sage-ajonaikaista ympäristöä ei ole vielä luotu käyttöönottoasetuksista.",
+            "nextAction": "Vie Sage-ajonaikainen ympäristö ennen kuin pidät käyttöönottoasetuksia Sageen sovellettuna."
+          },
+          "matches_desired": {
+            "summary": "Käynnissä oleva Sage-ajonaikainen konfiguraatio vastaa haluttuja käyttöönottoasetuksia.",
+            "nextAction": "Toimenpiteitä ei tarvita."
+          },
+          "drifted": {
+            "summary": "Käynnissä oleva Sage-ajonaikainen konfiguraatio poikkeaa halutusta käyttöönottoasetuksesta.",
+            "nextAction": "Tutki Sage-ajonaikaisen konfiguraation poikkeamaa, ota käyttöön luotu Sage-ympäristö ja käynnistä Sage uudelleen."
+          },
+          "current": {
+            "summary": "Sage-ajonaikainen ympäristö on luotu nykyisistä käyttöönottoasetuksista.",
+            "nextAction": "Toimenpiteitä ei tarvita, ellei luotua artefaktia ole sovellettu käyttöönantoon."
+          },
+          "stale": {
+            "summary": "Käyttöönottoasetukset muuttuivat sen jälkeen, kun Sage-ajonaikainen ympäristö oli luotu.",
+            "nextAction": "Vie uusi Sage-ajonaikainen ympäristö ja ota se käyttöön käyttöönaston uudelleenkäynnistyspolun kautta."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Core Backend -ajonaikainen konfiguraatio",
+        "status": {
+          "not_generated": {
+            "summary": "Core-backend-ajonaikaista ympäristöä ei ole vielä luotu käyttöönottoasetuksista.",
+            "nextAction": "Vie core-backend-ajonaikainen ympäristö ennen kuin pidät käyttöönottoasetuksia core-backendille sovellettuna."
+          },
+          "matches_desired": {
+            "summary": "Käynnissä oleva core-backend-ajonaikainen konfiguraatio vastaa haluttuja käyttöönottoasetuksia.",
+            "nextAction": "Toimenpiteitä ei tarvita."
+          },
+          "drifted": {
+            "summary": "Käynnissä oleva core-backend-ajonaikainen konfiguraatio poikkeaa halutusta käyttöönottoasetuksesta.",
+            "nextAction": "Tutki core-backend-ajonaikakonfiguraation poikkeamaa, ota käyttöön luotu core-backend-ympäristö ja käynnistä core-backend uudelleen."
+          },
+          "current": {
+            "summary": "Core-backend-ajonaikaympäristö on luotu nykyisten Deployment-asetusten perusteella.",
+            "nextAction": "Toimenpiteitä ei tarvita, ellei luotua artefaktia ole otettu käyttöön Deploymentissa."
+          },
+          "stale": {
+            "summary": "Deployment-asetukset muuttuivat sen jälkeen, kun core-backend-ajonaikaympäristö oli luotu.",
+            "nextAction": "Vie uusi core-backend-ajonaikaympäristö ja ota se käyttöön Deploymentin uudelleenkäynnistyspolun kautta."
+          }
+        }
+      }
+    },
+    "wizard": {
+      "title": "Deployment-velho",
+      "step": "Vaihe {{current}} / {{total}}"
+    },
+    "operationalReadiness": {
+      "title": "Toiminnallinen valmius",
+      "description": "Käy läpi varmuuskopiointi-, palautus-, valvonta- ja palautusharjoitukset ennen normaalia toimintaa."
+    },
+    "llmHelp": {
+      "apiKeyField": "LLM_API_KEY — Tinfoil-API-avaimesi paikallista välityspalvelinta varten.",
+      "apiKeyLabel": "Tinfoil API-avain",
+      "ariaLabel": "Sage-ajonaikakonfiguraation ohje",
+      "exampleConfig": "Esimerkkikonfiguraatio",
+      "goToPage": "Siirry sivulle",
+      "sageExtra": "Aseta LLM_API_KEY Tinfoil-avaimellesi osoitteesta {{tinfoilSignupUrl}}. Pinon (stack) avulla se yhdistetään Sageen ja paikalliseen Tinfoil-välityspalvelimeen.",
+      "sageHint": "Tämä prototyyppi reitittää Agent Runtime -liikenteen Sage- ja Tinfoil-palveluiden kautta. LLM_API_KEY on virallinen Model Provider -avain.",
+      "modelField": "TINFOIL_MODEL — Tinfoil-mallin tunniste, jota Sagen tulee käyttää (esimerkiksi: glm-5-2).",
+      "overviewDesc": "Tämä prototyyppi käyttää Sagea julkisena Agent Runtimeina ja Tinfoilia Model Provider -kuljetuskerroksena. Määritä Model Provider LLM_* -asennusasetusten kautta; pino yhdistää ne Sagen Tinfoil-ajonaikaiseen ympäristöön.",
+      "overviewTitle": "Sage Runtime -yleiskatsaus",
+      "providerField": "LLM_PROVIDER — aseta arvoon \"sage\" tässä prototyypissä."
+    },
+    "inferenceVerification": {
+      "current": "Nykyinen",
+      "missing": "Puuttuu",
+      "expired": "Vanhentunut",
+      "failed": "Epäonnistui",
+      "success": "Onnistui",
+      "statusLoadFailed": "Inference-varmistuksen tilan lataaminen epäonnistui",
+      "historyLoadFailed": "Inference-varmistushistorian lataaminen epäonnistui",
+      "loadFailed": "Inference-varmistuksen lataaminen epäonnistui",
+      "manualFailed": "Manuaalinen varmistus epäonnistui",
+      "manualSucceeded": "Manuaalinen varmistus onnistui",
+      "detailLoadFailed": "Todistuksen tietojen lataaminen epäonnistui",
+      "ariaLabel": "Päättelyvarmistus",
+      "title": "Päättelyvarmistus",
+      "summary": "Vain ylläpitäjille tarkoitettu todiste siitä, että suojattu päättely ajetaan odotetulla Model Providerilla.",
+      "verifyNow": "Varmista nyt",
+      "status": "Tila",
+      "checkedAt": "Tarkistettu",
+      "expiresAt": "Erääntyy",
+      "expectedClaims": "Odotetut vaatimukset",
+      "expectedClaimsValue": "Odotetut vaatimukset: {{fingerprint}}",
+      "providerClaims": "Tarjoajan vaatimukset",
+      "provider": "Tarjoaja",
+      "model": "Malli",
+      "endpoint": "Päätepiste",
+      "history": "Varmistushistoria",
+      "emptyHistory": "Ei vielä varmistustietoja.",
+      "recordTitle": "Tietue #{{id}}",
+      "inspectAttestation": "Tarkastele todistusta",
+      "fullAttestation": "Koko todistusaineisto"
+    },
+    "lifecycle": {
+      "notStarted": "Ei aloitettu",
+      "notConfigured": "Ei konfiguroitu",
+      "plaintextByOperatorChoice": "Selkokielinen operaattorin valinnan mukaan",
+      "allTombstones": "Kaikki",
+      "allTombstonesLabel": "Kaikki tombstonet",
+      "incompleteTombstonesFilter": "Puutteelliset",
+      "incompleteTombstonesLabel": "Puutteelliset tombstonet",
+      "completedTombstonesFilter": "Valmistuneet",
+      "completedTombstonesLabel": "Valmistuneet tombstonet",
+      "title": "Tiedon elinkaaren tila",
+      "description": "Nykyinen operaattorin hallitsema tietosuoja instanssin tiedoille.",
+      "scopeExcludes": "Poissulkee: {{excludes}}",
+      "secureEraseStatus": "Suojattu poisto: {{status}}",
+      "readinessStatus": "Elinkaaren valmius: {{status}}",
+      "readinessNonBlocking": "Käyttäjien keskustelut eivät esty v1-version elinkaaren valmiusvaroitusten vuoksi.",
+      "readinessStaleReason": "Syy: {{reason}}",
+      "contentEncryptionKey": "Sisällön salausavain: {{status}}",
+      "artifactEncryptionPosture": "Artifaktien salausasema: {{status}}",
+      "artifactPostureLabel": "Artifaktien salausasema",
+      "artifactPostureRequired": "Vaadittu",
+      "artifactPostureDisabled": "Poistettu käytöstä",
+      "retentionSchedulerStatus": "Säilytyksen ajastin: {{status}}",
+      "schedulerObservation": "Havainto: {{status}}",
+      "schedulerEnabledClasses": "Ajastimen käytössä olevat luokat: {{classes}}",
+      "schedulerLastRunStatus": "Viimeisimmän suorituksen tila: {{status}}",
+      "schedulerLastRun": "Viimeisin suoritus: {{trigger}} toimijan {{actor}} toimesta",
+      "previewRetention": "Esikatsele säilytystä",
+      "runScheduledRetention": "Suorita ajastettu",
+      "previewRetentionResult": "Esikatselu: {{conversations}} keskustelua, {{artifacts}} dokumenttiartfaktia, {{skipped}} ohitettua luokkaa.",
+      "scheduledRetentionResult": "Ajastettu suoritus: {{status}} {{retries}} tombstone-uudelleenyrityksellä.",
+      "scheduledRetentionStatus": "Ajastetut luokat: {{classes}}",
+      "auditCoverageStatus": "Auditointikattavuus: {{audited}} auditoitu, {{exceptions}} poikkeusta, {{missing}} puuttuu.",
+      "owner": "Omistaja: {{owner}}",
+      "deletion": "Poisto: {{status}}",
+      "retention": "Säilytys: {{status}}",
+      "audit": "Auditointi: {{status}}",
+      "confidentiality": "Luottamuksellisuus: {{status}}",
+      "incompleteTombstones": "Keskeneräiset tombstonet: {{count}}",
+      "completedTombstones": "Valmiit tombstonet: {{count}}",
+      "retentionEnabled": "Käytössä",
+      "retentionWindow": "Aikaväli",
+      "retentionDays": "päivää",
+      "scheduledEnforcement": "Ajastettu",
+      "saveRetentionPolicy": "Tallenna sääntö",
+      "empty": "Elinkeen tila ei ole saatavilla.",
+      "retentionPolicySaveFailed": "Säilytyskäytäntöä ei voitu tallentaa.",
+      "retentionPreviewFailed": "Säilytyksen esikatselua ei voitu suorittaa.",
+      "scheduledRetentionFailed": "Aikaistettua säilytystä ei voitu suorittaa.",
+      "artifactPostureFailed": "Artefaktin salausasetuksia ei voitu päivittää.",
+      "unsupportedSurfacesTitle": "Ei tuetut käyttöympäristöt",
+      "unsupportedSurfacesDescription": "Nämä toiminnalliset jäljet on ilmoitettu tässä, mutta ne jäävät tuotteen elinkaaren hallinnan ulkopuolelle.",
+      "unsupportedSurfaceAckFailed": "Vahvistusta ei voitu päivittää.",
+      "acknowledgedSurface": "Vahvistettu",
+      "acknowledgeSurface": "Vahvista",
+      "tombstonesTitle": "Poistomerkit (Tombstones)",
+      "tombstonesDescription": "Yritä uudelleen keskeneräiset elinkaaren poistot paljastamatta poistettua sisältöä.",
+      "tombstoneStatusFilter": "Poistomerkin tilasuodatin",
+      "tombstoneRetryFailed": "Uudelleenyritys epäonnistui.",
+      "tombstonesFetchFailed": "Poistomerkkejä ei voitu ladata.",
+      "tombstoneClass": "Luokka: {{className}}",
+      "tombstoneSource": "Lähde: {{source}}",
+      "tombstoneRetries": "Uudelleenyritykset: {{count}}",
+      "tombstoneUpdated": "Päivitetty: {{updated}}",
+      "retryTombstoneLabel": "Yritä uudelleen poistomerkkiä {{id}}",
+      "retry": "Yritä uudelleen",
+      "tombstonesEmpty": "Ei odottavia poistomerkkejä uudelleenyritystä varten."
+    },
+    "runtimeEnv": {
+      "unknown": "Tuntematon",
+      "title": "Ajon konfiguraation vastaavuus",
+      "description": "Vertaa haluttuja Deployment-asetuksia, luotua Sage-ympäristöä ja havaittavissa olevaa ajotilaa.",
+      "desired": "Haluttu",
+      "configuredKeys": "{{count}} / {{total}} avainta konfiguroitu",
+      "generated": "Luotu",
+      "exportedAt": "Viennyt {{time}} sitten",
+      "notExported": "Sage-ympäristön vientiä ei ole tallennettu",
+      "running": "Käynnissä",
+      "runningUnknown": "Ajotilaa ei voida vielä tarkastella suoraan.",
+      "coreBackend": "YdinBackend",
+      "coreBackendHint": "Backend-prosessin ympäristön kohdistus",
+      "coreDesired": "Ydin-tavoite",
+      "coreConfiguredKeys": "Ydinbackend: {{count}} / {{total}} avainta määritetty",
+      "coreGenerated": "Ydin-luotu",
+      "coreNotExported": "Ydinbackendin ympäristön vientiä ei ole tallennettu",
+      "coreRunning": "Ydin käynnissä",
+      "coreRunningUnknown": "Ydinbackendin käynnistystilaa ei voida vielä tarkastella suoraan.",
+      "coreExportedTitle": "Ydinbackendin ympäritet vienti suoritettu",
+      "coreSensitiveArtifact": "Käsittele core-backend.env-tiedostoa arkaluontoisena käyttöönottomateriaalina.",
+      "coreExportDoesNotApply": "Artefaktin vienti ei muuta käynnissä olevaa backend-prosessia, ennen kuin ylläpitäjä (Operator) ottaa sen käyttöön ja käynnistää core-backendin uudelleen.",
+      "exportedTitle": "Sage-ympäristö vienti suoritettu",
+      "sensitiveArtifact": "Käsittele sage.env-tiedostoa arkaluontoisena käyttöönottomateriaalina.",
+      "exportDoesNotApply": "Artefaktin vienti ei muuta käynnissä olevaa Sage-prosessia, ennen kuin ylläpitäjä (Operator) ottaa sen käyttöön ja käynnistää Sagen uudelleen."
+    },
+    "categorySettingsAria": "{{category}} asetukset",
+    "exportCoreBackendRuntimeEnv": "Vie core-backend-ympäristö",
+    "restartCurrent": "Uudelleenkäynnistystä ei tarvita",
+    "restartCurrentDesc": "Ei uudelleenkäynnistystä vaativia käyttöönottomäärityksiä on muutettu palvelun käynnistyksen jälkeen.",
+    "saveError": "Tallennus epäonnistui",
+    "openHelpAria": "Avaa ohje kohdalle {{label}}"
   },
   "upload": {
     "invalidFileType": "Virheellinen tiedostotyyppi. Sallittu: {{extensions}}",
@@ -1123,7 +1934,8 @@
       "processing": "Käsitellään",
       "chunked": "Pilkottu",
       "complete": "Valmis",
-      "failed": "Epäonnistui"
+      "failed": "Epäonnistui",
+      "completedWithErrors": "Valmis virheillä"
     },
     "chunks": "{{processed}}/{{total}} palaa",
     "deleteDocument": "Poista dokumentti",
@@ -1172,7 +1984,21 @@
     "serverBusy": "Palvelin on varattu",
     "tryRefresh": "Yritä uudelleen",
     "uploadedSuccess": "Ladattu onnistuneesti – käsittely aloitettu",
-    "uploadingStatus": "Ladataan palvelimelle..."
+    "uploadingStatus": "Ladataan palvelimelle...",
+    "uploadError": "Lataus epäonnistui",
+    "documentDeletionError": "Asiakirjan poistovirhe",
+    "navigationWarning": "Asiakirjaasi siirretään vielä. Poistu vasta, kun käsittely on alkanut, muuten lataus ei välttämättä tallennu.",
+    "duplicateInBatch": "Sama asiakirjan nimi tässä erässä",
+    "documentsSelected": "{{count}} asiakirjaa",
+    "queueSummary": "{{valid}} valmis, {{rejected}} ohitettu",
+    "skipped": "Ohitettu",
+    "uploadedPartialSuccess": "{{count}} jonossa, {{rejected}} ohitettu",
+    "chooseFiles": "Valitse tiedostot",
+    "chooseFolder": "Valitse kansio",
+    "uploadDocuments": "Lataa asiakirjat",
+    "replacingDocument": "Korvataan tiedostoa {{filename}}",
+    "recentDocumentsShowing": "Näytetään {{shown}} / {{total}} dokumenttia",
+    "showMore": "Näytä lisää"
   },
   "configCategories": {
     "embedding": {
@@ -1214,6 +2040,11 @@
       "description": "Määritä SSL-varmenteet ja HTTPS-asetukset",
       "hint": "Määritä TLS- ja välityspalvelinasetukset, kun käytät HTTPS:ää. Oletukset ovat turvallisia paikallisessa kehityksessä; ota HTTPS käyttöön vasta, kun varmenteet on asennettu.",
       "label": "SSL ja tietoturva"
+    },
+    "llm": {
+      "label": "Sage-agentin suoritusympäristö",
+      "description": "Määritä Sage + Tinfoil -päättely",
+      "hint": "Tämä prototyyppi reitittää Agent Runtime -liikenteen Sage-palvelun kautta ja käyttää Tinfoilia mallintarjoajan kuljetuskerroksena. Muutokset vaativat uudelleenkäynnistyksen."
     }
   },
   "promptSections": {
@@ -1240,6 +2071,12 @@
       "description": "Miten tekoäly jäsentää vastauksensa",
       "hint": "Hallitsee muotoilumieltymyksiä kuten käytetäänkö luettelomerkkejä, otsikoita vai keskustelevaa kappalemuotoa. Tämä vaikuttaa vastausten visuaaliseen esitystapaan.",
       "placeholder": "Käytä luettelomerkkejä listoille, otsikoita osioille..."
+    },
+    "prompt_system": {
+      "label": "Järjestelmäkehote",
+      "description": "Tekoälyn ydinkonsepti ja toimintaohjeet",
+      "hint": "Käytä tätä assistentin identiteettiin, tehtävään ja ylätason rajoihin, joiden tulisi pätevät ennen sävyä, sääntöjä, työkaluja tai dokumenttien kontekstia. Muutokset vaikuttavat uusiin keskusteluihin.",
+      "placeholder": "Olet Sage, tämän instanssin yksityinen assistentti..."
     }
   },
   "parameters": {
@@ -1252,6 +2089,11 @@
       "label": "Tiedon syvyys",
       "description": "Kuinka moneen dokumenttiosaan viitataan",
       "hint": "Vastatessaan kysymyksiin tekoäly hakee ladatuista dokumenteistasi ja ottaa mukaan oleelliset osiot. Suuremmat luvut tarkoittavat enemmän kontekstia mutta hitaampia vastauksia. Pienemmät luvut ovat nopeampia mutta saattavat ohittaa oleellista tietoa. Oletus: 5"
+    },
+    "max_tokens": {
+      "label": "Maksimitokenit",
+      "description": "Tekoälyn vastauksen suurin sallittu pituus",
+      "hint": "Rajaat vastauksen pituutta. Pienemmät arvot pitävät vastaukset lyhyinä ja vähentävät kustannuksia; suuremmat arvot mahdollistavat pidemmät selitykset. Oletus: 2048"
     }
   },
   "defaults": {
@@ -1259,6 +2101,21 @@
       "label": "Verkkohaku",
       "description": "Salli tekoälyn hakea internetistä",
       "hint": "Kun käytössä, tekoäly voi hakea verkosta ajankohtaista tietoa jota ei ole dokumenteissasi. Poista käytöstä jos haluat vastausten tulevan vain ladatusta tietokannastasi."
+    },
+    "knowledgeSource": {
+      "none": "Ei mitään",
+      "selected": "Valitut oletusdokumentit",
+      "all": "Kaikki saatavilla olevat dokumentit"
+    },
+    "knowledge_source_default": {
+      "label": "Tietolähteet",
+      "description": "Valitse, mitkä ladatut tietolähteet ovat käytössä käyttäjäkeskusteluissa",
+      "hint": "Käytä arvoa \"none\", jos oletusarvoisesti ei ole ladattua tietoa, arvoa \"selected\" asiakirjoille, jotka on merkitty oletusarvoisesti aktiivisiksi, tai arvoa \"all\", jos haluat käyttää kaikkia saatavilla olevia asiakirjoja."
+    },
+    "user_default_tool_ids": {
+      "label": "Käyttäjän työkalusarjat",
+      "description": "Työkalusarjat, jotka ovat oletusarvoisesti käytössä käyttäjäkeskusteluissa",
+      "hint": "JSON-taulukko, jossa käytetään arvoja \"curated-resources\", \"knowledge-search\" ja \"web-search\". Myös Knowledge Searchia hallitaan Knowledge Sources -asetuksilla."
     }
   },
   "colors": {
@@ -1437,6 +2294,51 @@
       "description": "Webhook-takaisinkutsun perus-URL",
       "hint": "Perus-URL, jota käytetään webhook-takaisinkutsujen muodostamiseen. Esimerkki: https://api.example.com/webhooks. Oletus: http://localhost:8000.",
       "label": "Webhook-URL"
+    },
+    "LLM_PROVIDER": {
+      "label": "Mallin tarjoaja",
+      "description": "Python-puolen mallin tarjoajan nimi",
+      "hint": "Käytä arvoa \"sage\" tässä prototyypissä. Tämä käyttöönottoasetus tukee Python-puolen diagnostiikkaa ja varmennusmetatietoja."
+    },
+    "LLM_MODEL": {
+      "label": "Mallin nimi",
+      "description": "Mallin nimi/tunniste",
+      "hint": "Tinfoil-mallin tunniste, jota Sage:n tulee käyttää (esim. \"glm-5-2\")."
+    },
+    "LLM_API_URL": {
+      "label": "API-päätepiste",
+      "description": "Mallin tarjoajan API:n perus-URL",
+      "hint": "Tinfoil-proxyn perus-URL. Oletus: http://tinfoil-proxy:8089/v1."
+    },
+    "LLM_API_KEY": {
+      "label": "API-avain",
+      "description": "Tinfoil API-avain (salainen)",
+      "hint": "Jätä tyhjäksi, jos haluat pitää nykyiset käyttöönottoasetukset salassa."
+    },
+    "RATE_LIMIT_CHAT_PER_MINUTE": {
+      "label": "Chatin nopeusrajoitus",
+      "description": "Chat-pyynnöt minuutissa",
+      "hint": "Enimmäismäärä /llm/chat-pyyntöjä minuutissa per vakaa käyttäjä, admin, token tai asiakas-IP. Vaatii uudelleenkäynnistyksen. Oletus: 120."
+    },
+    "RATE_LIMIT_QUERY_PER_MINUTE": {
+      "label": "Retrieval-kyselyn nopeusrajoitus",
+      "description": "Retrieval-kyselyt minuutissa",
+      "hint": "Enimmäismäärä /query-pyyntöjä minuutissa per vakaa käyttäjä, token tai asiakas-IP. Vaatii uudelleenkäynnistyksen. Oletus: 90."
+    },
+    "RATE_LIMIT_UPLOAD_PER_MINUTE": {
+      "label": "Latauksen nopeusrajoitus",
+      "description": "Asiakirjojen latauspyynnöt minuutissa",
+      "hint": "Enimmäismäärä asiakirjojen latauspyyntöjä minuutissa per vakaa admin, token tai asiakas-IP. Vaatii uudelleenkäynnistyksen. Oletus: 20."
+    },
+    "RATE_LIMIT_VECTOR_SEARCH_PER_MINUTE": {
+      "label": "Vektorihaun nopeusrajoitus",
+      "description": "Vektorihaun pyynnöt minuutissa",
+      "hint": "Enimmäismäärä vektorihaun pyyntöjä minuutissa per vakaa käyttäjä, token tai asiakas-IP. Vaatii uudelleenkäynnistyksen. Oletus: 30."
+    },
+    "RATE_LIMIT_CONFIG_EXPORT_PER_HOUR": {
+      "label": "Konfiguraation vientia nopeusrajoitus",
+      "description": "Käyttöönoton konfiguraation viennit tunnissa",
+      "hint": "Enimmäismäärä .env-vientejä tunnissa per admin-istunto tai asiakas-IP. Vaatii uudelleenkäynnistyksen. Oletus: 5."
     }
   },
   "instanceInitiation": {
@@ -1473,7 +2375,11 @@
       "title": "Valmis yhdistämään"
     },
     "subtitle": "Määritä yksityinen tietokantasi muutamassa vaiheessa.",
-    "title": "Tervetuloa Enclaveiin"
+    "title": "Tervetuloa Enclaveiin",
+    "keySafety": {
+      "title": "Käytä instanssikohtaista Nostr-avainta",
+      "body": "Älä käytä henkilökohtaista Nostr-avaintasi. Luo tai valitse tälle instanssille erillinen admin-avain vähentääksesi valvonnan riskiä ja pitääksesi operatiivisen pääsyn erillään."
+    }
   },
   "reachout": {
     "errors": {
@@ -1481,7 +2387,8 @@
       "notConfigured": "Tätä ominaisuutta ei ole määritetty.",
       "rateLimited": "Liian monta viestiä. Yritä uudelleen myöhemmin.",
       "required": "Viesti on pakollinen.",
-      "unavailable": "Yhteydenotto ei ole saatavilla."
+      "unavailable": "Yhteydenotto ei ole saatavilla.",
+      "formErrorLabel": "Yhteydenottolomakkeen virhe"
     },
     "form": {
       "messageLabel": "Viesti",
@@ -1489,7 +2396,8 @@
       "send": "Lähetä"
     },
     "status": {
-      "success": "Kiitos. Viestisi lähetettiin."
+      "success": "Kiitos. Viestisi lähetettiin.",
+      "successLabel": "Yhteydenotto onnistui"
     },
     "mode": {
       "feedback": {
@@ -1524,7 +2432,8 @@
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Taustaohjelma palautti virheen todennuksen vahvistuksessa. Tätä ei käsitellä uloskirjautumisena.",
       "unable_to_verify_admin_session_5f87b8": "Ylläpitäjän istuntoa ei voida vahvistaa",
       "verifying_admin_session_87c53b": "Vahvistetaan ylläpitäjän istuntoa..."
-    }
+    },
+    "loadingAssistant": "Ladataan admin-assistenttia"
   },
   "initiationGate": {
     "extracted": {
@@ -1738,7 +2647,331 @@
       "verify_a_magic_link_token_and_get_session_fc176a": "– Vahvista maagisen linkin token ja hae istuntotiedot (evästepohjainen istunto).",
       "verify_magic_link_token_183cf5": "Vahvista maagisen linkin token",
       "view_all_users_manage_approval_status_and_delete_03feec": "Tarkastele kaikkia käyttäjiä, hallinnoi hyväksymistilaa ja poista käyttäjiä.",
-      "view_and_update_instance_wide_configuration_settings_9d59d3": "Tarkastele ja päivitä instanssinlaajuisia määritysasetuksia."
+      "view_and_update_instance_wide_configuration_settings_9d59d3": "Tarkastele ja päivitä instanssinlaajuisia määritysasetuksia.",
+      "tests_connectivity_to_the_llm_provider_maple_or_e91a9f": "Testaa yhteys määritettyyn Model Provider -polkuun."
+    },
+    "labels": {
+      "themePreference": "Teeman valinta",
+      "endpointGuidance": "Päätepisteen ohjeistus",
+      "healthResponseOutput": "Health-vastauksen tuloste",
+      "jobs": "Työt",
+      "chunks": "Palaset",
+      "rateLimitTestType": "Nopeusrajoitustestin tyyppi",
+      "successfulRequests": "Onnistuneet pyynnöt",
+      "successful": "Onnistunut",
+      "blockedRequests": "Estetyt pyynnöt"
     }
+  },
+  "adminFeedback": {
+    "conversationTrace": "Keskustelun jälki"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logo"
+  },
+  "language": {
+    "english": "Englanti",
+    "spanish": "Espanja",
+    "french": "Ranska",
+    "german": "Saksa",
+    "portuguese": "Portugali"
+  },
+  "home": {
+    "checkingInstanceStatus": "Tarkistetaan instanssin tila..."
+  },
+  "adminGuidedSetup": {
+    "title": "Määritä instanssisi",
+    "subtitle": "Assistenttisi kerää perustiedot yhdellä kertaa.",
+    "manual": "Määritä manuaalisesti",
+    "finish": "Valmis & aloita testaus",
+    "comingSoon": "Tämä vaihe on tulossa pian ja se rakennetaan erikseen.",
+    "steps": {
+      "initialize": {
+        "label": "Alustaminen",
+        "title": "Alustaminen",
+        "subtitle": "Käydään läpi tilasi perustiedot, jotta agentillasi on oikea pohja."
+      },
+      "docs": {
+        "label": "Lataa dokumentit",
+        "title": "Lataa ohjeistuksesi",
+        "subtitle": "Lisää lähdemateriaali, josta agenttisi vastaa — kirjat, oppaat ja viiteasiakirjat."
+      },
+      "resources": {
+        "label": "Kuratoidut resurssit",
+        "title": "Kuratoidut resurssit",
+        "subtitle": "Lisää luotettavia todellisia resursseja — tärkeät yhteystiedot, lakimiehet, koulutus- ja mielenterveystuki — joihin agentti voi ohjata ihmisiä."
+      },
+      "test": {
+        "label": "Testaa käyttäjänä",
+        "title": "Testaa käyttäjänä",
+        "subtitle": "Tulossa pian — kokeile assistenttia yhtenä käyttäjätyyppienasi ja arvioi vastaukset."
+      },
+      "feedback": {
+        "label": "Palaute",
+        "title": "Palautekierto",
+        "subtitle": "Tulossa pian — tarkista vastausten laatu ja hienosäädä asetuksiasi."
+      }
+    }
+  },
+  "adminTestFeedback": {
+    "title": "Testaus & Palaute",
+    "subtitle": "Suorita testikäyttäjäistunto, tarkastele sitten salattuja beta-logeja ja palautetta tallennetuista keskusteluista.",
+    "tabs": {
+      "test": "Testaa käyttäjänä",
+      "feedback": "Palaute"
+    },
+    "test": {
+      "pickPersona": "Valitse persona testattavaksi",
+      "pickPersonaBody": "Luo testikäyttäjä yhdelle käyttäjätyypeistäsi ja keskustele hänen roolissaan. Istunto tallentuu salattuna kokeiluna, jonka voit arvioida Palautteen alla.",
+      "userType": "Käyttäjätyyppi",
+      "genericUser": "Yleinen käyttäjä (ei tyyppiä)",
+      "start": "Aloita istunto",
+      "admin": "Ylläpitäjä",
+      "testUserId": "Testikäyttäjä",
+      "endSave": "Lopeta & tallenna kokeilu",
+      "previewNotice": "Esikatselutila — täydellinen identiteetin väärentäminen ei ole vielä käytössä, joten tämä keskustelu käydään ylläpitäjäistuntosi alla. Keskusteluloki tallentuu silti tarkastettavaksi.",
+      "chatEmpty": "Lähetä viesti tämän käyttäjän roolissa aloittaaksesi kokeilun.",
+      "inputPlaceholder": "Viesti assistentille tämän käyttäjän roolissa...",
+      "saved": "Kokeilu tallennettu (salattu). Tarkastele sitä Palautteen alla.",
+      "startError": "Testi-istunnon aloittaminen epäonnistui",
+      "saveError": "Kokeilun tallentaminen epäonnistui",
+      "impersonationUnavailable": "Testikäyttäjän identiteetin väärentäminen ei ole vielä käytössä",
+      "sessionTokenError": "Synteettistä käyttäjäistunnon tokenia ei voitu luoda",
+      "testingAs": "Testataan roolissa {{persona}}",
+      "authFailed": "Synteettinen käyttäjäistunto ei ole enää valtuutettu.",
+      "discardUnsavedConfirm": "Hylätään valmiit vuorovaikutukset, joita ei ole tallennettu?",
+      "workspaceAria": "Testikäyttäjän keskustelualue"
+    },
+    "feedback": {
+      "trials": "Beta-logit",
+      "untitled": "Nimeämätön keskustelu",
+      "turns": "vuoroa",
+      "turn": "Vuoro",
+      "empty": "Ei vielä tallennettuja beta-logeja. Suorita Test User Session tai odota käyttäjäkeskusteluja.",
+      "selectPrompt": "Valitse beta-loki tarkastellaksesi sen tekstivastineen ja arvioidaksesi jokaisen vuorosan.",
+      "noNip04": "Yhdistä Nostr-laajennus (Alby, nos2x) tekstivastineiden purkamiseksi — ne on salattu admin-avaimellasi.",
+      "sourceUser": "Käyttäjän keskustelu",
+      "sourceTest": "Testikäyttäjän istunto",
+      "thumbUp": "Hyvä vastaus",
+      "thumbDown": "Vaatii parannusta",
+      "notePlaceholder": "Valinnainen huomautus (tallennettu salattuna)…",
+      "exportNotDecrypted": "Avaa ja pura tekstivastine ennen vientiä.",
+      "exportFeedbackNotDecrypted": "Jotkut palautteen kommentit eivät avautuneet. Avaa tekstivastine uudelleen ja hyväksy jokainen purkupyyntö ennen vientiä.",
+      "exportNeedsExtension": "Vienti vaatii Nostr-laappennuksen. Tekstivastineet on salattu levyllä, ja laajennuksesi purkaa ne.",
+      "exportDecrypting": "Purku on vielä kesken. Vienti on käytettävissä, kun jokainen pyyntö on hyväksytty.",
+      "exportWhyDisabled": "Miksi vienti on poistettu käytöstä?",
+      "retryDecryption": "Yritä purkamista uudelleen",
+      "decryptPendingTitle": "Tarkista Nostr-laajennuksesi",
+      "decryptPendingBody": "Se pyytää lupaa purkaa tämä tekstivastine. Se ei välttämättä avaudu automaattisesti — klikkaa laajennuksen kuvaketta, jos et näe sitä. Valitse vaihtoehto, joka muistaa valintasi, jotta se kysyy lupaa vain kerran.",
+      "decryptProgress": "Purettu {{done}} / {{total}}.",
+      "loadTrialsError": "Testien lataaminen epäonnistui",
+      "loadTranscriptError": "Tekstivastineen lataaminen epäonnistui",
+      "saveError": "Palautetta ei voitu tallentaa",
+      "deleteError": "Istuntolokia ei voitu poistaa",
+      "exportError": "Istunnon vienti epäonnistui",
+      "transcriptIntegrityError": "Tekstivastine ei ole saatavilla tai se on puutteellinen, eikä sitä voida viedä.",
+      "decryptTranscriptError": "Tekstivastinetta ei voitu purkaa. Hyväksy purkupyyntö Nostr-laajennuksessasi."
+    }
+  },
+  "adminResources": {
+    "title": "Resurssihakemisto",
+    "subtitle": "Ylläpidä manuaalisesti tarkastettuja lähetevirtoja, joita assistentti voi mainita, kun keskustelu eskaloituu. Vain \"valmiit\" resurssit näytetään loppukäyttäjille.",
+    "add": "Lisää resurssi",
+    "addTitle": "Lisää resurssi",
+    "editTitle": "Muokkaa resurssia",
+    "empty": "Ei vielä resursseja. Lisää yksi manuaalisesti, kun sinulla on tarkastettu lähetevirta.",
+    "verified": "varmistettu",
+    "missing": "Puuttuu julkaisusta",
+    "name": "Nimi",
+    "type": "Resurssin tyyppi",
+    "languages": "Kielet (pilkulla erotetut ISO-koodit)",
+    "description": "Kuvaus",
+    "descriptionHint": "Mitä avustajan tulisi kertoa henkilölle tästä resurssista.",
+    "scopeLevel": "Kattavuustaso",
+    "scopeCode": "Kattavuuskoodi",
+    "scopeCodeHint": "Maa: ISO-koodi (NI). Alue/maanosat: UN M4#9-koodi (013 = Keski-Amerikka). Globaali: jätä tyhjäksi.",
+    "helpTypes": "Apumateriaalityyppi",
+    "contact": "Yhteystavat",
+    "vettedBy": "Tarkastanut",
+    "sourceNote": "Lähdeviite",
+    "markVerified": "Merkitse varmennetuksi (nousee ensimmäiseksi)",
+    "archive": "Arkistoi (piilota loppukäyttäjiltä)",
+    "deleteTitle": "Poistetaanko resurssi?",
+    "deleteBody": "Tämä poistaa hakemistervetteen kohteelle {{name}}",
+    "coverage": "Kattavuus",
+    "coverageHint": "Valitse kattavuustaso, etsi sitten sen nimi tai koodi.",
+    "coverageCodePlaceholder": "Etsi nimellä tai koodilla…",
+    "coverageLevelFirst": "Valitse ensin kattavuustaso",
+    "coverageClear": "Tyhjennä kattavuuskoodi",
+    "regionDirectoryUnavailable": "Alueen hakemisto ei ole käytettävissä. Syötä koodi manuaalisesti.",
+    "level": {
+      "country": "Maa",
+      "subregion": "Alue",
+      "region": "Alue",
+      "global": "Globaali"
+    },
+    "addPointer": "Lisää osoitin",
+    "addRegion": "Lisää alue",
+    "displayOrder": "Näyttöjärjestys",
+    "displayOrderHint": "Pienemmät numerot näkyvät ensin relevanssin ja varmennuksen jälkeen.",
+    "kind": "Tyyppi",
+    "noSearchResults": "Haku ei tuottanut tuloksia.",
+    "order": "Järjestys",
+    "pointerLabel": "Osoitin {{number}} otsikko",
+    "pointerType": "Osoitin {{number}} tyyppi",
+    "pointerValue": "Osoitin arvo {{number}}",
+    "pointers": "Osoittimet",
+    "regionNumber": "Alue {{number}}",
+    "regions": "Alueet",
+    "removePointer": "Poista osoitin",
+    "removeRegion": "Poista alue",
+    "search": "Etsi resursseja",
+    "searchPlaceholder": "Nimi, tyyppi, tägi, osoitin tai kuvaus",
+    "tags": "Tagit (eroteltu pilkulla)",
+    "namePlaceholder": "esim. Keski-Amerikan ihmisoikeusneuvosto",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, koulutus, paikallinen",
+    "loadError": "Resurssien lataaminen epäonnistui",
+    "loadDirectoryError": "Hakemiston lataaminen epäonnistui",
+    "saveError": "Resurssin tallentaminen epäonnistui",
+    "deleteError": "Resurssin poistaminen epäonnistui"
+  },
+  "adminUserManager": {
+    "backToAdmin": "Takaisin Admin-hallintapaneeliin",
+    "eyebrow": "Admin-toiminnot",
+    "title": "Käyttäjänhallinta",
+    "subtitle": "Tarkastele käyttäjiä, näe heidän tilansa ja hyväksy käyttöoikeudet yhdestä selkeästä hallintapaneelista.",
+    "unlockDetails": "Avaa tiedot",
+    "refreshRoster": "Päivitä luettelo",
+    "exportVisible": "Vie näkyvissä oleva luettelo",
+    "prepareVisible": "Valmistele näkyvissä oleva luettelo",
+    "downloadPrepared": "Lataa valmisteltu luettelo",
+    "exportPrepared": "Koko näkyvissä oleva luettelo on valmis. Lataus on nyt käytettävissä.",
+    "rosterTitle": "Käyttäjäluettelo",
+    "rosterShown": "Näytetään {{shown}} yhteensä {{total}} käyttäjästä.",
+    "tableLabel": "Käyttäjäluettelo",
+    "tableRowsLabel": "Käyttäjäluutelon rivit",
+    "loadingLabel": "Käyttäjäluettelon lataaminen",
+    "loadingUsers": "Käyttäjiä ladataan...",
+    "loadRetry": "Käyttäjäluetteloa ei voitu ladata. Kokeile uudelleen käyttämällä Päivitä luettelo -painiketta.",
+    "emptyNoUsers": "Ei vielä käyttäjiä. Uudet tunnistautuneet käyttäjät ilmestyvät tänne.",
+    "emptyFiltered": "Suodattimet eivät tuottaneet yhtään käyttäjää.",
+    "noUserType": "Ei käyttäjätyyppiä",
+    "unknown": "Tuntematon",
+    "userFallback": "Käyttäjä #{{id}}",
+    "approvalSuccess": "{{name}} hyväksytty.",
+    "exportSuccess": "Käyttäjäluettelon taulukko ladattu.",
+    "metrics": {
+      "total": "Käyttäjiä yhteensä",
+      "totalDetail": "luettelossa",
+      "pendingApproval": "Odottaa hyväksyntää",
+      "pendingDetail": "{{count}} odottaa",
+      "approved": "Hyväksytty",
+      "approvedDetail": "voi liittyä chattiin",
+      "incompleteProfiles": "Puutteelliset profiilit",
+      "incompleteDetail": "vaativat pakolliset vastaukset"
+    },
+    "callouts": {
+      "loadFailed": "Käyttäjäluettelon lataaminen epäonnistui",
+      "approvalUpdated": "Käyttäjän hyväksyntä päivitetty",
+      "approvalFailed": "Käyttäjän hyväksyntäpäivitys epäonnistui",
+      "exportReady": "Käyttäjäluettelon vienti valmis",
+      "exportFailed": "Käyttäjäluettelon vienti epäonnistui"
+    },
+    "filters": {
+      "search": "Etsi käyttäjiä",
+      "searchPlaceholder": "Nimi, sähköposti, julkinen avain tai #ID",
+      "approvalStatus": "Hyväksyntätila",
+      "allApprovalStates": "Kaikki hyväksyntätilat",
+      "pendingApproval": "Odottaa hyväksyntää",
+      "approved": "Hyväksytty",
+      "allUserTypes": "Kaikki käyttäjätyypit"
+    },
+    "columns": {
+      "user": "Käyttäjä",
+      "approval": "Hyväksyntä",
+      "userType": "Käyttäjätyyppi",
+      "userProfile": "Käyttäjäprofiili",
+      "joined": "Liittynyt",
+      "action": "Toiminto"
+    },
+    "status": {
+      "approved": "Hyväksytty",
+      "pending": "Odottaa"
+    },
+    "actions": {
+      "approve": "Hyväksy",
+      "approveUser": "Hyväksy {{name}}",
+      "viewUserDetails": "Näytä {{name}} tiedot"
+    },
+    "profile": {
+      "noQuestions": "Ei kysymyksiä",
+      "noQuestionsDetail": "Ei sovellettavia aloituskysymyksiä.",
+      "needsProfile": "Profiili tarvitaan",
+      "missingRequiredOne": "1 pakollinen vastaus puuttuu",
+      "missingRequiredMany": "{{count}} pakollista vastausta puuttuu",
+      "noProfileYet": "Ei vielä profiilia",
+      "noAnswersSaved": "Ei tallennettuja vastauksia.",
+      "ready": "Profiili valmis",
+      "answersSavedOne": "1 vastaus tallennettu",
+      "answersSavedMany": "{{count}} vastausta tallennettu"
+    },
+    "identity": {
+      "decrypting": "Salataan nimeä ja sähköpostia...",
+      "failed": "Salattuja tietoja ei voitu avata.",
+      "unavailable": "Salatut tiedot vaativat selaimen allekirjoittajan.",
+      "locked": "Salatut tiedot on lukittu."
+    },
+    "errors": {
+      "loadUsers": "Käyttäjien lataaminen epäonnistui.",
+      "loadUserTypes": "Käyttäjätyyppien lataaminen epäonnistui.",
+      "loadQuestions": "Perehdytyskysymysten lataaminen epäylistyi.",
+      "approvalUpdate": "Käyttäjän hyväksyntää ei voitu päivittää.",
+      "decryptUnavailable": "Tämän luettelon valmisteluun tarvitaan selainlaajennus, joka tukee NIP-04-purkua.",
+      "decryptRoster": "Salattua luettelon arvoa ei voitu purkaa. Taulukkoa ei luotu.",
+      "prepareRequired": "Valmistele nykyinen näkyvissä oleva luettelo ennen sen lataamista.",
+      "exportAudit": "Käyttäjäluettelon vientiä ei voitu tarkastaa.",
+      "exportRoster": "Käyttäjäluettelon vienti epäonnistui."
+    },
+    "detail": {
+      "booleanYes": "Kyllä",
+      "booleanNo": "Ei",
+      "fieldUnlocked": "Salattu vastaus on avattu tässä selaimessa.",
+      "decryptingField": "Vastauksen purku käynnissä...",
+      "encryptedFieldUnavailable": "Salattu vastaus vaatii selaimen allekirjoittajan.",
+      "encryptedFieldFailed": "Salattua vastausta ei voitu avata.",
+      "encryptedFieldLocked": "Salattu vastaus on lukittu.",
+      "notAnswered": "Vastaamatta",
+      "requiredMissing": "Pakollinen vastaus puuttuu.",
+      "backToUserManager": "Takaisin käyttäjänhallintaan",
+      "backToRoster": "Takaisin käyttäjäluetteloon",
+      "eyebrow": "Käyttäjän tiedot",
+      "notFoundTitle": "Käyttäjää ei löytynyt",
+      "notFoundBody": "Tätä käyttäjää ei ole nykyisessä ylläpitäjän luettelossa.",
+      "subtitle": "Tarkastele tämän käyttäjän tilaa, profiilivastauksia ja käyttöoikeustietoja.",
+      "approvalStatus": "Hyväksyntätila",
+      "waitingApproval": "odottaa hyväksyntää",
+      "identityTitle": "Identiteetti",
+      "name": "Nimi",
+      "nameUnavailable": "Ei saatavilla",
+      "email": "Sähköposti",
+      "emailUnavailable": "Ei saatavilla",
+      "userId": "Käyttäjätunnus",
+      "publicKey": "Julkinen avain",
+      "noPublicKey": "Ei julkista avainta",
+      "fieldsTitle": "Profiilikentät",
+      "fieldsShown_one": "Tälle käyttäjälle on määritetty {{count}} kenttä.",
+      "fieldsShown_other": "Tälle käyttäjälle on määritetty {{count}} kenttää.",
+      "noFields": "Tälle käyttäjälle ei ole määritetty aloituskenttiä.",
+      "required": "Pakollinen",
+      "optional": "Valinnainen",
+      "encrypted": "Salattu",
+      "plain": "Selkokielinen",
+      "chatContext": "Chat-konteksti"
+    }
+  },
+  "decryptStatus": {
+    "progress": "Purkaa {{done}} / {{total}}",
+    "checkExtension": "tarkista Nostr-laajennuksesi",
+    "persistentApproval": "Valitse muista- tai aina-vaihtoehto, jotta kysely tulee vain kerran."
   }
 }

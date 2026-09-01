@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HelpCircle, X } from 'lucide-react'
 import { CustomField, FieldType, UserType } from '../../types/onboarding'
+import { localizedFieldTypes } from '../../i18n/dynamicTranslationFamilies'
 
 interface FieldEditorProps {
   onSave: (field: CustomField) => void
@@ -10,12 +11,10 @@ interface FieldEditorProps {
   userTypes?: UserType[]
 }
 
-const FIELD_TYPE_VALUES: FieldType[] = ['text', 'email', 'number', 'textarea', 'select', 'checkbox', 'date', 'url']
-
 export function FieldEditor({ onSave, onCancel, initialField, userTypes = [] }: FieldEditorProps) {
   const { t } = useTranslation()
 
-  const FIELD_TYPES = FIELD_TYPE_VALUES.map((value) => ({
+  const FIELD_TYPES = localizedFieldTypes.map((value) => ({
     value,
     label: t(`admin.fieldTypes.${value}`),
     description: t(`admin.fieldTypes.${value}Desc`),

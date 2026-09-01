@@ -1,4 +1,7 @@
 {
+  "adminFeedback": {
+    "conversationTrace": "Trace de la conversation"
+  },
   "onboarding": {
     "nostr": {
       "whatIsNostr": "Qu'est-ce que Nostr ?",
@@ -174,6 +177,15 @@
     "listTitle": "Discussions",
     "contextTitle": "Contexte",
     "messageActions": "Actions du message",
+    "actions": {
+      "stop": "Arrêter la réponse",
+      "stopDisabled": "Aucune réponse à arrêter.",
+      "regenerate": "Régénérer la réponse",
+      "edit": "Modifier le message",
+      "waitForResponse": "Attendez la fin de la réponse actuelle.",
+      "startConversation": "Commencez ou reprenez d'abord une conversation.",
+      "resolveConfirmation": "Résolvez la confirmation de changement en attente avant de modifier l'historique."
+    },
     "composerContextAria": "Contexte de rédaction",
     "sessions": {
       "ariaLabel": "Sessions de discussion",
@@ -200,7 +212,9 @@
       "renameInput": "Titre de la conversation",
       "renameCancel": "Annuler le renommage de la conversation",
       "renameSave": "Enregistrer le titre de la conversation",
-      "renameSaving": "Renommage..."
+      "renameSaving": "Renommage...",
+      "open": "Ouvrir les sessions de chat",
+      "close": "Fermer les sessions de chat"
     },
     "currentChatAria": "Discussion actuelle",
     "newFromCurrent": "Démarrer une nouvelle discussion",
@@ -209,7 +223,35 @@
       "requestLabel": "Erreur de requête de discussion"
     },
     "trace": {
-      "finalizing": "Finalisation de la réponse..."
+      "finalizing": "Finalisation de la réponse...",
+      "collapse": "Réduire",
+      "expand": "Développer",
+      "reasoning": "Raisonnement",
+      "thinking": "Réflexion",
+      "transcript": "Transcription de {{label}}",
+      "reasoningSummaryAria": "Résumé du raisonnement",
+      "reasoningTranscriptAria": "Transcription du raisonnement",
+      "label": "Trace",
+      "toolCalls": "Appels d'outils",
+      "retrieval": "Récupération",
+      "input": "Entrée",
+      "output": "Sortie",
+      "retrievedSource": "Source récupérée",
+      "score": "score {{score}}",
+      "optionalDetailsAria": "Détails facultatifs de {{label}}"
+    },
+    "conversationMessagesAria": "Messages de la conversation",
+    "conversationSurfaceAria": "Surface de conversation",
+    "conversationThreadAria": "Fil de conversation",
+    "activity": {
+      "label": "Activité",
+      "summaryAria": "Résumé de l'activité",
+      "detailsAria": "Détails de l'activité",
+      "timelineAria": "Chronologie de l'activité",
+      "show": "Afficher l'activité",
+      "hide": "Masquer l'activité",
+      "showOptional": "Afficher les détails facultatifs",
+      "hideOptional": "Masquer les détails facultatifs"
     }
   },
   "common": {
@@ -239,6 +281,8 @@
     "error": "Erreur",
     "back": "Retour",
     "loading": "Chargement...",
+    "loadingPage": "Chargement de la page",
+    "pageLoadError": "Impossible de charger la page. Veuillez actualiser.",
     "unknown": "Inconnu",
     "enabled": "Activé",
     "disabled": "Désactivé",
@@ -256,7 +300,11 @@
     "reset": "Réinitialiser",
     "exit": "Quitter",
     "none": "Aucun",
-    "all": "Tous"
+    "all": "Tous",
+    "warning": "Avertissement"
+  },
+  "branding": {
+    "logoAlt": "Logo de {{name}}"
   },
   "settings": {
     "title": "Paramètres",
@@ -316,7 +364,10 @@
       "reorderFailed": "Échec de la réorganisation du champ",
       "loadUsersFailed": "Échec du chargement des utilisateurs",
       "updateTypeFailed": "Échec de la mise à jour du type d'utilisateur",
-      "loadSettingsFailed": "Échec du chargement des paramètres"
+      "loadSettingsFailed": "Échec du chargement des paramètres",
+      "externalConfigConflict": "Sage ou un autre administrateur a modifié ces paramètres pendant votre édition. Rechargez cette page avant d'enregistrer afin de ne pas écraser les valeurs plus récentes.",
+      "externalSettingsConflict": "Sage ou un autre administrateur a modifié ces paramètres pendant votre édition. Rechargez cette page avant d'enregistrer.",
+      "externalUserConfigConflict": "Sage ou un autre administrateur a modifié les Types d'utilisateur ou les Questions d'intégration pendant votre édition. Rechargez cette page avant d'enregistrer votre brouillon."
     },
     "setup": {
       "backToChat": "Retour au chat",
@@ -636,7 +687,9 @@
       "approve": "Approuver",
       "applyErrorLabel": "Erreur d'application de la configuration",
       "onboardingTitle": "Chat de configuration guidée",
-      "onboardingContext": "Conversation de configuration ciblée"
+      "onboardingContext": "Conversation de configuration ciblée",
+      "directShareSecretsHint": "Facultatif : inclure les valeurs des secrets de déploiement stockés dans le contexte de cette Conversation. Les lectures directes de secrets ne l'exigent pas.",
+      "directWritePrompt": "Posez des questions sur la configuration d'administration. Sage peut inspecter les paramètres et, après confirmation avec vous dans la conversation, appliquer directement les modifications prises en charge."
     },
     "reachout": {
       "badgeDefault": "Par défaut",
@@ -884,6 +937,8 @@
     "connectedAs": "Connecté en tant que",
     "redirecting": "Redirection vers le tableau de bord...",
     "connectionFailed": "Échec de la connexion",
+    "statusError": "Impossible de vérifier l'état de l'instance",
+    "connectionError": "Impossible de se connecter",
     "securityJourneyTitle": "Parcours sécurité rapide",
     "securityJourneyIntro": "Après la connexion avec Nostr, suivez ce parcours simple :",
     "securityJourneyStep1": "Sécurisez l’accès : définissez les URLs publiques, désactivez les modes simulation hors développement et choisissez les règles d’approbation des utilisateurs.",
@@ -927,7 +982,15 @@
     "adminSessionExpired": "Session administrateur expirée",
     "authenticationFailed": "Échec de l'authentification",
     "noNostrExtension": "Aucune extension Nostr trouvée",
-    "exportFailed": "Échec de l'exportation"
+    "exportFailed": "Échec de l'exportation",
+    "failedToRetryDeletionTombstone": "Impossible de réessayer la suppression en attente",
+    "failedToAcknowledgeUnsupportedSurface": "Impossible d'accuser réception de la surface de déploiement non prise en charge",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Impossible d'accuser réception de la catégorie de surface non prise en charge",
+    "failedToPreviewRetention": "Impossible de prévisualiser la politique de conservation",
+    "failedToUpdateRetentionPolicy": "Impossible de mettre à jour la politique de conservation",
+    "failedToRunScheduledRetention": "Impossible d'exécuter la conservation planifiée",
+    "failedToUpdateArtifactEncryptionPosture": "Impossible de mettre à jour le niveau de chiffrement des artefacts",
+    "queryExecutionFailed": "Échec de l'exécution de la requête"
   },
   "upload": {
     "invalidFileType": "Type de fichier invalide. Autorisé : {{extensions}}",
@@ -939,6 +1002,7 @@
     "supported": "Pris en charge : {{extensions}}",
     "removeFile": "Supprimer le fichier",
     "uploading": "Téléchargement...",
+    "uploadError": "Échec du téléversement",
     "uploadDocument": "Télécharger le document",
     "recentUploads": "Téléchargements récents",
     "noUploads": "Aucun téléchargement pour le moment",
@@ -1102,7 +1166,9 @@
         "detail1": "Les lectures de config inspectent l'état réel de l'instance au lieu de deviner.",
         "detail2": "Les modifications proposées sont préparées pour révision.",
         "detail3": "Appliquer exécute les points d'accès admin approuvés sans nouveau tour du modèle.",
-        "link": "Ouvrir l'assistant admin"
+        "link": "Ouvrir l'assistant admin",
+        "directWriteDetail2": "Sage demande une confirmation dans la conversation avant toute écriture prise en charge.",
+        "directWriteDetail3": "Après votre confirmation, Sage appelle ses Outils de configuration directe et rapporte le résultat réel."
       },
       "guided": {
         "eyebrow": "Démarrer",
@@ -1168,7 +1234,9 @@
       "prompt2": "Passez en revue les types d'utilisateur, les questions d'intégration, les documents et les ressources actuels.",
       "prompt3": "Préparez des modifications pour révision : définissez le ton de l'assistant et la langue par défaut.",
       "title": "Bonnes choses à demander à l'assistant admin",
-      "body": "Demandez une révision avant de demander des modifications. Il peut inspecter la configuration et préparer un ensemble de modifications."
+      "body": "Demandez une révision avant de demander des modifications. Il peut inspecter la configuration et préparer un ensemble de modifications.",
+      "directWriteBody": "Demandez à Sage d'inspecter ou de modifier la configuration prise en charge. Il confirmera la modification prévue avec vous avant d'écrire.",
+      "directWritePrompt3": "Définissez le ton de l'assistant et la langue par défaut, et confirmez d'abord la modification prévue avec moi."
     },
     "hero": {
       "eyebrow": "Carte de contrôle admin",
@@ -1192,6 +1260,13 @@
         "2": "Les secrets restent masqués sauf si vous les partagez pour la session admin en cours.",
         "3": "Les modifications de l'assistant sont des propositions. Vous les révisez et cliquez sur Appliquer.",
         "4": "Les paramètres de déploiement enregistrent les valeurs d'exécution souhaitées. Les opérateurs exportent toujours l'environnement et redémarrent les services au besoin."
+      },
+      "directItems": {
+        "0": "Les administrateurs se connectent avec NIP-07. Les utilisateurs se connectent via des liens magiques par e-mail.",
+        "1": "Les champs utilisateur sont chiffrés par défaut. Seuls les champs en texte clair peuvent être partagés avec le chat.",
+        "2": "Les secrets restent masqués sauf si vous les partagez pour la session d'administration en cours.",
+        "3": "Sage confirme les modifications de configuration avec vous dans le chat, puis applique directement les changements pris en charge.",
+        "4": "Les Paramètres de déploiement stockent les valeurs d'exécution souhaitées. Les opérateurs exportent toujours l'environnement et redémarrent les services si nécessaire."
       }
     },
     "quickSteps": {
@@ -1291,7 +1366,7 @@
     "testDashboard": "Diagnostics",
     "testDashboardDesc": "Exécutez des tests de fumée de développement et inspectez les modules de diagnostic",
     "testDashboardDescSimple": "Exécutez des tests de fumée lors de l'investigation d'un problème.",
-    "iaChecklistTitle": "Liste de contrôle de la revue de l'IA d'administration",
+    "iaChecklistTitle": "Liste de contrôle de la revue de l’architecture de l’information de l’administrateur",
     "iaChecklistBody": "Gardez distincts, lors de la revue humaine, les paramètres de déploiement, les paramètres de l'instance, les paramètres de l'agent, la préparation du cycle de vie, la préparation au déploiement et les surfaces de diagnostic.",
     "humanReviewTitle": "Transfert de la revue humaine",
     "humanReviewStatus": "Support de déploiement personnalisé requis",
@@ -1324,6 +1399,9 @@
     "noDocuments": "Aucun document téléchargé pour le moment",
     "promptPreview": "Aperçu du prompt",
     "invalidJson": "Format JSON invalide",
+    "saveError": "Impossible d'enregistrer",
+    "revertError": "Impossible d'annuler",
+    "toggleError": "Impossible de modifier",
     "chunks": "fragments",
     "configureFor": "Configurer pour",
     "globalAllUsers": "Tous les utilisateurs globaux",
@@ -1391,7 +1469,8 @@
     "loadErrorLabel": "Erreur de chargement des paramètres de l'agent",
     "previewErrorLabel": "Erreur d'aperçu des paramètres de l'agent",
     "documentToggleErrorLabel": "Erreur de bascule de document des paramètres de l'agent",
-    "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés."
+    "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés.",
+    "externalChangeConflict": "Sage ou un autre administrateur a modifié ce paramètre pendant votre édition. Annulez et rouvrez l'éditeur avant d'enregistrer."
   },
   "adminDeployment": {
     "title": "Configuration du déploiement",
@@ -1645,7 +1724,139 @@
       "reviewRestartRequired": "Examiner le redémarrage requis",
       "reviewOperationalReadiness": "Examiner la préparation opérationnelle",
       "reviewServiceHealth": "Examiner l'état de santé des services",
-      "reviewRuntimeEnv": "Examiner l'export de l'env d'exécution"
+      "reviewRuntimeEnv": "Examiner l'export de l'env d'exécution",
+      "deployment_settings_validation": {
+        "label": "Validation des paramètres de déploiement",
+        "status": {
+          "invalid": {
+            "summary": "La validation des paramètres de déploiement comporte des erreurs à corriger.",
+            "nextAction": "Examinez les erreurs de validation des paramètres de déploiement."
+          },
+          "warnings": {
+            "summary": "La validation des paramètres de déploiement comporte des avertissements consultatifs.",
+            "nextAction": "Examinez les avertissements de validation des paramètres de déploiement."
+          },
+          "valid": {
+            "summary": "La validation des paramètres de déploiement ne comporte ni erreur ni avertissement.",
+            "nextAction": "Aucune action requise."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Inférence vérifiable",
+        "status": {
+          "current": {
+            "summary": "Le fournisseur de modèles configuré possède un registre de vérification d'inférence à jour.",
+            "nextAction": "Aucune action requise. Consultez le registre de vérification d'inférence actuel lorsque les déclarations du fournisseur changent."
+          },
+          "deferred_missing": {
+            "summary": "L'inférence chiffrée et vérifiable n'est pas actuellement vérifiée pour le fournisseur de modèles configuré.",
+            "nextAction": "Configurez un fournisseur de modèles pris en charge et exécutez la vérification d'inférence avant de considérer la préparation du déploiement comme terminée."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Revue du cycle de vie des données",
+        "status": {
+          "needs_review": {
+            "summary": "La revue du cycle de vie des données nécessite l'examen de l'administrateur.",
+            "nextAction": "Examinez la posture du stockage actif et enregistrez la revue du cycle de vie des données."
+          },
+          "stale": {
+            "summary": "La revue du cycle de vie des données enregistrée est obsolète après une modification prise en charge.",
+            "nextAction": "Examinez la posture actuelle du stockage actif et enregistrez une nouvelle revue du cycle de vie des données."
+          },
+          "reviewed": {
+            "summary": "La revue du cycle de vie des données est terminée.",
+            "nextAction": "Aucune action requise, sauf si la posture du cycle de vie prise en charge change."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Accusés de réception des surfaces de déploiement",
+        "status": {
+          "acknowledged": {
+            "summary": "Les catégories de surfaces de déploiement non prises en charge ont été confirmées.",
+            "nextAction": "Aucune action requise."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Les catégories de surfaces de déploiement non prises en charge nécessitent la reconnaissance de l'opérateur.",
+            "nextAction": "Examinez les catégories de surfaces de déploiement listées et reconnaissez chacune avant de considérer la préparation du déploiement comme terminée."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Exercice de sauvegarde et de restauration",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "Un enregistrement récent de l'exercice de sauvegarde et de restauration de l'opérateur est requis.",
+            "nextAction": "Effectuez et consignez un exercice de sauvegarde et de restauration pour ce déploiement."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Redémarrage requis",
+        "status": {
+          "current": {
+            "summary": "Aucun paramètre de déploiement nécessitant un redémarrage n'a changé depuis le dernier export.",
+            "nextAction": "Aucune action requise."
+          },
+          "restart_required": {
+            "summary": "Des paramètres de déploiement nécessitant un redémarrage ont changé après le démarrage du service. ({{changedSettings}})",
+            "nextAction": "Appliquez les paramètres de déploiement souhaités et redémarrez les services concernés avant de les considérer comme actuels."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Configuration d'exécution de Sage",
+        "status": {
+          "not_generated": {
+            "summary": "L'environnement d'exécution de Sage n'a pas été généré à partir des Paramètres de déploiement.",
+            "nextAction": "Exportez l'environnement d'exécution de Sage avant de considérer les Paramètres de déploiement comme appliqués."
+          },
+          "matches_desired": {
+            "summary": "La configuration d'exécution de Sage correspond aux Paramètres de déploiement souhaités.",
+            "nextAction": "Aucune action requise."
+          },
+          "drifted": {
+            "summary": "La configuration d'exécution de Sage diffère des Paramètres de déploiement souhaités.",
+            "nextAction": "Analysez la dérive de configuration de Sage, appliquez l'environnement généré et redémarrez le service."
+          },
+          "current": {
+            "summary": "L'environnement d'exécution de Sage a été généré à partir des Paramètres de déploiement actuels.",
+            "nextAction": "Aucune action requise, sauf si l'artefact généré n'a pas été appliqué au Déploiement."
+          },
+          "stale": {
+            "summary": "Les Paramètres de déploiement ont changé après la génération de l'environnement d'exécution de Sage.",
+            "nextAction": "Exportez un environnement d'exécution Sage à jour et appliquez-le via le redémarrage du Déploiement."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Configuration d'exécution du backend principal",
+        "status": {
+          "not_generated": {
+            "summary": "L'environnement d'exécution de le backend principal n'a pas été généré à partir des Paramètres de déploiement.",
+            "nextAction": "Exportez l'environnement d'exécution de le backend principal avant de considérer les Paramètres de déploiement comme appliqués."
+          },
+          "matches_desired": {
+            "summary": "La configuration d'exécution de le backend principal correspond aux Paramètres de déploiement souhaités.",
+            "nextAction": "Aucune action requise."
+          },
+          "drifted": {
+            "summary": "La configuration d'exécution de le backend principal diffère des Paramètres de déploiement souhaités.",
+            "nextAction": "Analysez la dérive de configuration de le backend principal, appliquez l'environnement généré et redémarrez le service."
+          },
+          "current": {
+            "summary": "L'environnement d'exécution de le backend principal a été généré à partir des Paramètres de déploiement actuels.",
+            "nextAction": "Aucune action requise, sauf si l'artefact généré n'a pas été appliqué au Déploiement."
+          },
+          "stale": {
+            "summary": "Les Paramètres de déploiement ont changé après la génération de l'environnement d'exécution de le backend principal.",
+            "nextAction": "Exportez un environnement d'exécution le backend principal à jour et appliquez-le via le redémarrage du Déploiement."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Assistant de déploiement",
@@ -1796,7 +2007,9 @@
     "categorySettingsAria": "Paramètres {{category}}",
     "exportCoreBackendRuntimeEnv": "Exporter l'environnement core-backend",
     "restartCurrent": "Aucun redémarrage requis",
-    "restartCurrentDesc": "Aucun paramètre de déploiement nécessitant un redémarrage n'a changé depuis le démarrage du service."
+    "restartCurrentDesc": "Aucun paramètre de déploiement nécessitant un redémarrage n'a changé depuis le démarrage du service.",
+    "saveError": "Impossible d'enregistrer",
+    "openHelpAria": "Ouvrir l'aide pour {{label}}"
   },
   "configCategories": {
     "embedding": {
@@ -2225,12 +2438,16 @@
       "select_u_s_created_at_from_users_u_729d1a": "SELECT u.*, s.created_at FROM users u JOIN sessions s ON u.id = s.user_id;"
     }
   },
+  "home": {
+    "checkingInstanceStatus": "Vérification du statut de l'instance..."
+  },
   "adminRoute": {
     "extracted": {
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "Le backend a renvoyé une erreur lors de la validation de l'authentification. Ceci n'est pas traité comme une déconnexion.",
       "unable_to_verify_admin_session_5f87b8": "Impossible de vérifier la session administrateur",
       "verifying_admin_session_87c53b": "Vérification de la session administrateur..."
-    }
+    },
+    "loadingAssistant": "Chargement de l'assistant administrateur"
   },
   "initiationGate": {
     "extracted": {
@@ -2520,7 +2737,14 @@
       "chatEmpty": "Envoyez un message en tant que cet utilisateur pour commencer l'essai.",
       "inputPlaceholder": "Écrivez à l'assistant en tant que cet utilisateur…",
       "saved": "Essai enregistré (chiffré). Examinez-le sous Retours.",
-      "testingAs": "Test en tant que {{persona}}"
+      "startError": "Impossible de démarrer la session de test",
+      "saveError": "Impossible d'enregistrer l'essai",
+      "impersonationUnavailable": "L'usurpation de l'utilisateur de test n'est pas encore disponible",
+      "sessionTokenError": "Impossible de créer le jeton de session de l'utilisateur synthétique",
+      "testingAs": "Test en tant que {{persona}}",
+      "authFailed": "La session de l'utilisateur synthétique n'est plus autorisée.",
+      "discardUnsavedConfirm": "Abandonner les tours terminés qui n’ont pas été enregistrés ?",
+      "workspaceAria": "Espace de travail de conversation de l'utilisateur de test"
     },
     "feedback": {
       "trials": "Journaux bêta",
@@ -2543,7 +2767,14 @@
       "retryDecryption": "Réessayer le déchiffrement",
       "decryptPendingTitle": "Vérifiez votre extension Nostr",
       "decryptPendingBody": "Elle demande l'autorisation de déchiffrer cette transcription. Elle peut ne pas s'ouvrir d'elle-même : cliquez sur l'icône de l'extension si vous ne la voyez pas. Choisissez l'option qui mémorise votre choix pour qu'elle ne le demande qu'une fois.",
-      "decryptProgress": "{{done}} déchiffrés sur {{total}}."
+      "decryptProgress": "{{done}} déchiffrés sur {{total}}.",
+      "loadTrialsError": "Impossible de charger les essais",
+      "loadTranscriptError": "Impossible de charger la transcription",
+      "saveError": "Impossible d'enregistrer les retours",
+      "deleteError": "Impossible de supprimer le journal de session",
+      "exportError": "Impossible d'exporter la session",
+      "transcriptIntegrityError": "La transcription est indisponible ou incomplète et ne peut pas être exportée.",
+      "decryptTranscriptError": "Impossible de déchiffrer la transcription. Autorisez la demande de déchiffrement dans votre extension Nostr."
     }
   },
   "adminResources": {
@@ -2582,7 +2813,32 @@
       "subregion": "Sous-région",
       "region": "Région",
       "global": "Monde"
-    }
+    },
+    "addPointer": "Ajouter un pointeur",
+    "addRegion": "Ajouter une région",
+    "displayOrder": "Ordre d'affichage",
+    "displayOrderHint": "Les numéros les plus bas apparaissent en premier, après la pertinence et la vérification.",
+    "kind": "Type",
+    "noSearchResults": "Aucune ressource ne correspond à cette recherche.",
+    "order": "Ordre",
+    "pointerLabel": "Libellé du pointeur {{number}}",
+    "pointerType": "Type du pointeur {{number}}",
+    "pointerValue": "Valeur du pointeur {{number}}",
+    "pointers": "Pointeurs",
+    "regionNumber": "Région {{number}}",
+    "regions": "Régions",
+    "removePointer": "Supprimer le pointeur",
+    "removeRegion": "Supprimer la région",
+    "search": "Rechercher des ressources",
+    "searchPlaceholder": "Nom, type, étiquette, pointeur ou description",
+    "tags": "Étiquettes (séparées par des virgules)",
+    "namePlaceholder": "ex. Conseil des droits humains d'Amérique centrale",
+    "languagesPlaceholder": "fr, en",
+    "tagsPlaceholder": "bitcoin, éducation, local",
+    "loadError": "Impossible de charger les ressources",
+    "loadDirectoryError": "Impossible de charger le répertoire",
+    "saveError": "Impossible d'enregistrer la ressource",
+    "deleteError": "Impossible de supprimer la ressource"
   },
   "adminUserManager": {
     "backToAdmin": "Retour au tableau de bord d'administration",

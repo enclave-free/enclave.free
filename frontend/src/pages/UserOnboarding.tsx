@@ -8,6 +8,7 @@ import {
   LANGUAGES,
   Language,
   STORAGE_KEY_LANGUAGE,
+  hasChosenLanguage,
   saveExplicitLanguageChoice,
 } from '../utils/languages';
 
@@ -124,13 +125,13 @@ export function UserOnboarding() {
   useEffect(() => {
     const storedLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE);
     if (
+      !hasChosenLanguage() ||
       !storedLanguage ||
       !LANGUAGES.some((lang) => lang.code === storedLanguage)
     ) {
       return;
     }
 
-    saveExplicitLanguageChoice(storedLanguage);
     if (i18n.language !== storedLanguage) {
       void i18n.changeLanguage(storedLanguage);
     }

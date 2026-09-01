@@ -157,12 +157,22 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
     try {
       const available = await getImpersonationStatus();
       if (!available) {
-        throw new Error('Test-user impersonation is not available yet');
+        throw new Error(
+          t(
+            'adminTestFeedback.test.impersonationUnavailable',
+            'Test-user impersonation is not available yet'
+          )
+        );
       }
       const provisioned = await provisionTestUser(selectedTypeId);
       const token = await requestImpersonationToken(provisioned.user_id);
       if (!token?.token) {
-        throw new Error('Could not create a synthetic user session token');
+        throw new Error(
+          t(
+            'adminTestFeedback.test.sessionTokenError',
+            'Could not create a synthetic user session token'
+          )
+        );
       }
       const defaults = await fetchUserSessionDefaults(selectedTypeId);
       setSession({
@@ -178,12 +188,15 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       setStartError(
         error instanceof Error
           ? error.message
-          : 'Failed to start a test session'
+          : t(
+              'adminTestFeedback.test.startError',
+              'Failed to start a test session'
+            )
       );
     } finally {
       setStarting(false);
     }
-  }, [clearConversationCapture, selectedTypeId, userTypes]);
+  }, [clearConversationCapture, selectedTypeId, t, userTypes]);
 
   const recordTerminalTurn = useCallback(
     (terminalTurn: UserConversationTerminalTurn) => {
@@ -254,7 +267,9 @@ export function TestAsUserView({ onSaved }: { onSaved?: () => void }) {
       onSaved?.();
     } catch (error) {
       setSaveError(
-        error instanceof Error ? error.message : 'Failed to save trial'
+        error instanceof Error
+          ? error.message
+          : t('adminTestFeedback.test.saveError', 'Failed to save trial')
       );
     } finally {
       setSaving(false);

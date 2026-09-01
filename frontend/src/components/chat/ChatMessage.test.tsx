@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChatMessage } from './ChatMessage';
 import { InstanceConfigProvider } from '../../context/InstanceConfigContext';
 import { ThemeProvider } from '../../theme';
+import i18n from '../../i18n';
 import {
   DEFAULT_INSTANCE_CONFIG,
   INSTANCE_CONFIG_KEY,
@@ -80,7 +81,7 @@ describe('ChatMessage', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     cleanup();
     if (originalClipboardDescriptor) {
       Object.defineProperty(
@@ -95,6 +96,7 @@ describe('ChatMessage', () => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
     document.documentElement.classList.remove('dark');
+    await i18n.changeLanguage('en');
   });
 
   function stubClipboard() {
@@ -545,6 +547,28 @@ describe('ChatMessage', () => {
     controlledDetailIds?.forEach((id) => {
       expect(document.getElementById(id)).not.toHaveAttribute('hidden');
     });
+  });
+
+  it('localizes Activity chrome and disclosure accessibility labels', async () => {
+    await i18n.changeLanguage('es');
+    renderMessage('Respuesta disponible.', 'assistant', {
+      visibility: 'detailed',
+      activity_steps: [
+        {
+          id: 'reasoning',
+          kind: 'reasoning',
+          title: 'Reasoning',
+          status: 'completed',
+          summary: 'Resumen del paso.',
+        },
+      ],
+    });
+
+    expect(screen.getByText('Actividad')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Mostrar actividad' })
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText('Detalles de actividad')).toBeInTheDocument();
   });
 
   it('collapses and restores the complete Activity body from its accessible header control', async () => {

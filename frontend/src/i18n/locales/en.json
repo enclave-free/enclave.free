@@ -1,4 +1,7 @@
 {
+  "adminFeedback": {
+    "conversationTrace": "Conversation trace"
+  },
   "common": {
     "close": "Close",
     "cancel": "Cancel",
@@ -30,6 +33,8 @@
     "back": "Back",
     "backToAdminDashboard": "Back to Admin Dashboard",
     "loading": "Loading...",
+    "loadingPage": "Loading page",
+    "pageLoadError": "Failed to load page. Please refresh.",
     "unknown": "Unknown",
     "enabled": "Enabled",
     "disabled": "Disabled",
@@ -43,7 +48,11 @@
     "reset": "Reset",
     "exit": "Exit",
     "none": "None",
-    "all": "All"
+    "all": "All",
+    "warning": "Warning"
+  },
+  "branding": {
+    "logoAlt": "{{name}} logo"
   },
   "language": {
     "english": "English",
@@ -51,6 +60,9 @@
     "french": "French",
     "german": "German",
     "portuguese": "Portuguese"
+  },
+  "home": {
+    "checkingInstanceStatus": "Checking instance status..."
   },
   "reachout": {
     "mode": {
@@ -325,7 +337,9 @@
       "approve": "Approve",
       "applyErrorLabel": "Config apply error",
       "onboardingTitle": "Guided Setup Chat",
-      "onboardingContext": "Focused setup conversation"
+      "onboardingContext": "Focused setup conversation",
+      "directShareSecretsHint": "Optional: include stored deployment secret values in this Conversation's context. Direct secret reads do not require this.",
+      "directWritePrompt": "Ask about admin configuration. Sage can inspect settings and, after confirming with you in the conversation, apply supported changes directly."
     },
     "reachout": {
       "title": "User Reachout",
@@ -609,7 +623,10 @@
       "updateFieldFailed": "Failed to update field",
       "removeFieldFailed": "Failed to remove field",
       "reorderFailed": "Failed to reorder field",
-      "loadSettingsFailed": "Failed to load settings"
+      "loadSettingsFailed": "Failed to load settings",
+      "externalConfigConflict": "Sage or another admin changed these settings while you were editing. Reload this page before saving so you do not overwrite the newer values.",
+      "externalSettingsConflict": "Sage or another admin changed these settings while you were editing. Reload this page before saving.",
+      "externalUserConfigConflict": "Sage or another admin changed User Types or Onboarding Questions while you were editing. Reload this page before saving your draft."
     },
     "userHelp": {
       "ariaLabel": "User configuration help",
@@ -710,6 +727,8 @@
     "connectedAs": "Connected as",
     "redirecting": "Redirecting to dashboard...",
     "connectionFailed": "Connection failed",
+    "statusError": "Failed to check instance status",
+    "connectionError": "Failed to connect",
     "securityJourneyTitle": "Security quick path",
     "securityJourneyIntro": "After connecting with Nostr, follow this simple setup path:",
     "securityJourneyStep1": "Secure access: set public URLs, configure real authentication, and choose user approval rules.",
@@ -876,6 +895,15 @@
     "listTitle": "Chats",
     "contextTitle": "Context",
     "messageActions": "Message actions",
+    "actions": {
+      "stop": "Stop response",
+      "stopDisabled": "There is no response to stop.",
+      "regenerate": "Regenerate response",
+      "edit": "Edit message",
+      "waitForResponse": "Wait for the current response to finish first.",
+      "startConversation": "Start or resume a Conversation first.",
+      "resolveConfirmation": "Resolve the pending Change Confirmation before changing history."
+    },
     "composerContextAria": "Composer context",
     "sessions": {
       "ariaLabel": "Chat sessions",
@@ -901,7 +929,9 @@
       "renameInput": "Conversation title",
       "renameCancel": "Cancel conversation rename",
       "renameSave": "Save conversation title",
-      "renameSaving": "Renaming..."
+      "renameSaving": "Renaming...",
+      "open": "Open chat sessions",
+      "close": "Close chat sessions"
     },
     "code": {
       "copy": "Copy",
@@ -930,7 +960,35 @@
       "requestLabel": "Chat request error"
     },
     "trace": {
-      "finalizing": "Finalizing response..."
+      "finalizing": "Finalizing response...",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "reasoning": "Reasoning",
+      "thinking": "Thinking",
+      "transcript": "{{label}} transcript",
+      "reasoningSummaryAria": "Reasoning summary",
+      "reasoningTranscriptAria": "Reasoning transcript",
+      "label": "Trace",
+      "toolCalls": "Tool calls",
+      "retrieval": "Retrieval",
+      "input": "Input",
+      "output": "Output",
+      "retrievedSource": "Retrieved source",
+      "score": "score {{score}}",
+      "optionalDetailsAria": "{{label}} optional details"
+    },
+    "conversationMessagesAria": "Conversation messages",
+    "conversationSurfaceAria": "Conversation surface",
+    "conversationThreadAria": "Conversation thread",
+    "activity": {
+      "label": "Activity",
+      "summaryAria": "Activity summary",
+      "detailsAria": "Activity details",
+      "timelineAria": "Activity timeline",
+      "show": "Show Activity",
+      "hide": "Hide Activity",
+      "showOptional": "Show optional details",
+      "hideOptional": "Hide optional details"
     }
   },
   "errors": {
@@ -965,7 +1023,15 @@
     "adminSessionExpired": "Admin session expired",
     "authenticationFailed": "Authentication failed",
     "noNostrExtension": "No Nostr extension found",
-    "exportFailed": "Export failed"
+    "exportFailed": "Export failed",
+    "failedToRetryDeletionTombstone": "Failed to retry deletion tombstone",
+    "failedToAcknowledgeUnsupportedSurface": "Failed to acknowledge unsupported deployment surface",
+    "failedToAcknowledgeUnsupportedSurfaceCategory": "Failed to acknowledge unsupported deployment surface category",
+    "failedToPreviewRetention": "Failed to preview retention policy",
+    "failedToUpdateRetentionPolicy": "Failed to update retention policy",
+    "failedToRunScheduledRetention": "Failed to run scheduled retention",
+    "failedToUpdateArtifactEncryptionPosture": "Failed to update artifact encryption posture",
+    "queryExecutionFailed": "Query execution failed"
   },
   "adminGuidedSetup": {
     "title": "Set up your instance",
@@ -1021,7 +1087,14 @@
       "chatEmpty": "Send a message as this user to begin the trial.",
       "inputPlaceholder": "Message the assistant as this user…",
       "saved": "Trial saved (encrypted). Review it under Feedback.",
-      "testingAs": "Testing as {{persona}}"
+      "startError": "Failed to start a test session",
+      "saveError": "Failed to save trial",
+      "impersonationUnavailable": "Test-user impersonation is not available yet",
+      "sessionTokenError": "Could not create a synthetic user session token",
+      "testingAs": "Testing as {{persona}}",
+      "authFailed": "The synthetic User session is no longer authorized.",
+      "discardUnsavedConfirm": "Discard completed turns that have not been saved?",
+      "workspaceAria": "Test User conversation workspace"
     },
     "feedback": {
       "trials": "Beta Logs",
@@ -1044,7 +1117,14 @@
       "retryDecryption": "Retry decryption",
       "decryptPendingTitle": "Check your Nostr extension",
       "decryptPendingBody": "It is asking permission to decrypt this transcript. It may not open on its own — click the extension icon if you do not see it. Choose the option to remember your choice so it only asks once.",
-      "decryptProgress": "Decrypted {{done}} of {{total}}."
+      "decryptProgress": "Decrypted {{done}} of {{total}}.",
+      "loadTrialsError": "Failed to load trials",
+      "loadTranscriptError": "Failed to load transcript",
+      "saveError": "Feedback could not be saved",
+      "deleteError": "Session log could not be deleted",
+      "exportError": "Session export failed",
+      "transcriptIntegrityError": "The transcript is unavailable or incomplete and cannot be exported.",
+      "decryptTranscriptError": "Could not decrypt the transcript. Approve the decryption request in your Nostr extension."
     }
   },
   "adminGuides": {
@@ -1135,7 +1215,9 @@
         "detail1": "Config reads inspect real instance state instead of guessing.",
         "detail2": "Proposed changes are staged for review.",
         "detail3": "Apply runs the approved admin endpoints without another model turn.",
-        "link": "Open Admin Assistant"
+        "link": "Open Admin Assistant",
+        "directWriteDetail2": "Sage asks for conversational confirmation before a supported write.",
+        "directWriteDetail3": "After you confirm, Sage calls its direct configuration Tools and reports the real result."
       },
       "guided": {
         "eyebrow": "Start",
@@ -1201,7 +1283,9 @@
       "prompt2": "Review the current user types, onboarding questions, docs, and resources.",
       "prompt3": "Prepare changes for review: set the assistant tone and default language.",
       "title": "Good things to ask the Admin Assistant",
-      "body": "Ask for a review before asking for changes. It can inspect setup and prepare a change set."
+      "body": "Ask for a review before asking for changes. It can inspect setup and prepare a change set.",
+      "directWriteBody": "Ask Sage to inspect or change supported configuration. It will confirm the intended change with you before writing.",
+      "directWritePrompt3": "Set the assistant tone and default language, and confirm the intended change with me first."
     },
     "hero": {
       "eyebrow": "Admin control map",
@@ -1224,6 +1308,13 @@
         "1": "User fields are encrypted by default. Only plaintext fields can be shared with chat.",
         "2": "Secrets stay masked unless you share them for the current admin session.",
         "3": "Assistant changes are proposals. You still review and click Apply.",
+        "4": "Deployment Settings store desired runtime values. Operators still export env and restart services when needed."
+      },
+      "directItems": {
+        "0": "Admins sign in with NIP-07. Users sign in with email magic links.",
+        "1": "User fields are encrypted by default. Only plaintext fields can be shared with chat.",
+        "2": "Secrets stay masked unless you share them for the current admin session.",
+        "3": "Sage confirms configuration changes with you in chat, then applies supported changes directly.",
         "4": "Deployment Settings store desired runtime values. Operators still export env and restart services when needed."
       }
     },
@@ -1322,7 +1413,7 @@
     "testDashboard": "Diagnostics",
     "testDashboardDesc": "Run development smoke checks and inspect diagnostic modules",
     "testDashboardDescSimple": "Run smoke checks when investigating a problem.",
-    "iaChecklistTitle": "Admin IA review checklist",
+    "iaChecklistTitle": "Admin information architecture review checklist",
     "iaChecklistBody": "Keep Deployment Settings, Instance Settings, Agent Settings, Lifecycle Readiness, Deployment Readiness, and diagnostic surfaces distinct during human review.",
     "humanReviewTitle": "Human review handoff",
     "humanReviewStatus": "White-glove deployment support required",
@@ -1370,7 +1461,32 @@
       "subregion": "Subregion",
       "region": "Region",
       "global": "Global"
-    }
+    },
+    "addPointer": "Add pointer",
+    "addRegion": "Add region",
+    "displayOrder": "Display order",
+    "displayOrderHint": "Lower numbers appear first after relevance and verification.",
+    "kind": "Kind",
+    "noSearchResults": "No resources match this search.",
+    "order": "Order",
+    "pointerLabel": "Pointer {{number}} label",
+    "pointerType": "Pointer {{number}} type",
+    "pointerValue": "Pointer {{number}} value",
+    "pointers": "Pointers",
+    "regionNumber": "Region {{number}}",
+    "regions": "Regions",
+    "removePointer": "Remove pointer",
+    "removeRegion": "Remove region",
+    "search": "Search resources",
+    "searchPlaceholder": "Name, kind, tag, pointer, or description",
+    "tags": "Tags (comma-separated)",
+    "namePlaceholder": "e.g. Central America Human Rights Counsel",
+    "languagesPlaceholder": "es, en",
+    "tagsPlaceholder": "bitcoin, education, local",
+    "loadError": "Failed to load resources",
+    "loadDirectoryError": "Failed to load directory",
+    "saveError": "Failed to save resource",
+    "deleteError": "Failed to delete resource"
   },
   "adminAI": {
     "title": "Agent Settings",
@@ -1396,6 +1512,9 @@
     "promptPreview": "Prompt Preview",
     "assembledPromptOutput": "Assembled prompt output",
     "invalidJson": "Invalid JSON format",
+    "saveError": "Failed to save",
+    "revertError": "Failed to revert",
+    "toggleError": "Toggle failed",
     "chunks": "chunks",
     "configureFor": "Configure For",
     "globalAllUsers": "Global All Users",
@@ -1462,7 +1581,8 @@
     "loadErrorLabel": "Agent Settings load error",
     "previewErrorLabel": "Agent Settings preview error",
     "documentToggleErrorLabel": "Agent Settings document toggle error",
-    "documentDefaultsHintV2": "Documents marked \"Available\" can be used by Knowledge Search. Documents marked \"Active by Default\" are included when Knowledge Sources is set to selected default documents."
+    "documentDefaultsHintV2": "Documents marked \"Available\" can be used by Knowledge Search. Documents marked \"Active by Default\" are included when Knowledge Sources is set to selected default documents.",
+    "externalChangeConflict": "Sage or another admin changed this setting while you were editing. Cancel and reopen the editor before saving."
   },
   "adminDeployment": {
     "title": "Deployment Configuration",
@@ -1511,7 +1631,139 @@
       "reviewRestartRequired": "Review Restart Required",
       "reviewOperationalReadiness": "Review Operational Readiness",
       "reviewServiceHealth": "Review Service Health",
-      "reviewRuntimeEnv": "Review Runtime Env Export"
+      "reviewRuntimeEnv": "Review Runtime Env Export",
+      "deployment_settings_validation": {
+        "label": "Deployment Settings Validation",
+        "status": {
+          "invalid": {
+            "summary": "Deployment Settings validation has errors that must be repaired.",
+            "nextAction": "Review Deployment Settings validation errors."
+          },
+          "warnings": {
+            "summary": "Deployment Settings validation has advisory warnings.",
+            "nextAction": "Review Deployment Settings validation warnings."
+          },
+          "valid": {
+            "summary": "Deployment Settings validation has no errors or warnings.",
+            "nextAction": "No action required."
+          }
+        }
+      },
+      "verifiable_inference": {
+        "label": "Verifiable Inference",
+        "status": {
+          "current": {
+            "summary": "The configured Model Provider has a current Inference Verification Record.",
+            "nextAction": "No action required. Review the current Inference Verification Record when provider claims change."
+          },
+          "deferred_missing": {
+            "summary": "Encrypted and Verifiable Inference is not currently verified for the configured Model Provider.",
+            "nextAction": "Configure a supported Model Provider and run Inference Verification before treating Deployment Readiness as complete."
+          }
+        }
+      },
+      "lifecycle_readiness": {
+        "label": "Data Lifecycle Review",
+        "status": {
+          "needs_review": {
+            "summary": "Data Lifecycle Review needs Admin review.",
+            "nextAction": "Review the Active Storage Lifecycle posture and record the Data Lifecycle Review."
+          },
+          "stale": {
+            "summary": "The recorded Data Lifecycle Review is stale after a supported lifecycle change.",
+            "nextAction": "Review the current Active Storage Lifecycle posture and record a new Data Lifecycle Review."
+          },
+          "reviewed": {
+            "summary": "Data Lifecycle Review has been completed.",
+            "nextAction": "No action required unless the supported lifecycle posture changes."
+          }
+        }
+      },
+      "deployment_surface_acknowledgements": {
+        "label": "Deployment Surface Acknowledgements",
+        "status": {
+          "acknowledged": {
+            "summary": "Unsupported Deployment Surface categories have been acknowledged.",
+            "nextAction": "No action required."
+          },
+          "needs_acknowledgement": {
+            "summary": "{{count}} — Unsupported Deployment Surface categories need Operator acknowledgement.",
+            "nextAction": "Review the listed Deployment Surface categories and acknowledge each one before treating Deployment Readiness as complete."
+          }
+        }
+      },
+      "backup_restore_drill": {
+        "label": "Backup And Restore Drill",
+        "status": {
+          "operator_evidence_required": {
+            "summary": "A recent Operator Backup And Restore Drill record is required.",
+            "nextAction": "Complete and record a Backup And Restore Drill for this Deployment."
+          }
+        }
+      },
+      "restart_required": {
+        "label": "Restart Required",
+        "status": {
+          "current": {
+            "summary": "No restart-required Deployment Settings have changed since service start.",
+            "nextAction": "No action required."
+          },
+          "restart_required": {
+            "summary": "Restart-required Deployment Settings changed after service start. ({{changedSettings}})",
+            "nextAction": "Apply the desired Deployment Settings and restart the affected services before treating them as current."
+          }
+        }
+      },
+      "sage_runtime_env": {
+        "label": "Sage Runtime Config",
+        "status": {
+          "not_generated": {
+            "summary": "Sage runtime env has not been generated from Deployment Settings yet.",
+            "nextAction": "Export the Sage runtime env before treating Deployment Settings as applied to Sage."
+          },
+          "matches_desired": {
+            "summary": "Running Sage runtime config matches desired Deployment Settings.",
+            "nextAction": "No action required."
+          },
+          "drifted": {
+            "summary": "Running Sage runtime config differs from desired Deployment Settings.",
+            "nextAction": "Investigate Sage runtime config drift, apply the generated Sage env, and restart Sage."
+          },
+          "current": {
+            "summary": "Sage runtime env has been generated from current Deployment Settings.",
+            "nextAction": "No action required unless the generated artifact has not been applied to the Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings changed after the Sage runtime env was generated.",
+            "nextAction": "Export a fresh Sage runtime env and apply it through the Deployment restart path."
+          }
+        }
+      },
+      "core_backend_runtime_env": {
+        "label": "Core Backend Runtime Config",
+        "status": {
+          "not_generated": {
+            "summary": "Core-backend runtime env has not been generated from Deployment Settings yet.",
+            "nextAction": "Export the core-backend runtime env before treating Deployment Settings as applied to core-backend."
+          },
+          "matches_desired": {
+            "summary": "Running core-backend runtime config matches desired Deployment Settings.",
+            "nextAction": "No action required."
+          },
+          "drifted": {
+            "summary": "Running core-backend runtime config differs from desired Deployment Settings.",
+            "nextAction": "Investigate core-backend runtime config drift, apply the generated core-backend env, and restart core-backend."
+          },
+          "current": {
+            "summary": "Core-backend runtime env has been generated from current Deployment Settings.",
+            "nextAction": "No action required unless the generated artifact has not been applied to the Deployment."
+          },
+          "stale": {
+            "summary": "Deployment Settings changed after the core-backend runtime env was generated.",
+            "nextAction": "Export a fresh core-backend runtime env and apply it through the Deployment restart path."
+          }
+        }
+      }
     },
     "wizard": {
       "title": "Deployment Wizard",
@@ -1867,7 +2119,9 @@
     "categorySettingsAria": "{{category}} Settings",
     "exportCoreBackendRuntimeEnv": "Export core-backend env",
     "restartCurrent": "No restart required",
-    "restartCurrentDesc": "No restart-required Deployment Settings have changed since service start."
+    "restartCurrentDesc": "No restart-required Deployment Settings have changed since service start.",
+    "saveError": "Failed to save",
+    "openHelpAria": "Open help for {{label}}"
   },
   "upload": {
     "invalidFileType": "Invalid file type. Allowed: {{extensions}}",
@@ -1879,6 +2133,7 @@
     "supported": "Supported: {{extensions}}",
     "removeFile": "Remove file",
     "uploading": "Uploading...",
+    "uploadError": "Upload failed",
     "uploadingStatus": "Uploading to server...",
     "uploadedSuccess": "Uploaded successfully — processing started",
     "uploadDocument": "Upload Document",
@@ -2340,7 +2595,8 @@
       "verifying_admin_session_87c53b": "Verifying admin session...",
       "unable_to_verify_admin_session_5f87b8": "Unable to verify admin session",
       "the_backend_returned_an_error_while_validating_authentication_0a9a16": "The backend returned an error while validating authentication. This is not treated as a logout."
-    }
+    },
+    "loadingAssistant": "Loading admin assistant"
   },
   "initiationGate": {
     "extracted": {

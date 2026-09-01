@@ -3,7 +3,7 @@ import type { AppendMessage, ThreadMessage } from '@assistant-ui/react';
 import type { ConversationSurfaceTurn } from './ConversationSurfaceModel';
 import {
   getConversationMessageActions,
-  type ConversationMessageAction,
+  type LocalizedConversationMessageAction,
   type ConversationTransportCapabilities,
 } from './ConversationMessageActions';
 
@@ -16,7 +16,7 @@ export interface AssistantConversationState {
   turnItems: Array<{
     turn: ConversationSurfaceTurn;
     accessory: ReactNode | null;
-    actions: ConversationMessageAction[];
+    actions: LocalizedConversationMessageAction[];
   }>;
   isRunning: boolean;
   isDisabled: boolean;
@@ -37,6 +37,7 @@ export function buildAssistantConversationState({
   hasPendingApproval = false,
   hasPersistedSession = false,
   runtimeMessageIdPrefix = '',
+  translate,
 }: {
   turns: ConversationSurfaceTurn[];
   isRunning?: boolean;
@@ -46,6 +47,7 @@ export function buildAssistantConversationState({
   hasPendingApproval?: boolean;
   hasPersistedSession?: boolean;
   runtimeMessageIdPrefix?: string;
+  translate?: (key: string, defaultValue: string) => string;
 }): AssistantConversationState {
   return {
     messages: turns.map((turn) =>
@@ -60,7 +62,22 @@ export function buildAssistantConversationState({
         hasSession: hasPersistedSession,
         transportCapabilities,
         hasPendingApproval,
-      }),
+      }).map((action) => ({
+        id: action.id,
+        label: translate
+          ? translate(action.labelKey, action.labelDefault)
+          : action.labelDefault,
+        disabled: action.disabled,
+        disabledReason:
+          action.disabledReasonKey && action.disabledReasonDefault
+            ? translate
+              ? translate(
+                  action.disabledReasonKey,
+                  action.disabledReasonDefault
+                )
+              : action.disabledReasonDefault
+            : undefined,
+      })),
     })),
     isRunning,
     isDisabled: disabled,
