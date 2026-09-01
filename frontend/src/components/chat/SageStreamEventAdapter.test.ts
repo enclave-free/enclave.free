@@ -176,14 +176,8 @@ describe('Sage Stream Event Adapter', () => {
             id: 'tool-db-query',
             kind: 'tool',
             title: 'Database Query',
-            title_key: 'chat.activity.tool.databaseQuery.title',
-            title_values: { toolId: 'db-query' },
             status: 'succeeded',
-            status_key: 'chat.activity.status.succeeded',
-            status_values: {},
             summary: 'Database results were redacted from the trace.',
-            summary_key: 'chat.activity.databaseResultsRedacted',
-            summary_values: { toolId: 'db-query' },
             warnings: ['raw_results_redacted', 123],
           },
         },
@@ -196,14 +190,8 @@ describe('Sage Stream Event Adapter', () => {
         id: 'tool-db-query',
         kind: 'tool',
         title: 'Database Query',
-        titleKey: 'chat.activity.tool.databaseQuery.title',
-        titleValues: { toolId: 'db-query' },
         status: 'succeeded',
-        statusKey: 'chat.activity.status.succeeded',
-        statusValues: {},
         summary: 'Database results were redacted from the trace.',
-        summaryKey: 'chat.activity.databaseResultsRedacted',
-        summaryValues: { toolId: 'db-query' },
         warnings: ['raw_results_redacted'],
       },
     });
@@ -317,60 +305,6 @@ describe('Sage Stream Event Adapter', () => {
     expect(adaptSageStreamEvent('error', { detail: 'Stream failed' })).toEqual({
       type: 'requestFailed',
       message: 'Stream failed',
-    });
-  });
-
-  it('normalizes keyed Activity steps in final traces while preserving legacy traces', () => {
-    expect(
-      adaptSageStreamEvent(
-        'trace_final',
-        {
-          trace: {
-            visibility: 'detailed',
-            tools: [],
-            retrieval: [],
-            activity_steps: [
-              {
-                id: 'tool-db-query',
-                kind: 'tool',
-                title: 'Database Query',
-                title_key: 'chat.activity.tool.databaseQuery.title',
-                title_values: { toolId: 'db-query' },
-                status: 'succeeded',
-                status_key: 'chat.activity.status.succeeded',
-                status_values: {},
-                summary: 'Database results were redacted from the trace.',
-                summary_key: 'chat.activity.databaseResultsRedacted',
-                summary_values: { toolId: 'db-query' },
-              },
-            ],
-          },
-        },
-        'assistant-1'
-      )
-    ).toMatchObject({
-      type: 'assistantTraceSettled',
-      trace: {
-        activity_steps: [
-          {
-            id: 'tool-db-query',
-            titleKey: 'chat.activity.tool.databaseQuery.title',
-            titleValues: { toolId: 'db-query' },
-            statusKey: 'chat.activity.status.succeeded',
-            summaryKey: 'chat.activity.databaseResultsRedacted',
-            summaryValues: { toolId: 'db-query' },
-          },
-        ],
-      },
-    });
-
-    const legacyTrace = { visibility: 'summary', tools: [], retrieval: [] };
-    expect(
-      adaptSageStreamEvent('trace_final', { trace: legacyTrace }, 'assistant-1')
-    ).toEqual({
-      type: 'assistantTraceSettled',
-      assistantTurnId: 'assistant-1',
-      trace: legacyTrace,
     });
   });
 });

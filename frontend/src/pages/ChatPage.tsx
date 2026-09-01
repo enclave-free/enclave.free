@@ -30,7 +30,6 @@ import { ConversationSurface } from '../components/chat/ConversationSurface';
 import { buildConversationSurfaceTurns } from '../components/chat/ConversationSurfaceModel';
 import {
   adaptSageStreamEvent,
-  readActivityStepValue,
   readTraceDelta,
   createConversationUiState,
   reduceConversationUiState,
@@ -252,11 +251,7 @@ function conversationTraceFromApi(value: unknown): ConversationTrace | null {
   if (!isOptionalObjectArray(record.trace_deltas)) {
     return null;
   }
-  const normalized = { ...record } as Record<string, unknown>;
-  if (Array.isArray(record.activity_steps)) {
-    normalized.activity_steps = activityStepsFromApi(record.activity_steps);
-  }
-  return normalized as unknown as ConversationTrace;
+  return record as unknown as ConversationTrace;
 }
 
 function traceDeltasFromApi(value: unknown): ConversationTraceDelta[] {
@@ -280,7 +275,30 @@ function isOptionalObjectArray(value: unknown): boolean {
 function activityStepsFromApi(value: unknown): ConversationActivityStep[] {
   if (!Array.isArray(value)) return [];
   return value
-    .map(readActivityStepValue)
+    .map((item): ConversationActivityStep | null => {
+      if (!item || typeof item !== 'object') return null;
+      const step = item as Record<string, unknown>;
+      if (
+        typeof step.id !== 'string' ||
+        typeof step.kind !== 'string' ||
+        typeof step.title !== 'string' ||
+        typeof step.status !== 'string'
+      ) {
+        return null;
+      }
+      return {
+        id: step.id,
+        kind: step.kind,
+        title: step.title,
+        status: step.status,
+        summary: typeof step.summary === 'string' ? step.summary : undefined,
+        warnings: Array.isArray(step.warnings)
+          ? step.warnings.filter(
+              (warning): warning is string => typeof warning === 'string'
+            )
+          : undefined,
+      };
+    })
     .filter((step): step is ConversationActivityStep => Boolean(step));
 }
 

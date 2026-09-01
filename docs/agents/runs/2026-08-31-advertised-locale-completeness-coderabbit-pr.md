@@ -26,5 +26,5 @@
 
 - Continue: yes, using the workflow's independent Codex review fallback
 - Escalate: no
-- Notes: PR #667 is non-draft and targets `staging`. The final Standards review found no hard documented-rule violation; the final Spec review passed. The workflow's complete GitHub check matrix passed after the localization job was corrected to initialize the pinned Sage submodule.
+- Notes: PR #667 is non-draft and targets `staging`. The maintainer subsequently narrowed the delivery to Enclave-owned multilingual copy, so the Sage protocol work, submodule dependency, and cross-repository localization test were removed before final review.
 - Maintainer direction: further CodeRabbit attempts were explicitly waived on 2026-08-31; subsequent cleanup uses fresh independent Standards + Spec review.

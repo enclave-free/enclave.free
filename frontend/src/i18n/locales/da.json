@@ -247,97 +247,7 @@
       "show": "Vis aktivitet",
       "hide": "Skjul aktivitet",
       "showOptional": "Vis valgfrie detaljer",
-      "hideOptional": "Skjul valgfrie detaljer",
-      "tool": {
-        "title": "{{toolName}}",
-        "attempted": "Forsøg på {{toolName}}-kald.",
-        "retry": "Forsøger værktøj igen efter forsøg {{attempt}}.",
-        "running": "Værktøjet kører.",
-        "completed": "Værktøjet er færdigt.",
-        "guarded": "Værktøjet blev beskyttet.",
-        "failed": "Værktøjet fejlede.",
-        "rejected": "Værktøjsopkaldet blev afvist.",
-        "timedOut": "Værktøjet tidsafløb.",
-        "knowledgeSearch": {
-          "title": "Videnssøgning"
-        },
-        "webSearch": {
-          "title": "Websøgning"
-        },
-        "curatedResources": {
-          "title": "Kuraterede ressourcer"
-        },
-        "adminConfig": {
-          "title": "Admin-konfiguration"
-        },
-        "databaseQuery": {
-          "title": "Databaseforespørgsel"
-        }
-      },
-      "status": {
-        "running": "Kører",
-        "succeeded": "Lykkedes",
-        "failed": "Fejlede",
-        "guarded": "Beskyttet",
-        "timed_out": "Tidsafløb",
-        "rejected": "Afvist"
-      },
-      "toolSelection": {
-        "title": "Værktøjsvalg",
-        "failed": "Værktøjsvalget fejlede, før et brugbart valg blev registreret.",
-        "partialFailure": "Nogle af modellens værktøjsvalg blev afvist.",
-        "noneSelected": "Ingen værktøjer blev valgt.",
-        "selected": "Valgt: {{selectedTools}}."
-      },
-      "timing": {
-        "modelRequest": {
-          "title": "Modelanmodning",
-          "summary": "Modelanmodning: {{elapsedMs}} ms."
-        },
-        "providerFirstEventWait": {
-          "title": "Ventetid på udbyders første hændelse",
-          "summary": "Ventetid på udbyders første hændelse: {{elapsedMs}} ms."
-        },
-        "toolExecution": {
-          "title": "Værktøjsudførelse",
-          "summary": "Værktøjsudførelse: {{elapsedMs}} ms."
-        },
-        "resourceDirectoryLookup": {
-          "title": "Opslag i ressourcekatalog",
-          "summary": "Opslag i ressourcekatalog: {{elapsedMs}} ms."
-        },
-        "retrieval": {
-          "title": "Hentning",
-          "summary": "Hentning: {{elapsedMs}} ms."
-        },
-        "retryDelay": {
-          "title": "Forsinkelse ved genforsøg",
-          "summary": "Forsinkelse ved genforsøg: {{elapsedMs}} ms."
-        },
-        "totalTurn": {
-          "title": "Samlet tur",
-          "summary": "Samlet tid: {{elapsedMs}} ms."
-        }
-      },
-      "knowledgeSearch": {
-        "noResults": "Ingen relevante passager blev fundet i de uploadede dokumenter.",
-        "retrieved": "Hentet {{count}} passager fra uploadede dokumenter til svaret."
-      },
-      "webSearch": {
-        "prepared": "Websøgeresultater blev klargjort til svaret ({{count}})."
-      },
-      "curatedResources": {
-        "noAdditional": "Ingen yderligere kuraterede ressourcer blev fundet.",
-        "noMatches": "Ingen kuraterede ressourcer matchede denne anmodning.",
-        "returned": "Returnerede {{count}} ud af {{totalCount}} kuraterede ressourcer."
-      },
-      "adminConfig": {
-        "completed": "Admin-konfigurationshandling {{toolId}} fuldført ({{outcome}}). Ændrede indstillinger: {{changedSettings}}."
-      },
-      "databaseResultsRedacted": "Databaseresultater blev fjernet fra sporet.",
-      "databaseQuery": {
-        "rejected": "Databaseforespørgsel blev afvist."
-      }
+      "hideOptional": "Skjul valgfrie detaljer"
     }
   },
   "common": {
@@ -1749,7 +1659,7 @@
         }
       },
       "lifecycle_readiness": {
-          "label": "Gennemgang af datalivscyklus",
+        "label": "Gennemgang af datalivscyklus",
         "status": {
           "needs_review": {
             "summary": "Data Lifecycle Review kræver gennemgang af en administrator.",

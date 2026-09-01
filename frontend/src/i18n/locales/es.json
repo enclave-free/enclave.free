@@ -251,87 +251,7 @@
       "show": "Mostrar actividad",
       "hide": "Ocultar actividad",
       "showOptional": "Mostrar detalles opcionales",
-      "hideOptional": "Ocultar detalles opcionales",
-      "tool": {
-        "title": "{{toolName}}",
-        "attempted": "Se intentó llamar a {{toolName}}.",
-        "retry": "Reintentando la herramienta tras el intento {{attempt}}.",
-        "running": "La herramienta está en ejecución.",
-        "completed": "Herramienta completada.",
-        "guarded": "Herramienta protegida.",
-        "failed": "La herramienta falló.",
-        "rejected": "Se rechazó la llamada a la herramienta.",
-        "timedOut": "La herramienta agotó el tiempo.",
-        "knowledgeSearch": { "title": "Búsqueda de conocimiento" },
-        "webSearch": { "title": "Búsqueda web" },
-        "curatedResources": { "title": "Recursos seleccionados" },
-        "adminConfig": { "title": "Configuración de administración" },
-        "databaseQuery": { "title": "Consulta de base de datos" }
-      },
-      "status": {
-        "running": "En ejecución",
-        "succeeded": "Completado",
-        "failed": "Fallido",
-        "guarded": "Protegido",
-        "timed_out": "Tiempo agotado",
-        "rejected": "Rechazado"
-      },
-      "toolSelection": {
-        "title": "Selección de herramientas",
-        "failed": "La selección de herramientas falló antes de registrar una selección utilizable.",
-        "partialFailure": "Se rechazaron algunas selecciones de herramientas del modelo.",
-        "noneSelected": "No se seleccionaron herramientas.",
-        "selected": "Seleccionadas: {{selectedTools}}."
-      },
-      "timing": {
-        "modelRequest": {
-          "title": "Solicitud al modelo",
-          "summary": "Solicitud al modelo: {{elapsedMs}} ms."
-        },
-        "providerFirstEventWait": {
-          "title": "Espera del primer evento del proveedor",
-          "summary": "Espera del primer evento del proveedor: {{elapsedMs}} ms."
-        },
-        "toolExecution": {
-          "title": "Ejecución de herramienta",
-          "summary": "Ejecución de herramienta: {{elapsedMs}} ms."
-        },
-        "resourceDirectoryLookup": {
-          "title": "Búsqueda en el directorio de recursos",
-          "summary": "Búsqueda en el directorio de recursos: {{elapsedMs}} ms."
-        },
-        "retrieval": {
-          "title": "Recuperación",
-          "summary": "Recuperación: {{elapsedMs}} ms."
-        },
-        "retryDelay": {
-          "title": "Espera del reintento",
-          "summary": "Espera del reintento: {{elapsedMs}} ms."
-        },
-        "totalTurn": {
-          "title": "Turno completo",
-          "summary": "Turno completo: {{elapsedMs}} ms."
-        }
-      },
-      "knowledgeSearch": {
-        "noResults": "No se encontraron pasajes relevantes en los documentos cargados.",
-        "retrieved": "Se recuperaron {{count}} pasajes de documentos cargados para la respuesta."
-      },
-      "webSearch": {
-        "prepared": "Se prepararon resultados de búsqueda web para la respuesta ({{count}})."
-      },
-      "curatedResources": {
-        "noAdditional": "No se encontraron recursos seleccionados adicionales.",
-        "noMatches": "Ningún recurso seleccionado coincide con esta solicitud.",
-        "returned": "Se devolvieron {{count}} de {{totalCount}} recursos seleccionados."
-      },
-      "adminConfig": {
-        "completed": "La acción de configuración {{toolId}} se completó ({{outcome}}). Ajustes modificados: {{changedSettings}}."
-      },
-      "databaseResultsRedacted": "Los resultados de la base de datos se ocultaron del registro.",
-      "databaseQuery": {
-        "rejected": "Se rechazó la consulta de base de datos."
-      }
+      "hideOptional": "Ocultar detalles opcionales"
     }
   },
   "common": {
@@ -1424,8 +1344,7 @@
     "previewErrorLabel": "Error de previsualización de la Configuración del agente",
     "documentToggleErrorLabel": "Error al alternar documento en la Configuración del agente",
     "documentDefaultsHintV2": "Los documentos marcados como \"Disponible\" pueden usarse en la Búsqueda de conocimiento. Los documentos marcados como \"Activo por defecto\" se incluyen cuando el origen de conocimiento está configurado en documentos predeterminados seleccionados.",
-    "externalChangeConflict": "Sage u otro administrador cambió este ajuste mientras editabas. Cancela y vuelve a abrir el editor antes de guardar.",
-    "saveError": "No se pudo guardar"
+    "externalChangeConflict": "Sage u otro administrador cambió este ajuste mientras editabas. Cancela y vuelve a abrir el editor antes de guardar."
   },
   "adminDeployment": {
     "title": "Configuración de Despliegue",

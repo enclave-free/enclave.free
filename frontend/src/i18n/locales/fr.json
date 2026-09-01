@@ -251,87 +251,7 @@
       "show": "Afficher l'activité",
       "hide": "Masquer l'activité",
       "showOptional": "Afficher les détails facultatifs",
-      "hideOptional": "Masquer les détails facultatifs",
-      "tool": {
-        "title": "{{toolName}}",
-        "attempted": "Appel de {{toolName}} tenté.",
-        "retry": "Nouvelle tentative de l’outil après la tentative {{attempt}}.",
-        "running": "L’outil est en cours d’exécution.",
-        "completed": "Outil terminé.",
-        "guarded": "Outil protégé.",
-        "failed": "L'outil a échoué.",
-        "rejected": "Appel d'outil refusé.",
-        "timedOut": "Délai de l'outil dépassé.",
-        "knowledgeSearch": { "title": "Recherche de connaissances" },
-        "webSearch": { "title": "Recherche Web" },
-        "curatedResources": { "title": "Ressources sélectionnées" },
-        "adminConfig": { "title": "Configuration d'administration" },
-        "databaseQuery": { "title": "Requête de base de données" }
-      },
-      "status": {
-        "running": "En cours",
-        "succeeded": "Terminé",
-        "failed": "Échec",
-        "guarded": "Protégé",
-        "timed_out": "Délai dépassé",
-        "rejected": "Refusé"
-      },
-      "toolSelection": {
-        "title": "Sélection d'outils",
-        "failed": "La sélection d'outils a échoué avant qu'une sélection utilisable soit enregistrée.",
-        "partialFailure": "Certaines sélections d'outils du modèle ont été refusées.",
-        "noneSelected": "Aucun outil n'a été sélectionné.",
-        "selected": "Sélectionnés : {{selectedTools}}."
-      },
-      "timing": {
-        "modelRequest": {
-          "title": "Requête du modèle",
-          "summary": "Requête du modèle : {{elapsedMs}} ms."
-        },
-        "providerFirstEventWait": {
-          "title": "Attente du premier événement du fournisseur",
-          "summary": "Attente du premier événement du fournisseur : {{elapsedMs}} ms."
-        },
-        "toolExecution": {
-          "title": "Exécution de l'outil",
-          "summary": "Exécution de l'outil : {{elapsedMs}} ms."
-        },
-        "resourceDirectoryLookup": {
-          "title": "Recherche dans le répertoire de ressources",
-          "summary": "Recherche dans le répertoire de ressources : {{elapsedMs}} ms."
-        },
-        "retrieval": {
-          "title": "Récupération",
-          "summary": "Récupération : {{elapsedMs}} ms."
-        },
-        "retryDelay": {
-          "title": "Délai avant nouvelle tentative",
-          "summary": "Délai avant nouvelle tentative : {{elapsedMs}} ms."
-        },
-        "totalTurn": {
-          "title": "Tour complet",
-          "summary": "Tour complet : {{elapsedMs}} ms."
-        }
-      },
-      "knowledgeSearch": {
-        "noResults": "Aucun passage pertinent n'a été trouvé dans les documents importés.",
-        "retrieved": "{{count}} passages de documents importés ont été récupérés pour la réponse."
-      },
-      "webSearch": {
-        "prepared": "Les résultats de recherche Web ont été préparés pour la réponse ({{count}})."
-      },
-      "curatedResources": {
-        "noAdditional": "Aucune ressource sélectionnée supplémentaire n'a été trouvée.",
-        "noMatches": "Aucune ressource sélectionnée ne correspond à cette demande.",
-        "returned": "{{count}} ressources sélectionnées sur {{totalCount}} ont été renvoyées."
-      },
-      "adminConfig": {
-        "completed": "L'action de configuration {{toolId}} est terminée ({{outcome}}). Paramètres modifiés : {{changedSettings}}."
-      },
-      "databaseResultsRedacted": "Les résultats de la base de données ont été masqués de la trace.",
-      "databaseQuery": {
-        "rejected": "La requête de base de données a été refusée."
-      }
+      "hideOptional": "Masquer les détails facultatifs"
     }
   },
   "common": {
@@ -1550,8 +1470,7 @@
     "previewErrorLabel": "Erreur d'aperçu des paramètres de l'agent",
     "documentToggleErrorLabel": "Erreur de bascule de document des paramètres de l'agent",
     "documentDefaultsHintV2": "Les documents marqués « Disponible » peuvent être utilisés par la recherche de connaissances. Les documents marqués « Actif par défaut » sont inclus lorsque les sources de connaissances sont définies sur les documents par défaut sélectionnés.",
-    "externalChangeConflict": "Sage ou un autre administrateur a modifié ce paramètre pendant votre édition. Annulez et rouvrez l'éditeur avant d'enregistrer.",
-    "saveError": "Impossible d'enregistrer"
+    "externalChangeConflict": "Sage ou un autre administrateur a modifié ce paramètre pendant votre édition. Annulez et rouvrez l'éditeur avant d'enregistrer."
   },
   "adminDeployment": {
     "title": "Configuration du déploiement",

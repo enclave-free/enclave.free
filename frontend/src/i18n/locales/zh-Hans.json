@@ -944,83 +944,7 @@
       "show": "显示活动",
       "hide": "隐藏活动",
       "showOptional": "显示可选详细信息",
-      "hideOptional": "隐藏可选详细信息",
-      "tool": {
-        "title": "{{toolName}}",
-        "attempted": "已尝试调用 {{toolName}}。",
-        "retry": "工具将在第 {{attempt}} 次尝试后重试。",
-        "running": "工具正在运行。",
-        "completed": "工具已完成。",
-        "guarded": "工具已受保护。",
-        "failed": "工具失败。",
-        "rejected": "工具调用已拒绝。",
-        "timedOut": "工具超时。",
-        "knowledgeSearch": { "title": "知识搜索" },
-        "webSearch": { "title": "网络搜索" },
-        "curatedResources": { "title": "精选资源" },
-        "adminConfig": { "title": "管理员配置" },
-        "databaseQuery": { "title": "数据库查询" }
-      },
-      "status": {
-        "running": "正在运行",
-        "succeeded": "已完成",
-        "failed": "失败",
-        "guarded": "已保护",
-        "timed_out": "已超时",
-        "rejected": "已拒绝"
-      },
-      "toolSelection": {
-        "title": "工具选择",
-        "failed": "工具选择失败，未记录可用的选择。",
-        "partialFailure": "模型选择的部分工具已被拒绝。",
-        "noneSelected": "未选择工具。",
-        "selected": "已选择：{{selectedTools}}。"
-      },
-      "timing": {
-        "modelRequest": {
-          "title": "模型请求",
-          "summary": "模型请求：{{elapsedMs}} 毫秒。"
-        },
-        "providerFirstEventWait": {
-          "title": "等待提供商的第一个事件",
-          "summary": "等待提供商的第一个事件：{{elapsedMs}} 毫秒。"
-        },
-        "toolExecution": {
-          "title": "工具执行",
-          "summary": "工具执行：{{elapsedMs}} 毫秒。"
-        },
-        "resourceDirectoryLookup": {
-          "title": "资源目录查找",
-          "summary": "资源目录查找：{{elapsedMs}} 毫秒。"
-        },
-        "retrieval": {
-          "title": "检索",
-          "summary": "检索：{{elapsedMs}} 毫秒。"
-        },
-        "retryDelay": {
-          "title": "重试延迟",
-          "summary": "重试延迟：{{elapsedMs}} 毫秒。"
-        },
-        "totalTurn": {
-          "title": "本轮总计",
-          "summary": "本轮总计：{{elapsedMs}} 毫秒。"
-        }
-      },
-      "knowledgeSearch": {
-        "noResults": "未在已上传的文档中找到相关段落。",
-        "retrieved": "已为回答检索到 {{count}} 个已上传文档段落。"
-      },
-      "webSearch": { "prepared": "已为回答准备网络搜索结果（{{count}}）。" },
-      "curatedResources": {
-        "noAdditional": "未找到其他精选资源。",
-        "noMatches": "没有精选资源匹配此请求。",
-        "returned": "已返回 {{count}} 个精选资源，共 {{totalCount}} 个。"
-      },
-      "adminConfig": {
-        "completed": "管理员配置操作 {{toolId}} 已完成（{{outcome}}）。已更改设置：{{changedSettings}}。"
-      },
-      "databaseResultsRedacted": "数据库结果已从追踪记录中隐藏。",
-      "databaseQuery": { "rejected": "数据库查询已被拒绝。" }
+      "hideOptional": "隐藏可选详细信息"
     }
   },
   "errors": {
@@ -1457,8 +1381,7 @@
     "previewErrorLabel": "Agent 设置预览错误",
     "documentToggleErrorLabel": "Agent 设置文档切换错误",
     "documentDefaultsHintV2": "标记为\"可用\"的文档可供知识搜索使用。当知识来源设置为选定的默认文档时，标记为\"默认启用\"的文档将被包含在内。",
-    "externalChangeConflict": "在你编辑期间，Sage 或另一位管理员更改了此设置。请取消并重新打开编辑器后再保存。",
-    "saveError": "无法保存"
+    "externalChangeConflict": "在你编辑期间，Sage 或另一位管理员更改了此设置。请取消并重新打开编辑器后再保存。"
   },
   "adminDeployment": {
     "title": "部署配置",

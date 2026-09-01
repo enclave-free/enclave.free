@@ -37,10 +37,6 @@ import {
   presentConversationActivity,
   type ConversationActivityAudience,
 } from './conversationActivityPresentation';
-import {
-  translateActivityMessage,
-  translateActivityValues,
-} from './conversationActivityI18n';
 
 export interface ConversationTrace {
   visibility: 'off' | 'minimal' | 'summary' | 'detailed';
@@ -94,14 +90,8 @@ export interface ConversationActivityStep {
   id: string;
   kind: string;
   title: string;
-  titleKey?: string;
-  titleValues?: Record<string, unknown>;
   status: string;
-  statusKey?: string;
-  statusValues?: Record<string, unknown>;
   summary?: string;
-  summaryKey?: string;
-  summaryValues?: Record<string, unknown>;
   warnings?: string[];
 }
 
@@ -623,59 +613,20 @@ function TraceRows({
 }
 
 function ActivityStepRow({ step }: { step: ConversationActivityStep }) {
-  const { t } = useTranslation();
-  const titleDescriptor = {
-    titleKey: step.titleKey,
-    titleValues: step.titleValues,
-    fallback: step.title,
-  };
-  const titleValues = translateActivityValues(
-    t,
-    step.titleValues,
-    titleDescriptor
-  );
-  const statusValues = translateActivityValues(
-    t,
-    step.statusValues,
-    titleDescriptor
-  );
-  const summaryValues = translateActivityValues(
-    t,
-    step.summaryValues,
-    titleDescriptor
-  );
-  const title = translateActivityMessage(
-    t,
-    step.titleKey,
-    titleValues,
-    step.title
-  );
-  const status = translateActivityMessage(
-    t,
-    step.statusKey,
-    statusValues,
-    step.status
-  );
-  const summary = translateActivityMessage(
-    t,
-    step.summaryKey,
-    summaryValues,
-    step.summary
-  );
   return (
     <div className="rounded-md border border-border/80 bg-surface-raised px-3 py-2">
       <div className="flex items-start gap-2">
         <TraceIcon kind={step.kind} name={step.title} status={step.status} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="font-medium text-text">{title}</span>
+            <span className="font-medium text-text">{step.title}</span>
             {!isSettledSuccessStatus(step.status) && (
-              <TraceStatus status={status ?? ''} />
+              <TraceStatus status={step.status} />
             )}
           </div>
-          {summary && (
+          {step.summary && (
             <p className="mt-1 leading-relaxed text-text-secondary">
-              {summary}
+              {step.summary}
             </p>
           )}
           <TraceWarnings warnings={step.warnings ?? []} />
@@ -856,7 +807,7 @@ function TraceIcon({
 }) {
   const normalizedName = (name ?? '').toLowerCase();
   const normalizedStatus = (status ?? '').toLowerCase();
-  const className = `mt-0.5 h-3.5 w-3.5 shrink-0 ${normalizedStatus.includes('fail') || normalizedStatus.includes('error') || normalizedStatus.includes('reject') ? 'text-danger' : 'text-accent'}`;
+  const className = `mt-0.5 h-3.5 w-3.5 shrink-0 ${normalizedStatus.includes('fail') || normalizedStatus.includes('error') ? 'text-danger' : 'text-accent'}`;
 
   if (
     normalizedStatus.includes('running') ||

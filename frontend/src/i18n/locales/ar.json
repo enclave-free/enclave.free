@@ -254,85 +254,7 @@
       "show": "إظهار النشاط",
       "hide": "إخفاء النشاط",
       "showOptional": "إظهار التفاصيل الاختيارية",
-      "hideOptional": "إخفاء التفاصيل الاختيارية",
-      "tool": {
-        "title": "{{toolName}}",
-        "attempted": "تمت محاولة استدعاء {{toolName}}.",
-        "retry": "إعادة محاولة الأداة بعد المحاولة {{attempt}}.",
-        "running": "الأداة قيد التنفيذ.",
-        "completed": "اكتملت الأداة.",
-        "guarded": "الأداة محمية.",
-        "failed": "فشلت الأداة.",
-        "rejected": "رُفض استدعاء الأداة.",
-        "timedOut": "انتهت مهلة الأداة.",
-        "knowledgeSearch": { "title": "البحث في المعرفة" },
-        "webSearch": { "title": "البحث على الويب" },
-        "curatedResources": { "title": "الموارد المنسّقة" },
-        "adminConfig": { "title": "إعدادات المسؤول" },
-        "databaseQuery": { "title": "استعلام قاعدة البيانات" }
-      },
-      "status": {
-        "running": "قيد التنفيذ",
-        "succeeded": "اكتمل",
-        "failed": "فشل",
-        "guarded": "محمية",
-        "timed_out": "انتهت المهلة",
-        "rejected": "مرفوض"
-      },
-      "toolSelection": {
-        "title": "اختيار الأدوات",
-        "failed": "فشل اختيار الأدوات قبل تسجيل اختيار صالح للاستخدام.",
-        "partialFailure": "رُفضت بعض الأدوات التي اختارها النموذج.",
-        "noneSelected": "لم يتم اختيار أي أدوات.",
-        "selected": "المختار: {{selectedTools}}."
-      },
-      "timing": {
-        "modelRequest": {
-          "title": "طلب النموذج",
-          "summary": "طلب النموذج: {{elapsedMs}} مللي ثانية."
-        },
-        "providerFirstEventWait": {
-          "title": "انتظار أول حدث من المزوّد",
-          "summary": "انتظار أول حدث من المزوّد: {{elapsedMs}} مللي ثانية."
-        },
-        "toolExecution": {
-          "title": "تنفيذ الأداة",
-          "summary": "تنفيذ الأداة: {{elapsedMs}} مللي ثانية."
-        },
-        "resourceDirectoryLookup": {
-          "title": "البحث في دليل الموارد",
-          "summary": "البحث في دليل الموارد: {{elapsedMs}} مللي ثانية."
-        },
-        "retrieval": {
-          "title": "الاسترجاع",
-          "summary": "الاسترجاع: {{elapsedMs}} مللي ثانية."
-        },
-        "retryDelay": {
-          "title": "تأخير إعادة المحاولة",
-          "summary": "تأخير إعادة المحاولة: {{elapsedMs}} مللي ثانية."
-        },
-        "totalTurn": {
-          "title": "الدورة الكاملة",
-          "summary": "الدورة الكاملة: {{elapsedMs}} مللي ثانية."
-        }
-      },
-      "knowledgeSearch": {
-        "noResults": "لم يتم العثور على مقاطع ذات صلة في المستندات المحمّلة.",
-        "retrieved": "تم استرجاع {{count}} من مقاطع المستندات المحمّلة للإجابة."
-      },
-      "webSearch": {
-        "prepared": "تم إعداد نتائج البحث على الويب للإجابة ({{count}})."
-      },
-      "curatedResources": {
-        "noAdditional": "لم يتم العثور على موارد منسّقة إضافية.",
-        "noMatches": "لا توجد موارد منسّقة تطابق هذا الطلب.",
-        "returned": "تم إرجاع {{count}} من أصل {{totalCount}} من الموارد المنسّقة."
-      },
-      "adminConfig": {
-        "completed": "اكتمل إجراء الإعداد {{toolId}} ({{outcome}}). الإعدادات التي تغيّرت: {{changedSettings}}."
-      },
-      "databaseResultsRedacted": "تم إخفاء نتائج قاعدة البيانات من التتبّع.",
-      "databaseQuery": { "rejected": "رُفض استعلام قاعدة البيانات." }
+      "hideOptional": "إخفاء التفاصيل الاختيارية"
     }
   },
   "common": {
@@ -1477,8 +1399,7 @@
     "previewErrorLabel": "خطأ في معاينة إعدادات الوكيل",
     "documentToggleErrorLabel": "خطأ في تبديل مستند إعدادات الوكيل",
     "documentDefaultsHintV2": "المستندات المحدّدة كـ \"متاحة\" يمكن استخدامها بواسطة البحث في المعرفة. المستندات المحدّدة كـ \"نشطة افتراضيًا\" تُضمَّن عند ضبط مصادر المعرفة على المستندات الافتراضية المحدّدة.",
-    "externalChangeConflict": "قام Sage أو مسؤول آخر بتغيير هذا الإعداد أثناء تحريرك. ألغِ وأعد فتح المحرِّر قبل الحفظ.",
-    "saveError": "تعذر الحفظ"
+    "externalChangeConflict": "قام Sage أو مسؤول آخر بتغيير هذا الإعداد أثناء تحريرك. ألغِ وأعد فتح المحرِّر قبل الحفظ."
   },
   "adminDeployment": {
     "title": "تكوين النشر",
