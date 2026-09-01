@@ -592,7 +592,7 @@ export function inspectLocaleStructuralCompleteness(
   const missingKeys = Object.keys(english)
     .filter((key) => !(key in translated))
     .sort();
-  const placeholderMismatches = Object.entries(english)
+  const directPlaceholderMismatches = Object.entries(english)
     .filter(([key]) => key in translated)
     .filter(
       ([key, value]) =>
@@ -607,6 +607,30 @@ export function inspectLocaleStructuralCompleteness(
     .map((key) => key.slice(0, -'_one'.length));
   const pluralCategories = new Intl.PluralRules(locale).resolvedOptions()
     .pluralCategories;
+  const localeSpecificPluralPlaceholderMismatches = pluralBases.flatMap(
+    (base) => {
+      const fallbackKey = `${base}_other`;
+      const fallbackValue = english[fallbackKey];
+      if (fallbackValue === undefined) return [];
+
+      const expectedPlaceholders =
+        interpolationPlaceholders(fallbackValue).join(',');
+      return pluralCategories
+        .map((category) => `${base}_${category}`)
+        .filter((key) => !(key in english) && key in translated)
+        .filter(
+          (key) =>
+            interpolationPlaceholders(translated[key]).join(',') !==
+            expectedPlaceholders
+        );
+    }
+  );
+  const placeholderMismatches = [
+    ...new Set([
+      ...directPlaceholderMismatches,
+      ...localeSpecificPluralPlaceholderMismatches,
+    ]),
+  ].sort();
   const missingPluralForms = pluralBases
     .flatMap((base) =>
       pluralCategories

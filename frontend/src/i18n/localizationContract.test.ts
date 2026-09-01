@@ -115,6 +115,26 @@ describe('localization contract validator', () => {
     });
   });
 
+  it('reports placeholder drift in locale-specific plural forms', () => {
+    const report = inspectLocaleStructuralCompleteness(
+      {
+        items_one: '{{count}} item',
+        items_other: '{{count}} items',
+      },
+      {
+        items_zero: 'No items',
+        items_one: '{{count}} item',
+        items_two: 'Two items',
+        items_few: '{{count}} items',
+        items_many: '{{count}} items',
+        items_other: '{{count}} items',
+      },
+      'ar'
+    );
+
+    expect(report.placeholderMismatches).toEqual(['items_two', 'items_zero']);
+  });
+
   it('finds static copy in JSX expressions, rendered state, display objects, and component props', () => {
     const report = inspectStaticCopy({
       'components/shared/FlowFixture.tsx': `

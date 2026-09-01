@@ -8,7 +8,7 @@
 - Feature branch: `feature/advertised-locale-completeness-final`
 - Human owner: plebdev
 - Started: 2026-08-30
-- Status: platform-only multilingual-copy cleanup in progress; PR #667 remains open and unmerged
+- Status: final review correction verified locally; PR #667 remains open and unmerged
 
 ## Goal
 
@@ -79,7 +79,23 @@ the Sage submodule.
 - The no-Sage-dependency audit found no Sage submodule diff, Sage localization
   import, keyed Sage payload field, cross-repository localization test, or
   Sage-only locale key.
-- Fresh independent Standards and Spec reviews: pending after final diff freeze.
+- Fresh independent Standards review found no hard documented-standard
+  violations. It recorded nonblocking maintainability follow-ups around the
+  duplicated Deployment Readiness/Advertised Locale manifests, the breadth of
+  `inspectStaticCopy`, and its local `add` helper name.
+- Fresh independent Spec review found that locale-only plural forms were checked
+  for presence but not placeholder compatibility. A red-green correction now
+  compares locale-specific plural placeholders with the English `_other`
+  contract and repairs 12 Arabic zero/two forms that omitted `{{count}}`.
+- The same Spec review recorded two nonblocking evidence concerns: the initial
+  translation delivery was not split into per-locale commits, and this ledger
+  still needed the final review result. Rewriting the already-reviewed branch
+  history would reduce release safety, so the commit-grouping concern is
+  retained as delivery-process feedback rather than changed retroactively.
+- Post-correction verification: focused localization contract 32/32, full
+  frontend 81 files / 487 tests, host production build, exact Docker frontend
+  runtime contract, Enclave Control Plane release selection 144/144, and
+  `git diff --check` all passed.
 
 ## Visual evidence
 
