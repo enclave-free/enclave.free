@@ -77,7 +77,7 @@ jobs:
     # The i18n suite was previously only reachable through the local pre-commit
     # hook, so untranslated strings shipped whenever that hook was bypassed.
     # Running it here is what actually enforces the contract:
-    #   - every English key exists in the priority locales
+    #   - every English key exists in every advertised locale
     #   - interpolation placeholders and plural categories match
     #   - every t('key') used in code exists in en.json
     #   - registered dynamic key families resolve
