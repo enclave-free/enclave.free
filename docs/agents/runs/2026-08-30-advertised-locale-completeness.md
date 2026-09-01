@@ -50,11 +50,12 @@ the Sage submodule.
 
 ## Provenance and structural evidence
 
-- English contains 2,475 scalar leaves.
+- English contains 2,427 scalar leaves after removing the Sage-only Activity
+  message keys.
 - All 31 advertised locale resources contain every English key, preserve all
   interpolation placeholders, and include locale-required plural forms.
-- Twenty-five formerly incomplete catalogs received 25,261 direct locale JSON
-  entries: 25,225 shared missing leaves plus 36 locale-specific plural leaves.
+- Twenty-five formerly incomplete catalogs received 24,061 direct locale JSON
+  entries: 24,025 shared missing leaves plus 36 locale-specific plural leaves.
 - Draft translations were machine-assisted locally with `qwen3.6:35b` and
   `gemma4:26b`, then structurally validated. Native-speaker Linguistic Review
   remains an explicit nonblocking follow-up.
