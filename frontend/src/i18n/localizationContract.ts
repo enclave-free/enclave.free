@@ -202,22 +202,41 @@ export function inspectStaticCopy(
 
     const resolveValueBinding = (
       identifier: ts.Identifier
-    ): ValueBinding | undefined =>
-      (valueBindings.get(identifier.text) ?? [])
+    ): ValueBinding | undefined => {
+      const candidates = (valueBindings.get(identifier.text) ?? [])
+        .map((binding) => ({
+          binding,
+          distance: scopeDistance(bindingScope(binding.node), identifier),
+        }))
+        .filter(({ distance }) => Number.isFinite(distance));
+      if (candidates.length === 0) return undefined;
+
+      const nearestDistance = Math.min(
+        ...candidates.map(({ distance }) => distance)
+      );
+      const nearestBindings = candidates
+        .filter(({ distance }) => distance === nearestDistance)
+        .map(({ binding }) => binding);
+      const identifierStart = identifier.getStart(sourceFile);
+      const initializedBeforeUse = nearestBindings
         .filter(
           (binding) =>
-            binding.node.getStart(sourceFile) <
-              identifier.getStart(sourceFile) &&
-            Number.isFinite(
-              scopeDistance(bindingScope(binding.node), identifier)
-            )
+            binding.initializer &&
+            binding.node.getStart(sourceFile) < identifierStart
         )
         .sort(
           (left, right) =>
-            scopeDistance(bindingScope(left.node), identifier) -
-              scopeDistance(bindingScope(right.node), identifier) ||
             right.node.getStart(sourceFile) - left.node.getStart(sourceFile)
         )[0];
+
+      if (initializedBeforeUse) return initializedBeforeUse;
+
+      // Bindings shadow their outer scope for the entire lexical/function
+      // scope. A declaration without a value at this point (including a
+      // hoisted function/var declared later) therefore stops resolution
+      // rather than exposing an outer static initializer.
+      return { node: nearestBindings[0].node };
+    };
 
     const inspectExpression = (
       expression: ts.Expression,

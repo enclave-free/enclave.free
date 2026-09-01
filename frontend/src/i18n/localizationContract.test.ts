@@ -250,6 +250,27 @@ describe('localization contract validator', () => {
     ).toEqual([]);
   });
 
+  it('does not resolve through hoisted function or var shadows', () => {
+    expect(
+      inspectStaticCopy({
+        'components/shared/HoistedShadowFixture.tsx': `
+          const functionCaption = 'Wrong outer function caption';
+          const variableCaption = 'Wrong outer variable caption';
+          function FunctionShadowFixture() {
+            const rendered = <h1>{functionCaption}</h1>;
+            function functionCaption() {}
+            return rendered;
+          }
+          function VariableShadowFixture() {
+            const rendered = <h1>{variableCaption}</h1>;
+            var variableCaption;
+            return rendered;
+          }
+        `,
+      })
+    ).toEqual([]);
+  });
+
   it('keeps catch and loop bindings inside their lexical scopes', () => {
     expect(
       inspectStaticCopy({
