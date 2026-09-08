@@ -1,3 +1,5 @@
+> Backend follow-up completed: [0.4.22 dependency removal](RELEASE-0.4.22.md). The live LIBERATOR frontend is unchanged.
+
 > Current release record: [0.4.21 / LIBERATOR rollout](RELEASE-0.4.21.md).
 
 # Temporary LIBERATOR / WLC visual patch

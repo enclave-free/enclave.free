@@ -1,0 +1,19 @@
+{
+  "publicSettingsUnchanged": true,
+  "health": {
+    "status": "healthy",
+    "services": {
+      "qdrant": "healthy",
+      "shared_rate_limit_store": "healthy"
+    }
+  },
+  "llmTest": {
+    "success": true,
+    "provider": "sage",
+    "health": true,
+    "response": "hello",
+    "model": "glm-5-2",
+    "error": null
+  },
+  "liberatorHtmlUnchanged": true
+}

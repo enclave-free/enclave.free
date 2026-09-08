@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.22 - 2026-09-08
+
+- Removed the unused Accelerate checkpoint loader (CVE-2026-69112) by selecting the PDF-only Docling dependency set and its layout model directly.
+- Added dependency and runtime checks preserving local embeddings and quality PDF conversion without adding an audit exception.
+
 ## 0.4.21 - 2026-09-08
 
 - Shortened the sign-up and login page by removing the three-paragraph disclaimer panel beneath the data-protection card. Authentication and data controls are unchanged.
