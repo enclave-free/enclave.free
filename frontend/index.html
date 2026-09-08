@@ -82,12 +82,12 @@
         }
         // Temporary PX presentation. Never write this identity into cached settings.
         if (document.documentElement.dataset.demoBrand === 'wlc') {
-          document.title = 'PX';
+          document.title = 'LIBERATOR';
           const selector = 'link[rel="icon"][data-instance-branding="true"]';
           const existing = document.head.querySelector(selector);
           const icon = existing || document.createElement('link');
           icon.rel = 'icon';
-          icon.href = '/demo-branding/px.svg';
+          icon.href = '/demo-branding/liberator.svg';
           icon.setAttribute('data-instance-branding', 'true');
           if (!existing) document.head.appendChild(icon);
         }

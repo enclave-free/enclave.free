@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
                   '<html lang="en">',
                   '<html lang="en" data-demo-brand="wlc">'
                 )
-                .replace('<title>Enclave</title>', '<title>PX</title>')
+                .replace('<title>Enclave</title>', '<title>LIBERATOR</title>')
             : html;
         },
       },

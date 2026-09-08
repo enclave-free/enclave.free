@@ -25,10 +25,10 @@ describe('temporary PX document branding', () => {
     const before = localStorage.getItem('enclave_instance_config');
     applyDocumentTitle(original.name);
     applyFavicon(original.faviconUrl);
-    expect(document.title).toBe('PX');
+    expect(document.title).toBe('LIBERATOR');
     expect(
       document.querySelector('link[rel="icon"]')?.getAttribute('href')
-    ).toBe('/demo-branding/px.svg');
+    ).toBe('/demo-branding/liberator.svg');
     expect(localStorage.getItem('enclave_instance_config')).toBe(before);
     expect(getInstanceConfig().name).toBe('Original instance');
   });

@@ -72,7 +72,9 @@ export function AppHeader({
 
   return (
     <>
-      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between border-b border-border/50">
+      <div
+        className={`${isPxDemo ? 'px-app-header ' : ''}max-w-5xl mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between border-b border-border/50`}
+      >
         {/* Left: Back + Branding */}
         <div className="flex items-center gap-3">
           {showBackButton && (

@@ -67,7 +67,7 @@ html[data-demo-brand='wlc'] .px-brand {
   width: fit-content;
   min-height: 44px;
   color: var(--color-text);
-  font-size: 32px;
+  font-size: 26px;
   line-height: 1;
   font-weight: 700;
   letter-spacing: -0.06em;
@@ -100,7 +100,7 @@ html[data-demo-brand='wlc'] .px-brand-colors i:nth-child(4) {
   height: 60%;
 }
 html[data-demo-brand='wlc'] .px-brand-large {
-  font-size: 80px;
+  font-size: clamp(30px, 3.3vw, 52px);
   gap: 20px;
 }
 html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors {
@@ -220,7 +220,7 @@ html[data-demo-brand='wlc'] .px-onboarding [role='radio'] {
     gap: 20px;
   }
   html[data-demo-brand='wlc'] .px-brand-large {
-    font-size: 48px;
+    font-size: 32px;
     gap: 12px;
   }
   html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors {
@@ -248,4 +248,32 @@ html[data-demo-brand='wlc'] .px-onboarding [role='radio'] {
     --color-text-muted: var(--color-text);
     --color-border: var(--color-border-strong);
   }
+}
+
+/* The longer LIBERATOR name must leave room for mobile header controls. */
+@media (max-width: 640px) {
+  html[data-demo-brand='wlc'] .px-brand:not(.px-brand-large) {
+    font-size: 18px;
+    gap: 6px;
+  }
+  html[data-demo-brand='wlc'] .px-brand:not(.px-brand-large) .px-brand-colors {
+    height: 22px;
+    gap: 2px;
+  }
+  html[data-demo-brand='wlc']
+    .px-brand:not(.px-brand-large)
+    .px-brand-colors
+    i {
+    width: 3px;
+  }
+}
+
+html[data-demo-brand='wlc'] .px-app-header {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+html[data-demo-brand='wlc'] .px-app-header > div:last-child {
+  margin-inline-start: auto;
+  max-width: 100%;
+  flex-wrap: wrap;
 }
