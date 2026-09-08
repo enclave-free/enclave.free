@@ -1,24 +1,24 @@
-import { useState, FormEvent } from 'react'
-import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { Loader2, Mail, ShieldCheck, Lock, Timer } from 'lucide-react'
-import { OnboardingCard } from '../components/onboarding/OnboardingCard'
-import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher'
-import { Button, Callout, TextField } from '../components/ui'
-import { API_BASE, STORAGE_KEYS } from '../types/onboarding'
-import { useInstanceConfig } from '../context/InstanceConfigContext'
-import { getExplicitLanguageChoice } from '../utils/languages'
+import { useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { Loader2, Mail, ShieldCheck, Lock, Timer } from 'lucide-react';
+import { OnboardingCard } from '../components/onboarding/OnboardingCard';
+import { LanguageSwitcher } from '../components/onboarding/LanguageSwitcher';
+import { Button, Callout, TextField } from '../components/ui';
+import { API_BASE, STORAGE_KEYS } from '../types/onboarding';
+import { useInstanceConfig } from '../context/InstanceConfigContext';
+import { getExplicitLanguageChoice } from '../utils/languages';
 
-type TabType = 'signup' | 'login'
-type FormState = 'idle' | 'submitting' | 'success' | 'error'
+type TabType = 'signup' | 'login';
+type FormState = 'idle' | 'submitting' | 'success' | 'error';
 
 interface FormData {
-  name: string
-  email: string
+  name: string;
+  email: string;
 }
 
 function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function TabSwitcher({
@@ -27,10 +27,10 @@ function TabSwitcher({
   signUpLabel,
   logInLabel,
 }: {
-  activeTab: TabType
-  onTabChange: (tab: TabType) => void
-  signUpLabel: string
-  logInLabel: string
+  activeTab: TabType;
+  onTabChange: (tab: TabType) => void;
+  signUpLabel: string;
+  logInLabel: string;
 }) {
   return (
     <div className="flex min-w-0 bg-surface-overlay rounded-xl p-1.5 mb-6">
@@ -55,7 +55,7 @@ function TabSwitcher({
         {logInLabel}
       </button>
     </div>
-  )
+  );
 }
 
 function InputField({
@@ -67,13 +67,13 @@ function InputField({
   required,
   error,
 }: {
-  label: string
-  type: string
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  required?: boolean
-  error?: string
+  label: string;
+  type: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  required?: boolean;
+  error?: string;
 }) {
   return (
     <TextField
@@ -85,15 +85,15 @@ function InputField({
       required={required}
       error={error}
     />
-  )
+  );
 }
 
 interface SuccessMessageProps {
-  email: string
-  checkEmailTitle: string
-  sentMagicLink: string
-  clickLink: string
-  checkSpam: string
+  email: string;
+  checkEmailTitle: string;
+  sentMagicLink: string;
+  clickLink: string;
+  checkSpam: string;
 }
 
 function SuccessMessage({
@@ -119,54 +119,54 @@ function SuccessMessage({
         {checkSpam}
       </p>
     </div>
-  )
+  );
 }
 
 export function UserAuth() {
-  const { t } = useTranslation()
-  const { config } = useInstanceConfig()
-  const [activeTab, setActiveTab] = useState<TabType>('signup')
-  const [formState, setFormState] = useState<FormState>('idle')
-  const [formData, setFormData] = useState<FormData>({ name: '', email: '' })
-  const [errors, setErrors] = useState<Partial<FormData>>({})
-  const [formError, setFormError] = useState<string | null>(null)
-  const [submittedEmail, setSubmittedEmail] = useState<string>('')
+  const { t } = useTranslation();
+  const { config } = useInstanceConfig();
+  const [activeTab, setActiveTab] = useState<TabType>('signup');
+  const [formState, setFormState] = useState<FormState>('idle');
+  const [formData, setFormData] = useState<FormData>({ name: '', email: '' });
+  const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string>('');
 
   const handleTabChange = (tab: TabType) => {
-    setActiveTab(tab)
-    setErrors({})
-    setFormError(null)
-    setFormState('idle')
-  }
+    setActiveTab(tab);
+    setErrors({});
+    setFormError(null);
+    setFormState('idle');
+  };
 
   const validate = (): boolean => {
-    const newErrors: Partial<FormData> = {}
+    const newErrors: Partial<FormData> = {};
 
     if (activeTab === 'signup' && !formData.name.trim()) {
-      newErrors.name = t('onboarding.auth.nameRequired')
+      newErrors.name = t('onboarding.auth.nameRequired');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = t('onboarding.auth.emailRequired')
+      newErrors.email = t('onboarding.auth.emailRequired');
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = t('onboarding.auth.emailInvalid')
+      newErrors.email = t('onboarding.auth.emailInvalid');
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!validate()) return
+    if (!validate()) return;
 
-    setFormState('submitting')
-    setFormError(null)
+    setFormState('submitting');
+    setFormError(null);
 
     try {
       // Call the magic link API
-      const locale = getExplicitLanguageChoice()
+      const locale = getExplicitLanguageChoice();
       const response = await fetch(`${API_BASE}/auth/magic-link`, {
         method: 'POST',
         headers: {
@@ -177,56 +177,67 @@ export function UserAuth() {
           name: activeTab === 'signup' ? formData.name : '',
           ...(locale ? { locale } : {}),
         }),
-      })
+      });
 
       if (!response.ok) {
-        let errorMessage = t('errors.failedToSendMagicLink')
+        let errorMessage = t('errors.failedToSendMagicLink');
         try {
-          const contentType = response.headers.get('content-type')
+          const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
-            const error = await response.json()
-            errorMessage = error.detail || error.message || errorMessage
+            const error = await response.json();
+            errorMessage = error.detail || error.message || errorMessage;
           } else {
-            const text = await response.text()
-            errorMessage = text || errorMessage
+            const text = await response.text();
+            errorMessage = text || errorMessage;
           }
         } catch (parseError) {
           // If JSON parsing fails, use status text or default message
-          errorMessage = response.statusText || errorMessage
+          errorMessage = response.statusText || errorMessage;
         }
-        throw new Error(errorMessage)
+        throw new Error(errorMessage);
       }
 
       // Store email for verification page
-      localStorage.setItem(STORAGE_KEYS.PENDING_EMAIL, formData.email)
+      localStorage.setItem(STORAGE_KEYS.PENDING_EMAIL, formData.email);
       if (activeTab === 'signup') {
-        localStorage.setItem(STORAGE_KEYS.PENDING_NAME, formData.name)
+        localStorage.setItem(STORAGE_KEYS.PENDING_NAME, formData.name);
       }
 
-      setSubmittedEmail(formData.email)
-      setFormState('success')
+      setSubmittedEmail(formData.email);
+      setFormState('success');
     } catch (error) {
-      console.error('Magic link error:', error)
-      setFormError(error instanceof Error ? error.message : t('errors.failedToSendMagicLink'))
-      setFormState('error')
+      console.error('Magic link error:', error);
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : t('errors.failedToSendMagicLink')
+      );
+      setFormState('error');
     }
-  }
+  };
 
   const footer = (
     <>
       <span>{t('common.adminQuestion')} </span>
-      <Link to="/admin" className="text-accent hover:text-accent-hover font-medium transition-colors">
+      <Link
+        to="/admin"
+        className="text-accent hover:text-accent-hover font-medium transition-colors"
+      >
         {t('common.signInNostr')}
       </Link>
     </>
-  )
+  );
 
-  const title = activeTab === 'signup'
-    ? t('onboarding.auth.createAccountTitle')
-    : t('onboarding.auth.welcomeBackTitle')
-  const subtitle = activeTab === 'signup'
-    ? t('onboarding.auth.createAccountSubtitle', { instanceName: config.name })
-    : t('onboarding.auth.welcomeBackSubtitle')
+  const title =
+    activeTab === 'signup'
+      ? t('onboarding.auth.createAccountTitle')
+      : t('onboarding.auth.welcomeBackTitle');
+  const subtitle =
+    activeTab === 'signup'
+      ? t('onboarding.auth.createAccountSubtitle', {
+          instanceName: config.name,
+        })
+      : t('onboarding.auth.welcomeBackSubtitle');
 
   return (
     <OnboardingCard
@@ -255,7 +266,10 @@ export function UserAuth() {
           <form onSubmit={handleSubmit} className="space-y-4">
             {formState === 'error' && formError && (
               <Callout
-                label={t('onboarding.auth.errorLabel', 'Magic link request error')}
+                label={t(
+                  'onboarding.auth.errorLabel',
+                  'Magic link request error'
+                )}
                 tone="error"
               >
                 {formError}
@@ -268,10 +282,11 @@ export function UserAuth() {
                 type="text"
                 value={formData.name}
                 onChange={(name) => {
-                  setFormData((prev) => ({ ...prev, name }))
-                  setFormError(null)
-                  setFormState('idle')
-                  if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+                  setFormData((prev) => ({ ...prev, name }));
+                  setFormError(null);
+                  setFormState('idle');
+                  if (errors.name)
+                    setErrors((prev) => ({ ...prev, name: undefined }));
                 }}
                 placeholder={t('onboarding.auth.namePlaceholder')}
                 required
@@ -284,10 +299,11 @@ export function UserAuth() {
               type="email"
               value={formData.email}
               onChange={(email) => {
-                setFormData((prev) => ({ ...prev, email }))
-                setFormError(null)
-                setFormState('idle')
-                if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }))
+                setFormData((prev) => ({ ...prev, email }));
+                setFormError(null);
+                setFormState('idle');
+                if (errors.email)
+                  setErrors((prev) => ({ ...prev, email: undefined }));
               }}
               placeholder={t('onboarding.auth.emailPlaceholder')}
               required
@@ -300,9 +316,14 @@ export function UserAuth() {
               className="w-full mt-6"
               size="lg"
               leadingIcon={
-                formState === 'submitting'
-                  ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-                  : <Mail className="w-5 h-5" aria-hidden="true" />
+                formState === 'submitting' ? (
+                  <Loader2
+                    className="w-4 h-4 animate-spin"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Mail className="w-5 h-5" aria-hidden="true" />
+                )
               }
             >
               {formState === 'submitting'
@@ -326,43 +347,43 @@ export function UserAuth() {
                 <div className="flex gap-2.5">
                   <Lock className="w-4 h-4 text-text-muted mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-text">{t('onboarding.auth.noPasswordTitle')}</p>
-                    <p className="text-xs text-text-muted">{t('onboarding.auth.noPasswordBody')}</p>
+                    <p className="text-xs font-medium text-text">
+                      {t('onboarding.auth.noPasswordTitle')}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {t('onboarding.auth.noPasswordBody')}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex gap-2.5">
                   <Timer className="w-4 h-4 text-text-muted mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-text">{t('onboarding.auth.expiringLinkTitle')}</p>
-                    <p className="text-xs text-text-muted">{t('onboarding.auth.expiringLinkBody')}</p>
+                    <p className="text-xs font-medium text-text">
+                      {t('onboarding.auth.expiringLinkTitle')}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {t('onboarding.auth.expiringLinkBody')}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex gap-2.5">
                   <ShieldCheck className="w-4 h-4 text-text-muted mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-text">{t('onboarding.auth.encryptionTitle')}</p>
-                    <p className="text-xs text-text-muted">{t('onboarding.auth.encryptionBody')}</p>
+                    <p className="text-xs font-medium text-text">
+                      {t('onboarding.auth.encryptionTitle')}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {t('onboarding.auth.encryptionBody')}
+                    </p>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className="rounded-lg border border-border bg-surface p-3">
-              <p className="text-xs text-text-muted leading-relaxed">
-                {t('onboarding.auth.adminControlNotice')}
-              </p>
-              <p className="text-xs text-text-muted leading-relaxed mt-2">
-                {t('onboarding.auth.retentionNotice', 'Data retention and deletion timelines are set by this instance administrator. Contact them for access, correction, or deletion requests.')}
-              </p>
-              <p className="text-xs text-text-muted leading-relaxed mt-2">
-                {t('onboarding.auth.noWarrantyNotice')}
-              </p>
             </div>
           </form>
         </>
       )}
     </OnboardingCard>
-  )
+  );
 }

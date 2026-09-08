@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.21 - 2026-09-08
+
+- Shortened the sign-up and login page by removing the three-paragraph disclaimer panel beneath the data-protection card. Authentication and data controls are unchanged.
+
 ## 0.4.20 - 2026-08-31
 
 - Completed Locale Structural Completeness for all 31 Advertised Locales across platform-owned static product copy, including placeholders and locale-required plural forms.
