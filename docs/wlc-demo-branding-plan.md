@@ -1,6 +1,8 @@
 # World Liberty Congress demo branding: research and proposed plan
 
-Research date: 2026-09-08. Status: branch prepared for implementation; no application or deployment changes.
+Research date: 2026-09-08. Status: implemented and locally verified on the temporary branch; not deployed.
+
+See the [patch manual](patches/px-wlc/README.md), [implementation analysis](patches/px-wlc/ANALYSIS.md), and [verification record](patches/px-wlc/VERIFICATION.md) for the implemented result. The research and proposals below are retained as history; those patch documents describe the final choices. PX artwork is original, the font stack reuses IBM Plex Sans, and existing theme preference behavior is preserved.
 
 ## Temporary branch and removal contract
 

@@ -1,0 +1,86 @@
+{
+  "patch_commit": "8889acc677f6ddad4e897cb16d00c65fcb4db52b",
+  "parent_commit": "306ce15f1d97a70b60fb32956d97b4222c877cfe",
+  "files": [
+    {
+      "path": "docker-compose.px-wlc.yml",
+      "before_blob": null,
+      "after_blob": "eeb9f3886b7f7088363dacdbeb56e90a5a479e8b"
+    },
+    {
+      "path": "frontend/Dockerfile",
+      "before_blob": "017f3f6d8224a6dc00799413c0b8a1d6a9db30b7",
+      "after_blob": "11596f22cc5569049527148ef9236117bdd5b23b"
+    },
+    {
+      "path": "frontend/index.html",
+      "before_blob": "d0fc8ab9c66c258ad95840d814193d211a94e24e",
+      "after_blob": "f9693da18dbf198b940ac2fc796fc938f52c146e"
+    },
+    {
+      "path": "frontend/public/demo-branding/px.svg",
+      "before_blob": null,
+      "after_blob": "60981943d434ff50a3844a4b0f9177526f0a6bc1"
+    },
+    {
+      "path": "frontend/src/branding/PxBrand.tsx",
+      "before_blob": null,
+      "after_blob": "56f72a3bd80bdf6128769ede599f27227560db39"
+    },
+    {
+      "path": "frontend/src/branding/PxWelcome.tsx",
+      "before_blob": null,
+      "after_blob": "4a7951a8588d372f19e893adeae1a5b0644c1698"
+    },
+    {
+      "path": "frontend/src/branding/pxDemo.css",
+      "before_blob": null,
+      "after_blob": "f314008fde8261520d14954799ba56eafc97828b"
+    },
+    {
+      "path": "frontend/src/branding/pxDemo.test.ts",
+      "before_blob": null,
+      "after_blob": "7ba6ca840d7be53158bb42e3e6066ebcd51fd9c7"
+    },
+    {
+      "path": "frontend/src/branding/pxDemo.ts",
+      "before_blob": null,
+      "after_blob": "789a6b64fe870013f853f01ee21324166d9bbe41"
+    },
+    {
+      "path": "frontend/src/branding/pxDocument.ts",
+      "before_blob": null,
+      "after_blob": "6e2b9883b235d37b0e496e6039dfd2c299f776b0"
+    },
+    {
+      "path": "frontend/src/components/onboarding/OnboardingCard.tsx",
+      "before_blob": "152fd03d8e7b7654b236c86eee63c6d15d431e7a",
+      "after_blob": "c74fa8f2b551d409a113a24d79c3448538ea6f1b"
+    },
+    {
+      "path": "frontend/src/components/shared/AppHeader.tsx",
+      "before_blob": "a3c5c829dcb8663e28fb1ff7bc0c45fd131fbff7",
+      "after_blob": "0082a7182ae9ca8dfd704e3381561ce136953d63"
+    },
+    {
+      "path": "frontend/src/components/shared/InstanceLogo.tsx",
+      "before_blob": "b80d69a7bbcf522cc29b17177d529dada5070063",
+      "after_blob": "e74c3e60c14a31d9b9ad608d9ffde4c08058569d"
+    },
+    {
+      "path": "frontend/src/context/InstanceConfigContext.tsx",
+      "before_blob": "804f301813757770d7a120ca056d27ebea44a9a9",
+      "after_blob": "6af3d67c48b6cfcd00853f70429accff37990f7b"
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "before_blob": "255df489643f3e573c7934e0ed885f0830c4cc03",
+      "after_blob": "697b085024870de96cb58c421f63a8d4fde71638"
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "before_blob": "de51998ba9117a2a1aab312aba5385422246dade",
+      "after_blob": "355bb9af5a7a615fa944aa02eca07d42100d2ec0"
+    }
+  ]
+}
