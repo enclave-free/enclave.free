@@ -1,3 +1,5 @@
+> Current release record: [0.4.21 / LIBERATOR rollout](RELEASE-0.4.21.md).
+
 # Temporary LIBERATOR / WLC visual patch
 
 Status: implemented and locally verified; **not deployed**. Branch: `temp/px-demo-wlc-visual-only`.

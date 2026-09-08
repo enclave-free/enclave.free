@@ -1,3 +1,5 @@
+> Release follow-up: see [RELEASE-0.4.21.md](RELEASE-0.4.21.md) for the combined copy review, final rollout status, and rollback record. The preparation notes below are historical.
+
 # LIBERATOR release preparation
 
 Status: prepared locally; not deployed. The Instance name is **LIBERATOR**, all caps. The live public Instance Settings already report that name. The existing tagline remains “Empowering Families of Political Prisoners.”
