@@ -11,7 +11,7 @@ const require = createRequire(
 );
 const { chromium } = require("playwright");
 const base = "http://127.0.0.1:4178";
-const out = resolve("docs/patches/px-wlc/screenshots");
+const out = resolve("docs/patches/px-wlc/screenshots/liberator");
 await mkdir(out, { recursive: true });
 const fixture = async (query) =>
   (await fetch(`${base}/__fixture?${query}`)).json();
@@ -66,12 +66,12 @@ try {
   await page.waitForFunction(() =>
     document.body.textContent.includes("Empowering Families"),
   );
-  assert.equal(await page.title(), "PX");
+  assert.equal(await page.title(), "LIBERATOR");
   assert.equal(await page.locator(".px-welcome").count(), 1);
   await noOverflow();
   await page.keyboard.press("Tab");
   assert.equal(await page.evaluate(() => document.activeElement?.tagName), "A");
-  check("Keyboard focus reaches PX link");
+  check("Keyboard focus reaches LIBERATOR link");
   await shot("after-language-desktop");
   await page
     .getByRole("radio", { name: "English (English)", exact: true })
@@ -122,6 +122,11 @@ try {
     .getByRole("button", { name: "Toggle theme", exact: true })
     .waitFor();
   await shot("after-chat-light");
+  await page.setViewportSize({ width: 320, height: 800 });
+  await shot("after-chat-mobile-320");
+  await noOverflow();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  check("LIBERATOR header fits 320px chat with controls");
   await page.getByRole("button", { name: "Toggle theme", exact: true }).click();
   await page.waitForFunction(
     () =>
@@ -174,7 +179,7 @@ try {
   check("Admin entry still renders");
   const before = await page.evaluate(() => ({ ...localStorage }));
   const stored = JSON.parse(before.enclave_instance_config);
-  assert.equal(stored.name, "PX");
+  assert.equal(stored.name, "LIBERATOR");
   assert.equal(stored.primaryColor, "#7d3e9b");
   assert.equal(stored.faviconUrl, "");
   assert.equal(stored.typographyPreset, "humanist");
@@ -186,9 +191,9 @@ try {
       await page.locator("html").getAttribute("data-demo-brand"),
       null,
     );
-    assert.equal(await page.title(), "PX");
+    assert.equal(await page.title(), "LIBERATOR");
     assert.equal(
-      await page.locator('link[href="/demo-branding/px.svg"]').count(),
+      await page.locator('link[href="/demo-branding/liberator.svg"]').count(),
       0,
     );
     const after = await page.evaluate(() => ({ ...localStorage }));
@@ -225,7 +230,7 @@ try {
   check("No uncaught browser errors");
   const state = await fixture("mode=enabled");
   await writeFile(
-    resolve(out, "../browser-results.json"),
+    resolve(out, "browser-results.json"),
     JSON.stringify(
       { checks, uncaughtErrors: errors, fixtureRequests: state.requests },
       null,

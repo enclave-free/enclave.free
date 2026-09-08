@@ -1,5 +1,7 @@
 # Verification record
 
+> Name update: the current product name is **LIBERATOR**, all caps. See [the release preparation record](LIBERATOR.md) for the rename, current screenshots, and updated rollback instructions. PX references below describe the earlier version.
+
 Date: 2026-09-08. Scope: local production bundles, isolated synthetic browser flow, frontend tests, and production Docker image. Live demo access was read-only.
 
 ## Baseline

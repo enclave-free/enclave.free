@@ -1,5 +1,7 @@
 # Implementation analysis and prototype reference
 
+> Name update: the current product name is **LIBERATOR**, all caps. See [the release preparation record](LIBERATOR.md) for the rename, current screenshots, and updated rollback instructions. PX references below describe the earlier version.
+
 ## Result and design choices
 
 The patch keeps PX as the product identity. The WLC reference supplies cyan, yellow, lime, pink, deep navy, and cream. PX uses an original text-and-color-bar treatment and an original local SVG favicon; the WLC wordmark is not substituted for PX.

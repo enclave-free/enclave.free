@@ -16,7 +16,7 @@ let mode = "enabled";
 let approved = false;
 let requestFails = false;
 const settings = {
-  instance_name: "PX",
+  instance_name: "LIBERATOR",
   header_tagline: "Empowering Families of Political Prisoners",
   primary_color: "#7d3e9b",
   typography_preset: "humanist",

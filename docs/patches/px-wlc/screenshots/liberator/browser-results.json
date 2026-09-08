@@ -1,0 +1,437 @@
+{
+  "checks": [
+    "Keyboard focus reaches LIBERATOR link",
+    "Fresh visitor language selection reaches existing signup",
+    "Explicit language choice survives reload and skips language selection",
+    "Signup/login tabs, request failure, retry, and sent state (fixture only)",
+    "Expired link and valid link through pending approval",
+    "LIBERATOR header fits 320px chat with controls",
+    "Approved User reaches chat and theme toggle works",
+    "Settings remains accessible",
+    "User Type and profile form remain usable through completion",
+    "Mobile light/dark and Arabic RTL fit without horizontal overflow",
+    "Admin entry still renders",
+    "Same-browser disabled rollback preserves config, session markers, locale and theme",
+    "Same-browser baseline rollback preserves config, session markers, locale and theme",
+    "No uncaught browser errors"
+  ],
+  "uncaughtErrors": [],
+  "fixtureRequests": [
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/query/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me/onboarding-status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session-defaults"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ingest/jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/query/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me/onboarding-status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session-defaults"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ingest/jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/magic-link"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/query/sessions"
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me/onboarding-status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/session-defaults"
+    },
+    {
+      "method": "GET",
+      "path": "/api/ingest/jobs"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/user-types"
+    },
+    {
+      "method": "GET",
+      "path": "/api/user-fields"
+    },
+    {
+      "method": "POST",
+      "path": "/api/users"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/instance/status"
+    },
+    {
+      "method": "GET",
+      "path": "/api/settings/public"
+    }
+  ]
+}

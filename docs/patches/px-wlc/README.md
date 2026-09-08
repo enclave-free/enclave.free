@@ -1,14 +1,16 @@
-# Temporary PX / WLC visual patch
+# Temporary LIBERATOR / WLC visual patch
 
 Status: implemented and locally verified; **not deployed**. Branch: `temp/px-demo-wlc-visual-only`.
 
-PX stays the Instance name. WLC supplies the visual reference. This branch is a temporary, organization-specific frontend patch, not a generic Enclave release. Do not merge it into `main` or `staging` as a product-wide branding change.
+**LIBERATOR** is now the Instance name (formerly PX). The branch, module names, CSS prefix, and Compose variable names retain `px` so the existing patch history remains stable. WLC supplies the visual reference. This branch is a temporary, organization-specific frontend patch, not a generic Enclave release. Do not merge it into `main` or `staging` as a product-wide branding change.
+
+Current preparation status and renamed screenshots: [LIBERATOR release preparation](LIBERATOR.md). The sign-in security-copy revision is being handled separately by the user and must be reviewed before the live update.
 
 ## Documents and evidence
 
 - [Original research and scope](../../wlc-demo-branding-plan.md)
 - [Implementation analysis and future customization requirements](ANALYSIS.md)
-- [Verification record](VERIFICATION.md)
+- [Original PX verification record](VERIFICATION.md)
 - [Exact application commit/file manifest](application-manifest.json)
 - [Baseline asset fingerprints](baseline-assets.json)
 - [Browser verification results](browser-results.json)
@@ -21,19 +23,19 @@ Paths below are relative to the repository root. Every application/build file in
 
 | File | Change | Removal |
 | --- | --- | --- |
-| `frontend/src/branding/pxDemo.ts` | Build selector, PX name, favicon path | Delete with patch |
-| `frontend/src/branding/PxBrand.tsx` | Original PX wordmark treatment with four decorative colors | Delete with patch |
+| `frontend/src/branding/pxDemo.ts` | Build selector, LIBERATOR name, favicon path | Delete with patch |
+| `frontend/src/branding/PxBrand.tsx` | LIBERATOR wordmark treatment with four decorative colors | Delete with patch |
 | `frontend/src/branding/PxWelcome.tsx` | Welcome panel with existing Instance tagline, responsive artwork, and form area | Delete with patch |
 | `frontend/src/branding/pxDemo.css` | Scoped palette, font stack, navy buttons, welcome layout, dark/mobile/contrast variants | Delete and remove import |
 | `frontend/src/branding/pxDocument.ts` | Display-only title/favicon wrappers around existing helpers | Delete; restore original provider imports |
 | `frontend/src/branding/pxDemo.test.ts` | Checks temporary metadata does not overwrite config and disabled metadata restores | Delete with patch |
-| `frontend/public/demo-branding/px.svg` | Original local PX favicon | Delete with patch |
+| `frontend/public/demo-branding/liberator.svg` | Original local LIBERATOR favicon | Delete with patch |
 | `frontend/src/components/onboarding/OnboardingCard.tsx` | Optional PX welcome shell; existing form children remain intact | Restore baseline component |
 | `frontend/src/components/shared/InstanceLogo.tsx` | Optional PX brand treatment | Restore baseline component |
-| `frontend/src/components/shared/AppHeader.tsx` | PX identity in compact shared header; existing controls retained | Restore baseline component |
+| `frontend/src/components/shared/AppHeader.tsx` | LIBERATOR identity in compact shared header; existing controls retained | Restore baseline component |
 | `frontend/src/context/InstanceConfigContext.tsx` | Import display-only title/favicon wrappers; config values and saving remain unchanged | Restore original two imports |
 | `frontend/src/main.tsx` | Import scoped stylesheet | Remove added import |
-| `frontend/index.html` | PX title/favicon first-paint handling when HTML carries explicit demo attribute | Remove temporary block |
+| `frontend/index.html` | LIBERATOR title/favicon first-paint handling when HTML carries explicit demo attribute | Remove temporary block |
 | `frontend/vite.config.ts` | Validate build option; set HTML demo attribute/title before render | Remove plugin/selector logic |
 | `frontend/Dockerfile` | Build-stage argument/environment for selector | Remove added ARG/ENV |
 | `docker-compose.px-wlc.yml` | Explicit frontend-only build override and required image tag | Remove from invocation and delete |
@@ -114,7 +116,7 @@ export PX_DEMO_FRONTEND_IMAGE="enclave-frontend:px-wlc-$(git rev-parse --short H
 "${PX_BASE[@]}" -f "$PX_PATCH_CHECKOUT/docker-compose.px-wlc.yml" up -d --no-deps --no-build frontend
 ```
 
-5. Verify container health, `/auth`, `/verify`, favicon delivery, cached-browser reload, theme switching, and the visible PX identity. Record the actual image ID, time, operator, and checks. Review synthetic/local screenshots before this step. Live email checks require an explicitly selected test account.
+5. Verify container health, `/auth`, `/verify`, favicon delivery, cached-browser reload, theme switching, and the visible LIBERATOR identity. Record the actual image ID, time, operator, and checks. Review synthetic/local screenshots before this step. Live email checks require an explicitly selected test account.
 
 ## Operational rollback — preferred
 
@@ -132,7 +134,7 @@ Run the same verified base invocation, excluding the WLC override and applying t
 "${PX_BASE[@]}" -f "$PX_ROLLBACK_OVERRIDE" up -d --no-deps --no-build frontend
 ```
 
-Check the running image ID equals `PX_ROLLBACK_ID`. Reload a browser that used the patch. Confirm original PX styling, original favicon behavior, language/theme choice, and authenticated access. No database restore, volume removal, localStorage clearing, or logout is needed. Do not run `down -v` or the local reset script.
+Check the running image ID equals `PX_ROLLBACK_ID`. Reload a browser that used the patch. Confirm the generic Instance styling, original favicon behavior, language/theme choice, and authenticated access. No database restore, volume removal, localStorage clearing, or logout is needed. Do not run `down -v` or the local reset script.
 
 Alternative: build with an empty selector and deploy that image. The browser verification covers both this path and the original unmodified baseline. Runtime health and image rollback on the actual host still need to be exercised at deployment.
 
@@ -140,9 +142,9 @@ Alternative: build with an empty selector and deploy that image. The browser ver
 
 - Preparation base: `063e132ce0b77a238cd8bccdd4f36cfd38369eae`.
 - Plan commit: `306ce15`.
-- Application implementation: `8889acc`. Final documentation: the following commit, listed by `git log --oneline 8889acc..HEAD`.
+- Application implementation: `8889acc`; LIBERATOR rename: `574179a`. Final documentation: the following commit, listed by `git log --oneline 8889acc..HEAD`.
 
-Keep application changes in one patch commit, with final verification/docs in a following commit. To remove source changes from a later descendant, revert the application commit and resolve any intervening frontend conflicts, then rebuild in generic mode. Retain this documentation as the customization reference. A Git revert alone does not replace a running image.
+Keep application changes in one patch commit, with final verification/docs in a following commit. To remove source changes from a later descendant, revert the LIBERATOR rename commit first and then `8889acc` and resolve any intervening frontend conflicts, then rebuild in generic mode. Retain this documentation as the customization reference. A Git revert alone does not replace a running image.
 
 ## Deployment record
 
@@ -152,6 +154,6 @@ Keep application changes in one patch commit, with final verification/docs in a 
 | Host/source commit | Not inspected |
 | Retained live rollback image ID | To record before activation |
 | Live patch image ID | Not deployed |
-| Local verification image | `enclave-frontend:px-wlc-local-verification` |
+| Local verification image | `enclave-frontend:liberator-wlc-prepared` |
 | Live rollback exercise | Not performed |
 | Local same-browser rollback | Passed for disabled and original builds |
