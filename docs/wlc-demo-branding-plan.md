@@ -1,3 +1,5 @@
+> Deployed release record: [LIBERATOR / 0.4.21](patches/px-wlc/RELEASE-0.4.21.md). This original plan remains as historical design context.
+
 # World Liberty Congress demo branding: research and proposed plan
 
 > Name update: the current product name is **LIBERATOR**, all caps. See [the release preparation record](patches/px-wlc/LIBERATOR.md) for the rename, current screenshots, and updated rollback instructions. PX references below describe the earlier version.

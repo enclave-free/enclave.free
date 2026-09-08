@@ -1,0 +1,309 @@
+[
+  {
+    "path": "index.html",
+    "sha256": "f6f64ab9e5f9600b63011c31d73df14cea41976084410582ca4bade02cf8af8a",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminAIConfig-C86hCYed.js",
+    "sha256": "f9dc5d5744d147b8558eb1cf152d4a4cbcfe820175e5ff7dc55bba5e20db9deb",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminConfigAssistant-DZ-56JWH.js",
+    "sha256": "96f48a00ab836c35a882f40df5be3a60bed1ee63a406959cdcbe1ad4bfeeb70b",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminDatabaseExplorer-DZcO9-W_.js",
+    "sha256": "1bb4ffd5930e1cbdcf6450b105ff2974384755667a3edae16d0fafb549eeb962",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminDeploymentConfig-feJ4UNzp.js",
+    "sha256": "57da005476ea3eecebbf212f3ab098bbb50b5e322d402436504c7f662b827632",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminDocumentUpload-DGRgl_8p.js",
+    "sha256": "edd070bbb3b072d5b64824780f48364e7d541c57e586bca65d2f07d5f1bd917a",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminGuides-MgkYBPv4.js",
+    "sha256": "ee7a8780596c16fc46ba19fcccd1b1e525896669c63700a74eaf74d1d1fe9187",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminInstanceConfig-nRyQae1V.js",
+    "sha256": "8fab5ec60964511d5acd2d5ce916e251c16a93096d623e2ba9bb55871658957a",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminOnboarding-ColqvlOn.js",
+    "sha256": "fbe48d30ad33be57d899e1610828dd6ad1eda24b160998bef0b7ffdbbf74835e",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminOnboardingSetup-BhQolRNC.js",
+    "sha256": "07d605cdce79ae22a8b2157bc725ae99b3176aa6c43caeb2f71415b2095af9d1",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminResourcesDirectory-Caml4u00.js",
+    "sha256": "aa54bfc2c14681865d68df4bc366818925de3588259602ffddeefab518074e58",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminSetup-BMlAwgfI.js",
+    "sha256": "f9feb0dd0a191476a477cd8153c56ce4c4ec584b6f0558be99a34a545426e7e4",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminTestAndFeedback-qz3C76vi.js",
+    "sha256": "99c4b214fdef6347b15492c25bd709ea2940c93d4f760f29565fee6b38f8c524",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminUserConfig-CBMERqki.js",
+    "sha256": "b6b3aace15fcb3e2d1e279cd8992e7fe6eb7557493f57b932a1904f9c3ad715f",
+    "matched": true
+  },
+  {
+    "path": "assets/AdminUserManager-D3LHoQHA.js",
+    "sha256": "e3ab279ec0a67380d4b9a6bc25c2615672ca166de05e19330518fba8ba462ab4",
+    "matched": true
+  },
+  {
+    "path": "assets/AppHeader-sCA8sucp.js",
+    "sha256": "864e8f31d23662f541375403549068153fe37d3f724a4f9622ce3ef53b8c1d9b",
+    "matched": true
+  },
+  {
+    "path": "assets/ChatPage-CxoWxC82.js",
+    "sha256": "873c3abd37ccd46bcec2aedfc818b8dd3abecfdc6da8459239464252db9c0eb0",
+    "matched": true
+  },
+  {
+    "path": "assets/DynamicIcon-CloSHj7K.js",
+    "sha256": "ca2a6ff1862c142f3d9a1aa89464711a3ebbc0c677730007a6cbf81fc3f2e267",
+    "matched": true
+  },
+  {
+    "path": "assets/IconPicker-DZisonO4.js",
+    "sha256": "da83a2f08454f2cb8a67d03ee8e15740e4de4fa4232ffc31217a749730b40574",
+    "matched": true
+  },
+  {
+    "path": "assets/InstanceLogo-CEbZ9Md4.js",
+    "sha256": "9d38316126ed06a06e88d890a2463f717ccbf648513486f6128e801cbf9fa82a",
+    "matched": true
+  },
+  {
+    "path": "assets/LanguageSwitcher-B532k1Nq.js",
+    "sha256": "27cb6bf7579fbb01d177047b5d7cff150758447b492b63aff6c64062e6019486",
+    "matched": true
+  },
+  {
+    "path": "assets/OnboardingCard-BFa2OdOS.js",
+    "sha256": "39f5a85621073afab41c8393c44c573549936c30f89793ca90a8af4608719258",
+    "matched": true
+  },
+  {
+    "path": "assets/PendingApproval-BM-1UPi6.js",
+    "sha256": "6de6feea7a27cf82edfed18e1ec607a672a51adc3954b295a5c6491a7b6763c2",
+    "matched": true
+  },
+  {
+    "path": "assets/PxBrand-wvLHRmPb.js",
+    "sha256": "054515ecf8dfb18606ca22a50919a9ebafd3e6c3134486cc77112e7838172579",
+    "matched": true
+  },
+  {
+    "path": "assets/TestDashboard-Cq5UPTSI.js",
+    "sha256": "4227e9c010981b4dcbd30b60101846ac15bb15b4f0fc124c23613f6bb9cda45a",
+    "matched": true
+  },
+  {
+    "path": "assets/UserAuth-DF09TR64.js",
+    "sha256": "55713f58961eda6eeb01e098536a0c0f1459089942ef3d310765ec9b595d031d",
+    "matched": true
+  },
+  {
+    "path": "assets/UserOnboarding-CrWjPwpx.js",
+    "sha256": "f9da8969efcea4f383733ee550673e5e1ed4eb999453c9418d55c0e244fc22a0",
+    "matched": true
+  },
+  {
+    "path": "assets/UserProfile-DI_v7gUZ.js",
+    "sha256": "97cfbc4024bd508d851d89d9de6931c693e23d9d0918f103ce695b65a84c99c8",
+    "matched": true
+  },
+  {
+    "path": "assets/UserTypeSelection-DCtqk89G.js",
+    "sha256": "5a88fe665762120cfc8ab61e0e5808376c5e28ea46a1bde87dbfcb1bfe99e82a",
+    "matched": true
+  },
+  {
+    "path": "assets/VerifyMagicLink-DzHCPHiq.js",
+    "sha256": "7844d55ac7e22f89a7ecc5e3ae670fef3df908ec8af244a80f1ebf047b0692f7",
+    "matched": true
+  },
+  {
+    "path": "assets/adminResilienceInstrumentation-O15STeKh.js",
+    "sha256": "ed51b53ce07a364abf16f831728b20187200cf0d559c783cb919f3372275d3b5",
+    "matched": true
+  },
+  {
+    "path": "assets/browserStoragePosture-E4P2s7sn.js",
+    "sha256": "4b0d641882407cd3e563be6aaeae389b29ac713c1d9c952cf948691fa8c76549",
+    "matched": true
+  },
+  {
+    "path": "assets/chevron-down-DM24ZAzR.js",
+    "sha256": "dbec1f7cf0f71df6f06443fb8fa03e57cab92cde1cd37ab67684db188b9c2d19",
+    "matched": true
+  },
+  {
+    "path": "assets/config-Ca6l95cA.js",
+    "sha256": "753389600b59c9552ead6e63d4e05fdb67561facac6cb2deea33c9f71f2fe60a",
+    "matched": true
+  },
+  {
+    "path": "assets/createLucideIcon-Dv7Vx7Pn.js",
+    "sha256": "14751bcd5d3dde04a79b54a3102c02ab156212054691414e85d221e03001154b",
+    "matched": true
+  },
+  {
+    "path": "assets/database-Debz__bM.js",
+    "sha256": "0ab853e6ba87d6bd09bcc662f20d5cb5ddd1a57677ab89dfca2e00b9b6033c79",
+    "matched": true
+  },
+  {
+    "path": "assets/file-text-Cz2Hdqc1.js",
+    "sha256": "50f804e9f56e4b56107c27d16af8a555b680b6097dc759455ed3745fbc7dea66",
+    "matched": true
+  },
+  {
+    "path": "assets/globe-CdmhElgq.js",
+    "sha256": "4957cd5cf56c8cbf99a3ace8e8381538e17abd66edf2b93f10d98307cf0a0a0e",
+    "matched": true
+  },
+  {
+    "path": "assets/index-DGip2aEI.js",
+    "sha256": "ea12c883a7448821889857927cb4c2659bfc5c0f470ab22a69cddf4c0b96ac3f",
+    "matched": true
+  },
+  {
+    "path": "assets/index-iAwJa0Y-.css",
+    "sha256": "a982328ad8f438cce7737589b49a4b84ebf8a4e70db96da30aac9df3193febfe",
+    "matched": true
+  },
+  {
+    "path": "assets/llmChat-BYUKJKS3.js",
+    "sha256": "22d2c4b89600cfd2c292ba659039f56fc8aa25ec66f6bfbdbf2284e8fa170f65",
+    "matched": true
+  },
+  {
+    "path": "assets/lock-IiGI4nG6.js",
+    "sha256": "1428a876e739eafe906cc06be4d5bf152e20fe08c54bc90d5416f0d3becebce4",
+    "matched": true
+  },
+  {
+    "path": "assets/nip19-C_zBHCIb.js",
+    "sha256": "75a761f2ac87a91d6d85dfc95a223ccfe80a18388a8f12b1fc1c12a4180ba45e",
+    "matched": true
+  },
+  {
+    "path": "assets/nostrAuth-Cmw8lX40.js",
+    "sha256": "02d74a05f61a696c5a87ab116c28b47d0a227ab9253e9d60083fdd79e72114f4",
+    "matched": true
+  },
+  {
+    "path": "assets/nostrKeys-DE_Wzov8.js",
+    "sha256": "a9b5c8da7a588406ea5253b1ce27f2e83a4dde005099fbaf670a9f11b7c54a39",
+    "matched": true
+  },
+  {
+    "path": "assets/onboarding-DYtgx3Wk.js",
+    "sha256": "02823ccd0e4b9d9fa619cff62b7c20ae31fdd53935fe058bbdd866ee746503a6",
+    "matched": true
+  },
+  {
+    "path": "assets/sessionDefaults-eR0XGqc5.js",
+    "sha256": "a3a89bb8aba47573f9ead6e04c9f01fe26ff61bcb79a2f0e1da7b71e1e85a377",
+    "matched": true
+  },
+  {
+    "path": "assets/shield-check-WEVjL9Zc.js",
+    "sha256": "8cb734dc2e86b36cde0f28708a1c7ce7b547319dcf644fcaa2b76e29f19e11ac",
+    "matched": true
+  },
+  {
+    "path": "assets/sparkles-B1iFsoQI.js",
+    "sha256": "ae05d523d6f1b011e9b01f15dc3d8e709f49e76c3e0c588d54ad3d2836af2c2d",
+    "matched": true
+  },
+  {
+    "path": "assets/square-terminal-CzykVhCI.js",
+    "sha256": "ac29d44900f39c5f779015dda637c8fb7b460f3be8028c5b84b2e325c53a2a55",
+    "matched": true
+  },
+  {
+    "path": "assets/trash-2-GwSF3JSO.js",
+    "sha256": "1eac13d3934c92ef7f8f5fa4b049fa18554663826365d3564ad69e9be731ae97",
+    "matched": true
+  },
+  {
+    "path": "assets/ui-CLxBoVRj.js",
+    "sha256": "439c9529bbf2a4b02c56e130286bb006260fc87c5027a1b910687e4634fa8276",
+    "matched": true
+  },
+  {
+    "path": "assets/user-check-72KH7ZRi.js",
+    "sha256": "2eb6e5fdabcb6ccb0037058c8a69eabd2f58c4394e456cc4e9b2793ac2cb4199",
+    "matched": true
+  },
+  {
+    "path": "assets/userRosterExportPreparation-kwPkSjUj.js",
+    "sha256": "ce5c4c1e207186586fba1e22bcc0d5cb2e4ad4e4736a89bb7d39bea1057270d2",
+    "matched": true
+  },
+  {
+    "path": "assets/users-BDUEX8-g.js",
+    "sha256": "099699823452d101aca8718f278ee7b0447349e47ed0c85a66735ba8f8edebf2",
+    "matched": true
+  },
+  {
+    "path": "assets/wand-sparkles-CePv0DWl.js",
+    "sha256": "4e6b85723b13876b116a29ced005162ee1ce28e7f8d172028b29b177d08c54ff",
+    "matched": true
+  },
+  {
+    "path": "assets/x-C8vHbIwx.js",
+    "sha256": "4ed8894a866eb6827eac0d3e9c7ed23527df1421100114a86de6d55345b2710d",
+    "matched": true
+  },
+  {
+    "path": "assets/zap-CCiXgyvK.js",
+    "sha256": "28ffcac7a6905110c3456d6e0cf5128f9106a45dfc055a35ad27952650b4bdcc",
+    "matched": true
+  },
+  {
+    "path": "demo-branding/liberator.svg",
+    "sha256": "a1b311c74103b0d0027b23738edf86721d815acdc7ab62aefdaed3a1e8e54ae9",
+    "matched": true
+  },
+  {
+    "path": "/api/health",
+    "status": 200
+  },
+  {
+    "path": "/auth",
+    "status": 200
+  },
+  {
+    "path": "/admin",
+    "status": 200
+  }
+]

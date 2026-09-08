@@ -21,12 +21,23 @@ Standards review: one heuristic robustness finding resolved by making the Vite t
 
 ## Rollout status
 
-Prepared; deployment completion will be recorded here after live verification. The deployed source was verified as `063e132ce0b77a238cd8bccdd4f36cfd38369eae` / 0.4.20 before any change. A frontend rollback image tag and exported archive have been created on the server; operational paths and container evidence are retained in the local operator record outside the repository.
+Deployed and verified on 2026-09-08. Generic release [v0.4.21](https://github.com/enclave-free/enclave.free/releases/tag/v0.4.21) is main `4c24068`; temporary frontend source is `2c54a68`. The deployed frontend image is `sha256:c81c520d9ff3fb6ee49121d81b903cacca6fc4fab4c5a73c58766bb069e60a67`. The deployed source was verified as `063e132ce0b77a238cd8bccdd4f36cfd38369eae` / 0.4.20 before any change. A frontend rollback image tag and exported archive have been created on the server; operational paths and container evidence are retained in the local operator record outside the repository.
 
-Only the frontend service will be recreated, using the existing Compose project, environment and demo port bindings. Backend, Sage, infrastructure, volumes and persisted Instance Settings remain in place.
+Only the frontend service was recreated, using the existing Compose project, environment and demo port bindings. Backend, Sage, infrastructure, volumes and persisted Instance Settings remain in place.
 
 ## Rollback and removal
 
 For immediate full frontend rollback, use the saved pre-release frontend image with the original Compose files and a frontend-image override, then `up -d --no-deps --no-build frontend`. For branding-only rollback while retaining the copy cleanup, build generic v0.4.21 without `VITE_DEMO_BRAND` and replace only frontend. Neither operation requires a database restore or clearing browser storage.
 
-For source removal, retain the release/copy merge and documentation. Revert the later Vite guard commit `6eda1de` first, then the LIBERATOR rename `574179a`, then the original visual patch `8889acc`. The final deployed revision will be recorded after live verification. Historical PX paths and symbols identify this temporary patch; visible name is LIBERATOR.
+For source removal, retain the release/copy merge and documentation. Revert the later Vite guard commit `6eda1de` first, then the LIBERATOR rename `574179a`, then the original visual patch `8889acc`. The three source reverts were rehearsed in an isolated checkout and produced exactly the generic 0.4.21 frontend and Compose files (zero-byte diff). Historical PX paths and symbols identify this temporary patch; visible name is LIBERATOR.
+
+
+## Live results
+
+- Frontend container healthy; every non-frontend container retained its original ID and image.
+- Public landing, language selection, signup, login tab and Admin entry passed. Desktop, mobile light/dark and 320px width passed with no uncaught browser errors.
+- All 59 deployed HTML/asset/favicon files matched the public responses by SHA-256; `/api/health`, `/auth`, and `/admin` also returned 200 (62 checks total).
+- Live verification used a fresh browser and read-only API requests. No real email was sent and no Nostr signature, real account creation or authenticated live Conversation was performed. Those flow transitions were verified with the synthetic fixture, not claimed as live authentication coverage.
+- Public screenshots and JSON evidence are under `screenshots/live-0.4.21/`.
+- Generic 0.4.21 rollback image built successfully on the server and served `/auth` from an isolated container. Original 0.4.20 image is separately tagged and exported. Source rollback was rehearsed; production traffic was not deliberately switched back as a test.
+- PR #669 and release PR #671 are merged. Main and staging have identical contents. No open PRs remained at release closeout.
