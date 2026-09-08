@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import importlib
 import importlib.metadata
+import importlib.util
 import json
 import re
 import sys
@@ -41,6 +42,9 @@ def main() -> int:
         sys.path.insert(0, str(app_path))
 
     failures: list[str] = []
+
+    if importlib.util.find_spec("accelerate") is not None:
+        failures.append("accelerate must not be installed in the backend runtime (CVE-2026-69112)")
 
     try:
         torch = importlib.import_module("torch")
