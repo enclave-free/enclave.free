@@ -1,0 +1,8 @@
+# TEMPORARY: PX demo presentation only. See docs/patches/px-wlc/README.md.
+# Apply after the normal Compose files. Use a unique image tag for each build.
+services:
+  frontend:
+    image: ${PX_DEMO_FRONTEND_IMAGE:?Set PX_DEMO_FRONTEND_IMAGE to a unique PX patch image tag}
+    build:
+      args:
+        VITE_DEMO_BRAND: wlc

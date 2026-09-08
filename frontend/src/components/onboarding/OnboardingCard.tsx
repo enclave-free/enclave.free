@@ -1,38 +1,55 @@
-import { ReactNode } from 'react'
-import { InstanceLogo } from '../shared/InstanceLogo'
+import { ReactNode } from 'react';
+import { isPxDemo } from '../../branding/pxDemo';
+import { PxWelcome } from '../../branding/PxWelcome';
+import { InstanceLogo } from '../shared/InstanceLogo';
 
 interface OnboardingCardProps {
-  children: ReactNode
-  footer?: ReactNode
-  title?: string
-  subtitle?: string
-  size?: 'md' | 'lg' | 'xl'
-  topRight?: ReactNode
+  children: ReactNode;
+  footer?: ReactNode;
+  title?: string;
+  subtitle?: string;
+  size?: 'md' | 'lg' | 'xl';
+  topRight?: ReactNode;
 }
 
-export function OnboardingCard({ children, footer, title, subtitle, size, topRight }: OnboardingCardProps) {
+export function OnboardingCard({
+  children,
+  footer,
+  title,
+  subtitle,
+  size,
+  topRight,
+}: OnboardingCardProps) {
   const maxWidthClass = {
     md: 'max-w-2xl',
     lg: 'max-w-4xl',
     xl: 'max-w-5xl',
-  }[size ?? 'md']
+  }[size ?? 'md'];
 
-  return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4">
+  const content = (
+    <div
+      className={`${isPxDemo ? 'px-onboarding ' : ''}relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4`}
+    >
       {topRight && (
-        <div className="absolute top-4 inset-x-4 flex min-w-0 justify-end">
+        <div className="px-onboarding-actions absolute top-4 inset-x-4 flex min-w-0 justify-end">
           {topRight}
         </div>
       )}
 
       <div className={`max-w-full min-w-0 ${maxWidthClass}`}>
-        <InstanceLogo />
+        {!isPxDemo && <InstanceLogo />}
 
         <div className="card w-full max-w-full rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">
           {(title || subtitle) && (
             <div className="text-center mb-8 min-w-0">
-              {title && <h1 className="heading-xl text-balance break-words">{title}</h1>}
-              {subtitle && <p className="text-sm text-text-muted mt-2 max-w-md mx-auto text-balance break-words">{subtitle}</p>}
+              {title && (
+                <h1 className="heading-xl text-balance break-words">{title}</h1>
+              )}
+              {subtitle && (
+                <p className="text-sm text-text-muted mt-2 max-w-md mx-auto text-balance break-words">
+                  {subtitle}
+                </p>
+              )}
             </div>
           )}
           {children}
@@ -45,5 +62,7 @@ export function OnboardingCard({ children, footer, title, subtitle, size, topRig
         )}
       </div>
     </div>
-  )
+  );
+
+  return isPxDemo ? <PxWelcome>{content}</PxWelcome> : content;
 }

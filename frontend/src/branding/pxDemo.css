@@ -1,0 +1,251 @@
+/* TEMPORARY PX demo. Body-scoped tokens override inherited Instance colors,
+   including custom inline colors on <html>, without mutating saved settings. */
+html[data-demo-brand='wlc'] body {
+  --font-sans: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
+  --color-surface: #ffffff;
+  --color-surface-raised: #f6f8f9;
+  --color-surface-overlay: #edf2f4;
+  --color-text: #0a2533;
+  --color-text-secondary: #405563;
+  --color-text-muted: #586c77;
+  --color-border: #dce4e8;
+  --color-border-strong: #afbec7;
+  --color-accent: #006c80;
+  --color-accent-hover: #005565;
+  --color-accent-subtle: #e0f5f8;
+  --color-accent-text: #ffffff;
+  --px-action: #0a2533;
+  --px-action-hover: #174557;
+  --px-action-text: #ffffff;
+  --px-intro: #faf2e5;
+  --px-cyan: #00b2cb;
+  --px-yellow: #f8dd04;
+  --px-lime: #9bc335;
+  --px-pink: #e30e58;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+html[data-demo-brand='wlc'].dark body {
+  --color-surface: #0b1e29;
+  --color-surface-raised: #102a37;
+  --color-surface-overlay: #193744;
+  --color-text: #f3f7fa;
+  --color-text-secondary: #c0cfd7;
+  --color-text-muted: #a0b4c0;
+  --color-border: #304b5a;
+  --color-border-strong: #617d8d;
+  --color-accent: #62d8e8;
+  --color-accent-hover: #9ce7f1;
+  --color-accent-subtle: #183f4a;
+  --color-accent-text: #0a2533;
+  --px-action: #62d8e8;
+  --px-action-hover: #9ce7f1;
+  --px-action-text: #0a2533;
+  --px-intro: #102a37;
+}
+
+html[data-demo-brand='wlc'] .btn-primary {
+  background: var(--px-action);
+  color: var(--px-action-text);
+  border-color: transparent;
+  border-radius: 10px;
+  box-shadow: none;
+}
+html[data-demo-brand='wlc'] .btn-primary:hover:not(:disabled) {
+  background: var(--px-action-hover);
+  box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
+}
+
+html[data-demo-brand='wlc'] .px-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  width: fit-content;
+  min-height: 44px;
+  color: var(--color-text);
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+  text-decoration: none;
+  border-radius: 6px;
+}
+html[data-demo-brand='wlc'] .px-brand-colors {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+}
+html[data-demo-brand='wlc'] .px-brand-colors i {
+  display: block;
+  width: 5px;
+  height: 70%;
+  border-radius: 3px;
+  background: var(--px-cyan);
+}
+html[data-demo-brand='wlc'] .px-brand-colors i:nth-child(2) {
+  background: var(--px-yellow);
+  height: 100%;
+}
+html[data-demo-brand='wlc'] .px-brand-colors i:nth-child(3) {
+  background: var(--px-lime);
+  height: 85%;
+}
+html[data-demo-brand='wlc'] .px-brand-colors i:nth-child(4) {
+  background: var(--px-pink);
+  height: 60%;
+}
+html[data-demo-brand='wlc'] .px-brand-large {
+  font-size: 80px;
+  gap: 20px;
+}
+html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors {
+  height: 64px;
+  gap: 5px;
+}
+html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors i {
+  width: 8px;
+  border-radius: 5px;
+}
+
+html[data-demo-brand='wlc'] .px-welcome {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  min-height: 100svh;
+}
+html[data-demo-brand='wlc'] .px-welcome-intro {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 48px;
+  padding: clamp(32px, 5vw, 80px);
+  background: var(--px-intro);
+  overflow: hidden;
+  isolation: isolate;
+}
+html[data-demo-brand='wlc'] .px-welcome-tagline {
+  max-width: 12ch;
+  font-size: clamp(32px, 3.3vw, 56px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  margin: 0;
+}
+html[data-demo-brand='wlc'] .px-welcome-art {
+  display: flex;
+  gap: clamp(10px, 1.8vw, 28px);
+  align-items: flex-end;
+  min-height: 180px;
+  height: 26vh;
+  max-height: 300px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: auto;
+  padding-top: 32px;
+}
+html[data-demo-brand='wlc'] .px-welcome-art span {
+  flex: 1;
+  height: 80%;
+  border-radius: 999px 999px 12px 12px;
+  background: var(--px-cyan);
+}
+html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(2) {
+  background: var(--px-yellow);
+  height: 100%;
+}
+html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(3) {
+  background: var(--px-lime);
+  height: 90%;
+}
+html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(4) {
+  background: var(--px-pink);
+  height: 65%;
+}
+html[data-demo-brand='wlc'] .px-welcome-content {
+  min-width: 0;
+}
+html[data-demo-brand='wlc'] .px-onboarding {
+  min-height: 100svh;
+  padding: 64px clamp(20px, 4vw, 64px) 40px;
+  background: var(--color-surface);
+  overflow: visible;
+}
+html[data-demo-brand='wlc'] .px-onboarding > div:not(.px-onboarding-actions) {
+  width: 100%;
+  max-width: 640px;
+}
+html[data-demo-brand='wlc'] .px-onboarding .card {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+  background: transparent;
+  overflow: visible;
+  animation: none;
+}
+html[data-demo-brand='wlc'] .px-onboarding h1 {
+  font-size: clamp(26px, 2.5vw, 36px);
+  letter-spacing: -0.035em;
+  line-height: 1.15;
+}
+html[data-demo-brand='wlc'] .px-onboarding .card > .text-center:first-child {
+  text-align: start;
+}
+html[data-demo-brand='wlc']
+  .px-onboarding
+  .card
+  > .text-center:first-child
+  > p {
+  margin-inline: 0;
+}
+html[data-demo-brand='wlc'] .px-onboarding [role='radio'] {
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+@media (max-width: 800px) {
+  html[data-demo-brand='wlc'] .px-welcome {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  html[data-demo-brand='wlc'] .px-welcome-intro {
+    padding: 24px;
+    gap: 20px;
+  }
+  html[data-demo-brand='wlc'] .px-brand-large {
+    font-size: 48px;
+    gap: 12px;
+  }
+  html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors {
+    height: 40px;
+    gap: 3px;
+  }
+  html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors i {
+    width: 5px;
+  }
+  html[data-demo-brand='wlc'] .px-welcome-tagline {
+    max-width: 26ch;
+    font-size: 28px;
+  }
+  html[data-demo-brand='wlc'] .px-welcome-art {
+    display: none;
+  }
+  html[data-demo-brand='wlc'] .px-onboarding {
+    min-height: auto;
+    padding: 64px 24px 32px;
+  }
+}
+
+@media (prefers-contrast: more) {
+  html[data-demo-brand='wlc'] body {
+    --color-text-muted: var(--color-text);
+    --color-border: var(--color-border-strong);
+  }
+}

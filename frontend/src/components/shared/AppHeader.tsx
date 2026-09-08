@@ -1,3 +1,5 @@
+import { isPxDemo } from '../../branding/pxDemo';
+import { PxBrand } from '../../branding/PxBrand';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -83,44 +85,48 @@ export function AppHeader({
               <ArrowLeft className="h-5 w-5" aria-hidden="true" />
             </Link>
           )}
-          <div className="flex items-center gap-2.5">
-            {showIcon && (
-              <div
-                className={`w-8 h-8 rounded-lg ${brandingBadgeClass} flex items-center justify-center`}
-              >
-                {hasLogoImage ? (
-                  <img
-                    src={config.logoUrl}
-                    alt={t('branding.logoAlt', '{{name}} logo', {
-                      name: config.name,
-                    })}
-                    className="w-5 h-5 object-contain"
-                    onError={() => setLogoError(true)}
-                  />
-                ) : (
-                  <DynamicIcon
-                    name={config.icon}
-                    size={18}
-                    className="text-accent"
-                  />
-                )}
-              </div>
-            )}
-            {showName && (
-              <div
-                className={`${showIcon ? 'hidden sm:flex' : 'flex'} flex-col leading-tight`}
-              >
-                <span className="font-semibold text-text tracking-tight">
-                  {config.name}
-                </span>
-                {showTagline && (
-                  <span className="text-[11px] text-text-muted">
-                    {config.headerTagline}
+          {isPxDemo ? (
+            <PxBrand />
+          ) : (
+            <div className="flex items-center gap-2.5">
+              {showIcon && (
+                <div
+                  className={`w-8 h-8 rounded-lg ${brandingBadgeClass} flex items-center justify-center`}
+                >
+                  {hasLogoImage ? (
+                    <img
+                      src={config.logoUrl}
+                      alt={t('branding.logoAlt', '{{name}} logo', {
+                        name: config.name,
+                      })}
+                      className="w-5 h-5 object-contain"
+                      onError={() => setLogoError(true)}
+                    />
+                  ) : (
+                    <DynamicIcon
+                      name={config.icon}
+                      size={18}
+                      className="text-accent"
+                    />
+                  )}
+                </div>
+              )}
+              {showName && (
+                <div
+                  className={`${showIcon ? 'hidden sm:flex' : 'flex'} flex-col leading-tight`}
+                >
+                  <span className="font-semibold text-text tracking-tight">
+                    {config.name}
                   </span>
-                )}
-              </div>
-            )}
-          </div>
+                  {showTagline && (
+                    <span className="text-[11px] text-text-muted">
+                      {config.headerTagline}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Right: Actions */}
