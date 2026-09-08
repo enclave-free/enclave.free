@@ -21,7 +21,7 @@ Primary references:
 
 ## Change
 
-`docling` is a meta-package for `docling-slim[standard]`. Its broad local-model extra pulls in Accelerate. Enclave now requests `docling-slim[format-pdf]` and `docling-ibm-models` directly, preserving the existing PDF converter and layout model along with the existing Torch/Transformers/Sentence Transformers stack. Enclave does not expose Docling's CLI, training, OCR, VLM, or general format-conversion features.
+`docling` is a meta-package for `docling-slim[standard]`. Its broad local-model extra pulls in Accelerate. Enclave now requests `docling-slim[format-pdf]` plus `docling-ibm-models` and `rtree` directly, preserving the existing PDF converter and layout model along with the existing Torch/Transformers/Sentence Transformers stack. Enclave does not expose Docling's CLI, training, OCR, VLM, or general format-conversion features.
 
 The CI model dependency contract rejects an installed Accelerate module and exercises real local SentenceTransformer encoding and PDF converter construction. The CPU artifact verifier also rejects Accelerate. No advisory suppression was added and no authentication, configuration, ingest fallback, or UI behavior was changed.
 
@@ -33,7 +33,7 @@ ENCLAVE_VERIFY_QUALITY_PDF=1 python -m unittest backend.tests.test_model_depende
 CONTAINER_RUNTIME=docker scripts/verify_cpu_backend_image.sh IMAGE
 ```
 
-The second command downloads Docling's normal layout weights and verifies actual PDF conversion directly, without allowing Enclave's PyMuPDF fallback to hide a failure. The local embedding test generates a tiny model and tokenizer locally, so it requires no external model service. The dependency-absence check also runs in the regular backend security CI suite. Fresh image and release results are recorded after verification.
+The second command downloads Docling's normal layout weights and verifies actual PDF conversion directly, without allowing Enclave's PyMuPDF fallback to hide a failure. The local embedding test generates a tiny model and tokenizer locally, so it requires no external model service. The dependency-absence check also runs in the regular backend security CI suite. The fresh minimal image exposed a missing `rtree` import in Docling’s spatial index; adding that direct dependency restored PDF converter construction and actual quality conversion. All four dependency/model checks then passed, including real PDF conversion without fallback. Final artifact and release results are recorded after verification.
 
 ## Compatibility and rollback
 
