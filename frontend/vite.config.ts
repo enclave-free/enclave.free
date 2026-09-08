@@ -16,6 +16,15 @@ export default defineConfig(({ mode }) => {
       {
         name: 'temporary-px-demo-brand',
         transformIndexHtml(html) {
+          if (
+            brand === 'wlc' &&
+            (!html.includes('<html lang="en">') ||
+              !html.includes('<title>Enclave</title>'))
+          ) {
+            throw new Error(
+              'Temporary LIBERATOR branding expects the original HTML root and title; update the branding transform before building.'
+            );
+          }
           return brand === 'wlc'
             ? html
                 .replace(
