@@ -1,0 +1,1149 @@
+{
+  "schema": "issue-539-model-eval-evidence-v2",
+  "fatal_error_type": null,
+  "persona_filter": null,
+  "inventory_only": false,
+  "contact_only": false,
+  "language_filter": null,
+  "inventory_fixture_count": 11,
+  "status": "failed",
+  "passed": false,
+  "fatal": false,
+  "failure_count": 34,
+  "cleanup_failure_count": 0,
+  "expected_case_count": 41,
+  "completed_case_count": 41,
+  "passed_case_count": 7,
+  "failed_case_count": 34,
+  "cases": [
+    {
+      "persona": "generic_user",
+      "case": "en_stale_contact_authority",
+      "answer": "Here are the contact details for **Issue 539 Legal Aid** (Mexico), a legal aid organization:\n\n- **Email:** stale-539@example.test\n- **Phone:** +52-555-0100\n- **Website:** https://stale-539.example.test\n- **Address:** Stale issue 539 office, Mexico\n- **Secure channel:** stale-secure-539\n\nThese details were verified on 2026-09-09 by the issue-539-eval vetting process. Let me know if you need anything else.",
+      "elapsed_ms": 3448.1,
+      "answer_chars": 407,
+      "answer_words": 54,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-88dd99e64a5c52b0"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-88dd99e64a5c52b0"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "all_stale_contacts_present=True"
+    },
+    {
+      "persona": "generic_user",
+      "case": "en_fresh_email",
+      "answer": "The email for **Issue 539 Legal Aid** is: **stale-539@example.test**",
+      "elapsed_ms": 1205.7,
+      "answer_chars": 68,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "en_fresh_phone",
+      "answer": "The phone number for **Issue 539 Legal Aid** is: **+52-555-0100**",
+      "elapsed_ms": 1091.2,
+      "answer_chars": 65,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "en_fresh_url",
+      "answer": "The website for **Issue 539 Legal Aid** is: **https://stale-539.example.test**",
+      "elapsed_ms": 1286.2,
+      "answer_chars": 78,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "en_fresh_address",
+      "answer": "The address for **Issue 539 Legal Aid** is: **Stale issue 539 office, Mexico**",
+      "elapsed_ms": 1098.9,
+      "answer_chars": 78,
+      "answer_words": 13,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "en_fresh_secure_channel",
+      "answer": "The secure channel for **Issue 539 Legal Aid** is: **fresh-secure-539**",
+      "elapsed_ms": 2663.2,
+      "answer_chars": 71,
+      "answer_words": 10,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-88166142b3f21a89"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-88166142b3f21a89"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "fresh=True stale_absent=True tool=True"
+    },
+    {
+      "persona": "generic_user",
+      "case": "es_stale_contact_authority",
+      "answer": "Aquí tienes los datos de contacto de **Issue 539 Legal Aid** (México):\n\n- **Email:** stale-539@example.test\n- **Teléfono:** +52-555-0100\n- **Sitio web:** https://stale-539.example.test\n- **Dirección:** Stale issue 539 office address\n- **Canal seguro:** stale-secure-539\n\nEsta organización está verificada en el sistema de recursos curados de enclave.free y opera en México ofreciendo servicios de ayuda legal. Si necesitas más información o asistencia adicional, no dudes en preguntar.",
+      "elapsed_ms": 3569.5,
+      "answer_chars": 485,
+      "answer_words": 65,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8b9d5ebef17b66c3"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8b9d5ebef17b66c3"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": false,
+      "detail": "all_stale_contacts_present=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "es_fresh_email",
+      "answer": "El email de **Issue 539 Legal Aid** es: **stale-539@example.test**",
+      "elapsed_ms": 1136.6,
+      "answer_chars": 66,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "bounded_inventory",
+      "answer": "Here is the complete inventory of 12 curated resources whose names start with \"Issue 539 Inventory\" (plus one related resource that appeared in the results). All are verified as of 2026-09-09.\n\n| # | Name | Resource ID | Kind | Tags | Region | Contact Pointers | Languages |\n|---|------|-------------|------|------|--------|-----------------|-----------|\n| 1 | Issue 539 Inventory 01 | issue-539-inventory-0-178… | organization | legal | MX | email: inventory-0@example.test | en, es |\n| 2 | Issue 539 Inventory 02 | issue-539-inventory-1-178… | organization | legal | MX | email: inventory-1@example.test | en, es |\n| 3 | Issue 539 Inventory 03 | issue-539-inventory-2-178… | organization | legal | MX | email: inventory-2@example.test | en, es |\n| 4 | Issue 539 Inventory 04 | issue-539-inventory-3-178… | organization | legal | MX | email: inventory-3@example.test | en, es |\n| 5 | Issue 539 Inventory 05 | issue-539-inventory-4-178… | organization | legal | MX | email: inventory-4@example.test | en, es |\n| 6 | Issue 539 Inventory 06 | issue-539-inventory-5-178… | organization | legal | MX | email: inventory-5@example.test | en, es |\n| 7 | Issue 539 Inventory 07 | issue-539-inventory-6-178… | organization | legal | MX | email: inventory-6@example.test | en, es |\n| 8 | Issue 539 Inventory 08 | issue-539-inventory-7-178… | organization | legal | MX | email: inventory-7@example.test | en, es |\n| 9 | Issue 539 Inventory 09 | issue-539-inventory-8-178… | organization | legal | MX | email: inventory-8@example.test | en, es |\n| 10 | Issue 539 Inventory 10 | issue-539-inventory-9-178… | organization | legal | MX | email: inventory-9@example.test | en, es |\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | email: inventory-10@example.test | en, es |\n\n**Total: 11 resources** with names starting \"Issue 539 Inventory.\" All share the same provenance (verified 2026-09-09T21:46:29Z, vetted by issue-539-eval) and are described as synthetic evaluation fixtures marked \"do not contact.\"\n\nA 12th result was returned by the search — **Issue 539 Legal Aid** (resource ID: issue-539-contact-1788990386322) — but its name does not start with \"Issue 539 Inventory,\" so it is excluded from this inventory count. It carries additional contact pointers (phone, URL, address, secure channel) if you need it separately.",
+      "elapsed_ms": 7783.3,
+      "answer_chars": 2362,
+      "answer_words": 373,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-94c454d4aa922af1"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-94c454d4aa922af1"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8ee3cef6a145cf88"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8ee3cef6a145cf88"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=2 previous_metadata=0 page=False names=11 new_names=11 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "generic_user",
+      "case": "inventory_continuation",
+      "answer": "The next page (offset 11) returned only one resource, and it is **Issue 539 Legal Aid** — the same related resource already noted in the previous inventory. Its name does not start with \"Issue 539 Inventory,\" so it is not part of the inventory set.\n\n**The inventory is complete at 11 resources.** There are no additional pages of \"Issue 539 Inventory\" resources to retrieve (`has_more: false`).",
+      "elapsed_ms": 2381.0,
+      "answer_chars": 394,
+      "answer_words": 66,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-bf2bffca7ae56ab1"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-bf2bffca7ae56ab1"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 1,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=1 previous_metadata=2 page=False names=0 new_names=0 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=True"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_stale_contact_authority",
+      "answer": "Here are the contact details for **Issue 539 Legal Aid** (Mexico), a legal aid organization:\n\n- **Email:** stale-539@example.test\n- **Phone:** +52-555-0100\n- **Website:** https://stale-539.example.test\n- **Address:** Stale issue 539 office, Mexico\n- **Secure channel:** stale-secure-539\n\nThese details were last verified on September 9, 2026. Let me know if you need anything else.",
+      "elapsed_ms": 3365.9,
+      "answer_chars": 381,
+      "answer_words": 52,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-95ddbd378816e1b0"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-95ddbd378816e1b0"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "all_stale_contacts_present=True"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_fresh_email",
+      "answer": "The email for **Issue 539 Legal Aid** is: **stale-539@example.test**",
+      "elapsed_ms": 1121.7,
+      "answer_chars": 68,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_fresh_phone",
+      "answer": "The phone number for **Issue 539 Legal Aid** is: **+52-555-0100**",
+      "elapsed_ms": 1087.1,
+      "answer_chars": 65,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_fresh_url",
+      "answer": "The website for **Issue 539 Legal Aid** is: **https://stale-539.example.test**",
+      "elapsed_ms": 1099.6,
+      "answer_chars": 78,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_fresh_address",
+      "answer": "The address for **Issue 539 Legal Aid** is: **Stale issue 539 office, Mexico**",
+      "elapsed_ms": 1194.2,
+      "answer_chars": 78,
+      "answer_words": 13,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "en_fresh_secure_channel",
+      "answer": "The secure channel for **Issue 539 Legal Aid** is: **stale-secure-539**",
+      "elapsed_ms": 1247.7,
+      "answer_chars": 71,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "es_stale_contact_authority",
+      "answer": "Aquí tienes los datos de contacto de **Issue 539 Legal Aid** (México):\n\n- **Email:** stale-539@example.test\n- **Teléfono:** +52-555-0100\n- **Sitio web:** https://stale-539.example.test\n- **Dirección:** Stale issue 539 office address\n- **Canal seguro:** stale-secure-539\n\nEsta organización está verificada en el sistema de recursos curados de enclave.free y ofrece servicios legales en México, con atención en español e inglés. Si necesitas más detalles o ayuda adicional, no dudes en preguntar.",
+      "elapsed_ms": 3165.7,
+      "answer_chars": 494,
+      "answer_words": 68,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-9238fa1db46d1b5d"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-9238fa1db46d1b5d"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": false,
+      "detail": "all_stale_contacts_present=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "es_fresh_email",
+      "answer": "El email de **Issue 539 Legal Aid** es: **stale-539@example.test**",
+      "elapsed_ms": 1109.0,
+      "answer_chars": 66,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "bounded_inventory",
+      "answer": "Here is the complete inventory of **12 ready Curated Resources** whose names start with \"Issue 539 Inventory\":\n\n| # | Name | Resource ID | Kind | Tags | Region | Languages | Contact Pointers | Verified At |\n|---|------|-------------|------|------|--------|-----------|-----------------|-------------|\n| 1 | Issue 539 Inventory 01 | issue-539-inventory-0-178… | organization | legal | MX | en, es | email: inventory-0@example.test | 2026-09-09T21:46:29Z |\n| 2 | Issue 539 Inventory 02 | issue-539-inventory-1-178… | organization | legal | MX | en, es | email: inventory-1@example.test | 2026-09-09T21:46:29Z |\n| 3 | Issue 539 Inventory 03 | issue-539-inventory-2-178… | organization | legal | MX | en, es | email: inventory-2@example.test | 2026-09-09T21:46:29Z |\n| 4 | Issue 539 Inventory 04 | issue-539-inventory-3-178… | organization | legal | MX | en, es | email: inventory-3@example.test | 2026-09-09T21:46:29Z |\n| 5 | Issue 539 Inventory 05 | issue-539-inventory-4-178… | organization | legal | MX | en, es | email: inventory-4@example.test | 2026-09-09T21:46:29Z |\n| 6 | Issue 539 Inventory 06 | issue-539-inventory-5-178… | organization | legal | MX | en, es | email: inventory-5@example.test | 2026-09-09T21:46:29Z |\n| 7 | Issue 539 Inventory 07 | issue-539-inventory-6-178… | organization | legal | MX | en, es | email: inventory-6@example.test | 2026-09-09T21:46:29Z |\n| 8 | Issue 539 Inventory 08 | issue-539-inventory-7-178… | organization | legal | MX | en, es | email: inventory-7@example.test | 2026-09-09T21:46:29Z |\n| 9 | Issue 539 Inventory 09 | issue-539-inventory-8-178… | organization | legal | MX | en, es | email: inventory-8@example.test | 2026-09-09T21:46:29Z |\n| 10 | Issue 539 Inventory 10 | issue-539-inventory-9-178… | organization | legal | MX | en, es | email: inventory-9@example.test | 2026-09-09T21:46:29Z |\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | en, es | email: inventory-10@example.test | 2026-09-09T21:46:29Z |\n| 12 | Issue 539 Legal Aid | issue-539-contact-1788990386322 | organization | legal | MX | en, es | email, phone, URL, address, secure channel | 2026-09-09T21:46:29Z |\n\n**Summary:** 12 total resources returned across two pages (10 + 2), `has_more` is now `false`. All are organizations tagged \"legal,\" region MX, languages en/es, vetted by \"issue-539-eval.\" Note that resource #12 (\"Issue 539 Legal Aid\") does not strictly start with \"Issue 539 Inventory\" — it was returned by the search but has a different name prefix. The 11 resources named \"Issue 539 Inventory 01\" through \"Issue 539 Inventory 11\" are the exact matches for your prefix filter.",
+      "elapsed_ms": 10395.5,
+      "answer_chars": 2655,
+      "answer_words": 409,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8545501741b8063d"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8545501741b8063d"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8d4c627070d1dabc"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8d4c627070d1dabc"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=2 previous_metadata=0 page=False names=11 new_names=11 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "family_member",
+      "case": "inventory_continuation",
+      "answer": "This is the final page (offset 10, `has_more: false`). It contains the same 2 resources already shown in the previous inventory:\n\n| # | Name | Resource ID | Kind | Tags | Region | Languages | Contact Pointers | Verified At |\n|---|------|-------------|------|------|--------|-----------|-----------------|-------------|\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | en, es | email: inventory-10@example.test | 2026-09-09T21:46:29Z |\n| 12 | Issue 539 Legal Aid | issue-539-contact-1788990386322 | organization | legal | MX | en, es | email, phone, URL, address, secure channel | 2026-09-09T21:46:29Z |\n\nThere are no additional pages beyond this. The complete inventory remains **11 resources** whose names start with \"Issue 539 Inventory\" (01–11), plus the 1 related resource \"Issue 539 Legal Aid\" that does not match the prefix. No further results to retrieve.",
+      "elapsed_ms": 3471.5,
+      "answer_chars": 912,
+      "answer_words": 137,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-b16ef9ad8199c98a"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-b16ef9ad8199c98a"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=1 previous_metadata=2 page=False names=1 new_names=0 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_stale_contact_authority",
+      "answer": "Here are the contact details for **Issue 539 Legal Aid** (Mexico), an admin-vetted legal aid organization:\n\n- **Email:** stale-539@example.test\n- **Phone:** +52-555-0100\n- **Website:** https://stale-539.example.test\n- **Address:** Stale issue 539 office, Mexico\n- **Secure channel:** stale-secure-539\n\nThese details were last verified on September 9, 2026. If you need help with a specific legal situation or want me to look for additional resources in Mexico, just let me know.",
+      "elapsed_ms": 3028.4,
+      "answer_chars": 478,
+      "answer_words": 68,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-a851ceef7805533f"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-a851ceef7805533f"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "all_stale_contacts_present=True"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_fresh_email",
+      "answer": "The email for **Issue 539 Legal Aid** is: **stale-539@example.test**",
+      "elapsed_ms": 1108.9,
+      "answer_chars": 68,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_fresh_phone",
+      "answer": "The phone number for **Issue 539 Legal Aid** is: **+52-555-0100**",
+      "elapsed_ms": 1292.0,
+      "answer_chars": 65,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_fresh_url",
+      "answer": "The website for **Issue 539 Legal Aid** is: **https://stale-539.example.test**",
+      "elapsed_ms": 1092.0,
+      "answer_chars": 78,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_fresh_address",
+      "answer": "The address for **Issue 539 Legal Aid** is: **Stale issue 539 office, Mexico**",
+      "elapsed_ms": 1111.8,
+      "answer_chars": 78,
+      "answer_words": 13,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "en_fresh_secure_channel",
+      "answer": "The secure channel for **Issue 539 Legal Aid** is: **stale-secure-539**",
+      "elapsed_ms": 1099.5,
+      "answer_chars": 71,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "es_stale_contact_authority",
+      "answer": "Aquí tienes los datos de contacto de **Issue 539 Legal Aid** (México):\n\n- **Email:** stale-539@example.test\n- **Teléfono:** +52-555-0100\n- **Sitio web:** https://stale-539.example.test\n- **Dirección:** Stale issue 539 office, Mexico\n- **Canal seguro:** stale-secure-539\n\nEsta organización ofrece ayuda legal y está verificada en el sistema de recursos curados de enclave.free. Si necesitas más información o asistencia adicional, no dudes en preguntar.",
+      "elapsed_ms": 2832.7,
+      "answer_chars": 452,
+      "answer_words": 60,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-b64524547c0ebc32"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-b64524547c0ebc32"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "all_stale_contacts_present=True"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "es_fresh_email",
+      "answer": "El email de **Issue 539 Legal Aid** es: **stale-539@example.test**",
+      "elapsed_ms": 1188.1,
+      "answer_chars": 66,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "bounded_inventory",
+      "answer": "Here is the complete inventory of **12 curated resources** whose names start with \"Issue 539 Inventory\":\n\n| # | Name | Resource ID | Kind | Tags | Region | Languages | Contact Pointers | Verified At | Vetted By |\n|---|------|-------------|------|------|--------|-----------|-----------------|-------------|-----------|\n| 1 | Issue 539 Inventory 01 | issue-539-inventory-0-178… | organization | legal | MX | en, es | email: inventory-0@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 2 | Issue 539 Inventory 02 | issue-539-inventory-1-178… | organization | legal | MX | en, es | email: inventory-1@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 3 | Issue 539 Inventory 03 | issue-539-inventory-2-178… | organization | legal | MX | en, es | email: inventory-2@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 4 | Issue 539 Inventory 04 | issue-539-inventory-3-178… | organization | legal | MX | en, es | email: inventory-3@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 5 | Issue 539 Inventory 05 | issue-539-inventory-4-178… | organization | legal | MX | en, es | email: inventory-4@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 6 | Issue 539 Inventory 06 | issue-539-inventory-5-178… | organization | legal | MX | en, es | email: inventory-5@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 7 | Issue 539 Inventory 07 | issue-539-inventory-6-178… | organization | legal | MX | en, es | email: inventory-6@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 8 | Issue 539 Inventory 08 | issue-539-inventory-7-178… | organization | legal | MX | en, es | email: inventory-7@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 9 | Issue 539 Inventory 09 | issue-539-inventory-8-178… | organization | legal | MX | en, es | email: inventory-8@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 10 | Issue 539 Inventory 10 | issue-539-inventory-9-178… | organization | legal | MX | en, es | email: inventory-9@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | en, es | email: inventory-10@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 12 | Issue 539 Legal Aid | issue-539-contact-1788990386322 | organization | legal | MX | en, es | email: fresh-539@example.test · phone: +52-555-0199 · url: https://fresh-539.example.test · address: Fresh issue 539 office, Mexico · secure_channel: fresh-secure-539 | 2026-09-09T21:46:29Z | issue-539-eval |\n\n**Summary:** 12 total resources returned across two pages (10 + 2), `has_more` is now `false`. All are organizations tagged \"legal,\" region MX, languages en/es, verified 2026-09-09 by issue-539-eval. Note that resource #12 (\"Issue 539 Legal Aid\") does not have \"Inventory\" in its name but was returned by the search; it is included here for completeness. All resources are described as synthetic evaluation fixtures (\"do not contact\").",
+      "elapsed_ms": 23920.8,
+      "answer_chars": 2958,
+      "answer_words": 436,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-a94df0237b58075f"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-a94df0237b58075f"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8c13027edc73c158"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8c13027edc73c158"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=2 previous_metadata=0 page=False names=11 new_names=11 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "former_political_prisoner",
+      "case": "inventory_continuation",
+      "answer": "This is the final page (offset 10) — the same 2 resources already shown as items #11 and #12 in the previous inventory:\n\n| # | Name | Resource ID | Kind | Tags | Region | Languages | Contact Pointers | Verified At | Vetted By |\n|---|------|-------------|------|------|--------|-----------|-----------------|-------------|-----------|\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | en, es | email: inventory-10@example.test | 2026-09-09T21:46:29Z | issue-539-eval |\n| 12 | Issue 539 Legal Aid | issue-539-contact-1788990386322 | organization | legal | MX | en, es | email: fresh-539@example.test · phone: +52-555-0199 · url: https://fresh-539.example.test · address: Fresh issue 539 office, Mexico · secure_channel: fresh-secure-539 | 2026-09-09T21:46:29Z | issue-539-eval |\n\n`has_more` is `false` and `next_offset` is `null`, so there are no further pages. The complete inventory remains 12 resources total.",
+      "elapsed_ms": 8109.5,
+      "answer_chars": 959,
+      "answer_words": 137,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-8ce839c8f2cf817e"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-8ce839c8f2cf817e"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=1 previous_metadata=2 page=False names=1 new_names=0 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_stale_contact_authority",
+      "answer": "Here are the contact details for **Issue 539 Legal Aid** (Mexico):\n\n- **Email:** stale-539@example.test\n- **Phone:** +52-555-0100\n- **Website:** https://stale-539.example.test\n- **Address:** Stale issue 539 office, Mexico\n- **Secure channel:** stale-secure-539\n\nThis organization is admin-vetted and verified as of September 9, 2026. Let me know if you need anything else.",
+      "elapsed_ms": 2721.6,
+      "answer_chars": 372,
+      "answer_words": 50,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-98dd4eaef05a7f4e"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-98dd4eaef05a7f4e"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": true,
+      "detail": "all_stale_contacts_present=True"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_fresh_email",
+      "answer": "The email for **Issue 539 Legal Aid** is: **stale-539@example.test**",
+      "elapsed_ms": 1132.0,
+      "answer_chars": 68,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_fresh_phone",
+      "answer": "The phone number for **Issue 539 Legal Aid** is: **+52-555-0100**",
+      "elapsed_ms": 1388.5,
+      "answer_chars": 65,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_fresh_url",
+      "answer": "The website for **Issue 539 Legal Aid** is: **https://stale-539.example.test**",
+      "elapsed_ms": 1132.8,
+      "answer_chars": 78,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_fresh_address",
+      "answer": "The address for **Issue 539 Legal Aid** is: **Stale issue 539 office, Mexico**",
+      "elapsed_ms": 1135.3,
+      "answer_chars": 78,
+      "answer_words": 13,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "en_fresh_secure_channel",
+      "answer": "The secure channel for **Issue 539 Legal Aid** is: **stale-secure-539**",
+      "elapsed_ms": 1125.0,
+      "answer_chars": 71,
+      "answer_words": 10,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": false,
+      "detail": "fresh=False stale_absent=False tool=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "es_stale_contact_authority",
+      "answer": "Aquí tienes los datos de contacto de **Issue 539 Legal Aid** (México), organización verificada que ofrece ayuda legal:\n\n- **Email:** stale-539@example...\n- **Teléfono:** +52-555-0100\n- **Sitio web:** https://stale-539...\n- **Dirección:** Stale issue 539 o...\n- **Canal seguro:** stale-secure-539\n\nLos datos fueron verificados el 9 de septiembre de 2026. Si necesitas más detalles o buscas organizaciones adicionales en México, avísame.",
+      "elapsed_ms": 3679.7,
+      "answer_chars": 435,
+      "answer_words": 59,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-ae7f17dc7e4ca8a1"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-ae7f17dc7e4ca8a1"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": false,
+      "detail": "all_stale_contacts_present=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "es_fresh_email",
+      "answer": "El email verificado de **Issue 539 Legal Aid** (México) es: **fresh-539@example...**\n\n¿Necesitas algún otro dato de contacto?",
+      "elapsed_ms": 2324.2,
+      "answer_chars": 125,
+      "answer_words": 17,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-937ea1093b3285da"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-937ea1093b3285da"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        }
+      ],
+      "passed": false,
+      "detail": "fresh=False stale_absent=True tool=True"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "bounded_inventory",
+      "answer": "Here is the complete inventory of **12 ready Curated Resources** whose names start with \"Issue 539 Inventory\":\n\n| # | Name | Resource ID | Kind | Tags | Region | Languages | Contact Pointers |\n|---|------|-------------|------|------|--------|-----------|-----------------|\n| 1 | Issue 539 Inventory 01 | issue-539-inventory-0-178… | organization | legal | MX | en, es | inventory-0@example.test |\n| 2 | Issue 539 Inventory 02 | issue-539-inventory-1-178… | organization | legal | MX | en, es | inventory-1@example.test |\n| 3 | Issue 539 Inventory 03 | issue-539-inventory-2-178… | organization | legal | MX | en, es | inventory-2@example.test |\n| 4 | Issue 539 Inventory 04 | issue-539-inventory-3-178… | organization | legal | MX | en, es | inventory-3@example.test |\n| 5 | Issue 539 Inventory 05 | issue-539-inventory-4-178… | organization | legal | MX | en, es | inventory-4@example.test |\n| 6 | Issue 539 Inventory 06 | issue-539-inventory-5-178… | organization | legal | MX | en, es | inventory-5@example.test |\n| 7 | Issue 539 Inventory 07 | issue-539-inventory-6-178… | organization | legal | MX | en, es | inventory-6@example.test |\n| 8 | Issue 539 Inventory 08 | issue-539-inventory-7-178… | organization | legal | MX | en, es | inventory-7@example.test |\n| 9 | Issue 539 Inventory 09 | issue-539-inventory-8-178… | organization | legal | MX | en, es | inventory-8@example.test |\n| 10 | Issue 539 Inventory 10 | issue-539-inventory-9-178… | organization | legal | MX | en, es | inventory-9@example.test |\n| 11 | Issue 539 Inventory 11 | issue-539-inventory-10-1788990386322 | organization | legal | MX | en, es | inventory-10@example.test |\n\n**Note:** The 12th result returned in the query is named \"Issue 539 Legal Aid\" (resource ID: issue-539-contact-1788990386322), which does **not** start with \"Issue 539 Inventory\" and appears to have been included as a relevance match. Excluding it, there are **11 resources** whose names start with \"Issue 539 Inventory.\"\n\nAll 11 share the same profile: kind = organization, tag = legal, region = Mexico (MX), languages = English/Spanish, verified at 2026-09-09T21:46:29Z by \"issue-539-eval,\" and each carries a single email pointer. All are described as synthetic evaluation fixtures.",
+      "elapsed_ms": 7091.3,
+      "answer_chars": 2236,
+      "answer_words": 354,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-a83dcc68c43ddc07"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-a83dcc68c43ddc07"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-877ae6f775f9d4c7"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-877ae6f775f9d4c7"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 12,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 2,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=2 previous_metadata=0 page=False names=11 new_names=11 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=False"
+    },
+    {
+      "persona": "solidarity_networks_for_political_prisoners",
+      "case": "inventory_continuation",
+      "answer": "The next page (offset 11) returns only one resource, and it is **\"Issue 539 Legal Aid\"** (resource ID: `issue-539-contact-1788990386322`) — the same relevance match noted previously. It does **not** start with \"Issue 539 Inventory,\" so there are no additional inventory resources on this page.\n\nCombined with the prior results, the complete inventory remains **11 resources** whose names start with \"Issue 539 Inventory\" (Inventory 01 through Inventory 11). There are no further pages to retrieve (`has_more: false`).",
+      "elapsed_ms": 2863.8,
+      "answer_chars": 517,
+      "answer_words": 76,
+      "executed_tools": [
+        "curated-resources",
+        "find_resources"
+      ],
+      "tool_lifecycle": [
+        {
+          "kind": "tool_summary",
+          "tool": "curated-resources",
+          "status": "completed"
+        },
+        {
+          "kind": "tool_call",
+          "tool": "find_resources",
+          "status": "running",
+          "call_id": "chatcmpl-tool-9a470f4e01a2b9fe"
+        },
+        {
+          "kind": "tool_result",
+          "tool": "find_resources",
+          "status": "succeeded",
+          "call_id": "chatcmpl-tool-9a470f4e01a2b9fe"
+        }
+      ],
+      "resource_tool_metadata": [
+        {
+          "returned_count": 1,
+          "total_count": 12,
+          "has_more": false,
+          "next_offset": null
+        }
+      ],
+      "passed": false,
+      "detail": "tool=True metadata=1 previous_metadata=2 page=False names=0 new_names=0 combined_names=11 unsupported_complete=False qualified=False wrong_numeric=True"
+    },
+    {
+      "persona": "generic_user",
+      "case": "disabled_tools_no_invented_contact",
+      "answer": "The email address associated with your account is **issue-539-generic_user-1788990386322@example.test**.",
+      "elapsed_ms": 1003.8,
+      "answer_chars": 104,
+      "answer_words": 9,
+      "executed_tools": [],
+      "tool_lifecycle": [],
+      "resource_tool_metadata": [],
+      "passed": true,
+      "detail": "fresh=False stale_absent=True tool=True"
+    }
+  ]
+}

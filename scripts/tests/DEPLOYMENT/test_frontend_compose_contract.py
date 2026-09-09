@@ -19,13 +19,14 @@ DEVELOPMENT_OVERRIDE = "docker-compose.frontend-dev.yml"
 
 
 def render_compose(*files: str) -> dict[str, object]:
-    command = ["docker", "compose"]
+    command = ["docker", "compose", "--env-file", os.devnull]
     for compose_file in files:
         command.extend(("-f", compose_file))
     command.extend(("config", "--format", "json"))
 
     environment = os.environ.copy()
     environment.pop("TINFOIL_MODEL", None)
+    environment.pop("TINFOIL_REASONING_EFFORT", None)
     environment.pop("TINFOIL_MODEL_FALLBACKS", None)
     environment.setdefault("LLM_API_KEY", "compose-contract-test")
     environment.setdefault("INTERNAL_AGENT_TOKEN", "compose-contract-test")
@@ -65,9 +66,10 @@ class FrontendComposeContractTests(unittest.TestCase):
         backend_environment = backend["environment"]
         assert isinstance(sage_environment, dict)
         assert isinstance(backend_environment, dict)
-        self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-2")
+        self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-3-flash")
+        self.assertEqual(sage_environment["TINFOIL_REASONING_EFFORT"], "low")
         self.assertNotIn("TINFOIL_MODEL_FALLBACKS", sage_environment)
-        self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-2")
+        self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-3-flash")
 
     def test_default_topology_is_the_production_frontend(self) -> None:
         frontend = frontend_service(render_compose(*BASE_COMPOSE_FILES))

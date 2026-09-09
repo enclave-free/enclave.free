@@ -1,0 +1,84 @@
+{
+  "baseline": {
+    "model": "glm-5-2",
+    "conversation": {
+      "passed_scenarios": 9,
+      "scenario_count": 10,
+      "completed_turns": 12,
+      "turn_count": 12,
+      "median_first_visible_ms": 2767.05,
+      "median_done_ms": 3567.2,
+      "warning_count": 13,
+      "scenario_statuses": {
+        "admin_no_tools_control": "passed",
+        "admin_config_confirmed_instance_update": "passed",
+        "admin_deployment_readiness": "passed",
+        "admin_database_direct_select": "passed",
+        "admin_database_natural_language_guardrail": "passed",
+        "user_knowledge_assistance": "passed",
+        "user_curated_resource_referral": "failed",
+        "user_knowledge_and_resource_assistance": "passed",
+        "user_consent_boundary": "passed",
+        "user_nicaragua_referral_relevance": "passed"
+      }
+    },
+    "legacy": {
+      "completed_turns": 25,
+      "error_count": 0,
+      "summed_seconds": 254.5,
+      "median_seconds": 6.8,
+      "grading_enabled": false
+    },
+    "contact_eval": {
+      "status": "failed",
+      "expected_case_count": 41,
+      "completed_case_count": 41,
+      "passed_case_count": 7,
+      "failed_case_count": 34,
+      "cleanup_failure_count": 0
+    },
+    "reasoning_effort": "none",
+    "sage_commit": "f41321e14125316130363e2333b6979409d44ae9"
+  },
+  "candidate": {
+    "model": "glm-5-3-flash",
+    "conversation": {
+      "passed_scenarios": 8,
+      "scenario_count": 10,
+      "completed_turns": 12,
+      "turn_count": 12,
+      "median_first_visible_ms": 2126.05,
+      "median_done_ms": 3306.8500000000004,
+      "warning_count": 8,
+      "scenario_statuses": {
+        "admin_no_tools_control": "passed",
+        "admin_config_confirmed_instance_update": "passed",
+        "admin_deployment_readiness": "passed",
+        "admin_database_direct_select": "passed",
+        "admin_database_natural_language_guardrail": "passed",
+        "user_knowledge_assistance": "failed",
+        "user_curated_resource_referral": "passed",
+        "user_knowledge_and_resource_assistance": "failed",
+        "user_consent_boundary": "passed",
+        "user_nicaragua_referral_relevance": "passed"
+      }
+    },
+    "legacy": {
+      "completed_turns": 25,
+      "error_count": 0,
+      "summed_seconds": 162.4,
+      "median_seconds": 5.4,
+      "grading_enabled": false
+    },
+    "contact_eval": {
+      "status": "failed",
+      "expected_case_count": 41,
+      "completed_case_count": 41,
+      "passed_case_count": 4,
+      "failed_case_count": 37,
+      "cleanup_failure_count": 0
+    },
+    "reasoning_effort": "low",
+    "sage_commit": "0f24926f27cef7d51a4ba8ac9dbd5fd4e9058846"
+  }
+}

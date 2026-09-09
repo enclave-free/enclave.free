@@ -1,0 +1,237 @@
+{
+  "api_base": "http://127.0.0.1:18000",
+  "topology": "docker compose gateway",
+  "results": [
+    {
+      "scenario": "no_tools",
+      "tools": [],
+      "first_event_ms": 133.8,
+      "first_trace_or_tool_feedback_ms": 917.0,
+      "first_visible_assistant_token_ms": 918.7,
+      "done_ms": 1160.0,
+      "answer_chars": 107,
+      "answer_delta_count": 9,
+      "provider_streamed_multiple_answer_deltas": true,
+      "model_call_count": 0,
+      "correction_call_count": 0,
+      "retry_count": 0,
+      "tool_execution_ms": 0.0,
+      "terminal_prose_zero_corrections": true,
+      "deterministic_terminal_no_final_model_call": null,
+      "model": "glm-5-2",
+      "provider": "sage",
+      "timing_phases": [
+        {
+          "phase": "preparing_tools",
+          "elapsed_ms": 0
+        },
+        {
+          "phase": "tool_loop",
+          "elapsed_ms": 48
+        },
+        {
+          "phase": "writing_answer",
+          "elapsed_ms": 863
+        }
+      ],
+      "tool_statuses": [],
+      "background_timing": {
+        "persistence_ms": null,
+        "embedding_ms": null,
+        "availability": "not exposed by the public stream; deferred persistence/embedding behavior is covered by Sage runtime tests"
+      }
+    },
+    {
+      "scenario": "config_setup_summary",
+      "tools": [
+        "admin-config"
+      ],
+      "first_event_ms": 107.6,
+      "first_trace_or_tool_feedback_ms": 829.1,
+      "first_visible_assistant_token_ms": 3602.8,
+      "done_ms": 3627.9,
+      "answer_chars": 1070,
+      "answer_delta_count": 1,
+      "provider_streamed_multiple_answer_deltas": false,
+      "model_call_count": 0,
+      "correction_call_count": 0,
+      "retry_count": 0,
+      "tool_execution_ms": 11.0,
+      "terminal_prose_zero_corrections": true,
+      "deterministic_terminal_no_final_model_call": false,
+      "model": "glm-5-2",
+      "provider": "sage",
+      "timing_phases": [
+        {
+          "phase": "preparing_tools",
+          "elapsed_ms": 0
+        },
+        {
+          "phase": "tool_loop",
+          "elapsed_ms": 41
+        },
+        {
+          "phase": "writing_answer",
+          "elapsed_ms": 3559
+        }
+      ],
+      "tool_statuses": [
+        {
+          "id": "admin-config:read_admin_setup_summary",
+          "status": "completed",
+          "warnings": []
+        }
+      ],
+      "background_timing": {
+        "persistence_ms": null,
+        "embedding_ms": null,
+        "availability": "not exposed by the public stream; deferred persistence/embedding behavior is covered by Sage runtime tests"
+      }
+    },
+    {
+      "scenario": "config_only",
+      "tools": [
+        "admin-config"
+      ],
+      "first_event_ms": 105.5,
+      "first_trace_or_tool_feedback_ms": 800.2,
+      "first_visible_assistant_token_ms": 2262.1,
+      "done_ms": 2285.4,
+      "answer_chars": 281,
+      "answer_delta_count": 1,
+      "provider_streamed_multiple_answer_deltas": false,
+      "model_call_count": 0,
+      "correction_call_count": 0,
+      "retry_count": 0,
+      "tool_execution_ms": 11.0,
+      "terminal_prose_zero_corrections": true,
+      "deterministic_terminal_no_final_model_call": null,
+      "model": "glm-5-2",
+      "provider": "sage",
+      "timing_phases": [
+        {
+          "phase": "preparing_tools",
+          "elapsed_ms": 0
+        },
+        {
+          "phase": "tool_loop",
+          "elapsed_ms": 38
+        },
+        {
+          "phase": "writing_answer",
+          "elapsed_ms": 2219
+        }
+      ],
+      "tool_statuses": [
+        {
+          "id": "admin-config:read_admin_setup_summary",
+          "status": "completed",
+          "warnings": []
+        }
+      ],
+      "background_timing": {
+        "persistence_ms": null,
+        "embedding_ms": null,
+        "availability": "not exposed by the public stream; deferred persistence/embedding behavior is covered by Sage runtime tests"
+      }
+    },
+    {
+      "scenario": "database_natural_language_guarded",
+      "tools": [
+        "db-query"
+      ],
+      "first_event_ms": 103.4,
+      "first_trace_or_tool_feedback_ms": 801.4,
+      "first_visible_assistant_token_ms": 6069.0,
+      "done_ms": 6148.1,
+      "answer_chars": 842,
+      "answer_delta_count": 1,
+      "provider_streamed_multiple_answer_deltas": false,
+      "model_call_count": 0,
+      "correction_call_count": 0,
+      "retry_count": 0,
+      "tool_execution_ms": 4.0,
+      "terminal_prose_zero_corrections": true,
+      "deterministic_terminal_no_final_model_call": null,
+      "model": "glm-5-2",
+      "provider": "sage",
+      "timing_phases": [
+        {
+          "phase": "preparing_tools",
+          "elapsed_ms": 0
+        },
+        {
+          "phase": "tool_loop",
+          "elapsed_ms": 38
+        },
+        {
+          "phase": "writing_answer",
+          "elapsed_ms": 6019
+        }
+      ],
+      "tool_statuses": [
+        {
+          "id": "db-query",
+          "status": "guarded",
+          "warnings": [
+            "db_query_rejected"
+          ]
+        }
+      ],
+      "background_timing": {
+        "persistence_ms": null,
+        "embedding_ms": null,
+        "availability": "not exposed by the public stream; deferred persistence/embedding behavior is covered by Sage runtime tests"
+      }
+    },
+    {
+      "scenario": "database_direct_select",
+      "tools": [
+        "db-query"
+      ],
+      "first_event_ms": 118.1,
+      "first_trace_or_tool_feedback_ms": 807.7,
+      "first_visible_assistant_token_ms": 1848.1,
+      "done_ms": 1874.8,
+      "answer_chars": 120,
+      "answer_delta_count": 1,
+      "provider_streamed_multiple_answer_deltas": false,
+      "model_call_count": 0,
+      "correction_call_count": 0,
+      "retry_count": 0,
+      "tool_execution_ms": 1.0,
+      "terminal_prose_zero_corrections": true,
+      "deterministic_terminal_no_final_model_call": null,
+      "model": "glm-5-2",
+      "provider": "sage",
+      "timing_phases": [
+        {
+          "phase": "preparing_tools",
+          "elapsed_ms": 0
+        },
+        {
+          "phase": "tool_loop",
+          "elapsed_ms": 42
+        },
+        {
+          "phase": "writing_answer",
+          "elapsed_ms": 1800
+        }
+      ],
+      "tool_statuses": [
+        {
+          "id": "db-query",
+          "status": "completed",
+          "warnings": [
+            "raw_results_redacted"
+          ]
+        }
+      ],
+      "background_timing": {
+        "persistence_ms": null,
+        "embedding_ms": null,
+        "availability": "not exposed by the public stream; deferred persistence/embedding behavior is covered by Sage runtime tests"
+      }
+    }
+  ]
+}
