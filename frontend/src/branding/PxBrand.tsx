@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { PX_DEMO_NAME } from './pxDemo';
+import { PX_DEMO_ATTRIBUTION, PX_DEMO_NAME } from './pxDemo';
 
 /** LIBERATOR treatment (historical PX module name), using WLC's palette; not the WLC wordmark. */
 export function PxBrand({ large = false }: { large?: boolean }) {
@@ -15,7 +15,10 @@ export function PxBrand({ large = false }: { large?: boolean }) {
         <i />
         <i />
       </span>
-      <span>{PX_DEMO_NAME}</span>
+      <span className="px-brand-text">
+        <span>{PX_DEMO_NAME}</span>
+        <span className="px-brand-byline">{PX_DEMO_ATTRIBUTION}</span>
+      </span>
     </Link>
   );
 }

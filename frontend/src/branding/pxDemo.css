@@ -74,6 +74,21 @@ html[data-demo-brand='wlc'] .px-brand {
   text-decoration: none;
   border-radius: 6px;
 }
+html[data-demo-brand='wlc'] .px-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+html[data-demo-brand='wlc'] .px-brand-byline {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+}
+html[data-demo-brand='wlc'] .px-brand-large .px-brand-byline {
+  font-size: 14px;
+}
 html[data-demo-brand='wlc'] .px-brand-colors {
   display: flex;
   align-items: center;
