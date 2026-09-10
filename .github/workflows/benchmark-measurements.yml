@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install evaluator dependencies
-        run: python -m pip install requests==2.34.2 httpx==0.28.1
+        run: python -m pip install requests==2.34.2 httpx==0.28.1 pycryptodome==3.23.0 coincurve==21.0.0
       - name: Verify measurement, review, corpus, and resource contracts
         run: |
           python -m unittest discover -s scripts/benches
