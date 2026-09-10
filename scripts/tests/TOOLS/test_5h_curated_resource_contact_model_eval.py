@@ -5,12 +5,13 @@ import argparse, hashlib, json, math, os, re, subprocess, time, unicodedata, uui
 from collections import namedtuple
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlsplit
 import requests
 
 from scripts.benches.synthetic_environment import (
+    is_empty_synthetic_environment,
+    validate_loopback_api_base,
     verify_http_target,
-    verify_synthetic_environment,
+    verify_empty_synthetic_environment,
 )
 
 RUNNER_CODE_HASH = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -61,29 +62,11 @@ CONTACT_FOLLOWUPS = {
         "secure_channel": "¿Me das el canal seguro?",
     },
 }
-CONTACT_REPLAY_CASES = {
-    "en": tuple(CONTACT_FOLLOWUPS["en"].items()),
-    "es": tuple(CONTACT_FOLLOWUPS["es"].items()),
-}
 INVENTORY_LIMIT = 10
 INVENTORY_NAMES = tuple(
     f"Directory Sample {index:02d}"
     for index in range(1, INVENTORY_LIMIT + 2)
 )
-CASES = [
-    ("en", "email", "What is the email address?", "Can you give me the email?", 0),
-    ("es", "email", "¿Cuál es el correo electrónico?", "¿Me puedes dar el email?", 1),
-    ("en", "phone", "What is the phone number?", "Can you give me the phone number?", 0),
-    ("es", "phone", "¿Cuál es el teléfono?", "¿Me das el número de teléfono?", 1),
-    ("en", "url", "What is the website?", "Can you give me the website?", 0),
-    ("es", "url", "¿Cuál es el sitio web?", "¿Me das el sitio web?", 1),
-    ("en", "address", "What is the address?", "Can you give me the address?", 0),
-    ("es", "address", "¿Cuál es la dirección?", "¿Me das la dirección?", 1),
-    ("en", "secure_channel", "What secure channel is listed?", "Can you give me the secure channel?", 0),
-    ("es", "secure_channel", "¿Cuál es el canal seguro?", "¿Me das el canal seguro?", 1),
-]
-
-
 def fixture_contacts(suffix: str = "unit") -> tuple[dict[str, str], dict[str, str]]:
     """Return two distinct, neutral contact snapshots for one evaluation."""
     marker = hashlib.sha256(str(suffix).encode()).hexdigest()[:8]
@@ -142,7 +125,6 @@ def expected_case_ids(
     modality_filter: str | None = None,
     journey_filter: str | None = None,
     profile: str = "full",
-    repeat: int = 1,
 ) -> list[str]:
     """Return the exact plan; missing or duplicate evidence is a harness failure."""
     personas = [p for p in PERSONAS if persona_filter is None or p.key == persona_filter]
@@ -155,16 +137,14 @@ def expected_case_ids(
         modalities = [m for m in modalities if m == "email"] or modalities[:1]
     ids: list[str] = []
     if not inventory_only:
-        for repeat_index in range(repeat):
-            repeat_suffix = "" if repeat == 1 else f"::repeat{repeat_index + 1}"
-            for persona in personas:
-                for language in languages:
-                    for journey in journeys:
-                        for modality in modalities:
-                            for turn in (1, 2):
-                                ids.append(journey_case_id(persona.key, language, journey, modality, turn) + repeat_suffix)
+        for persona in personas:
+            for language in languages:
+                for journey in journeys:
+                    for modality in modalities:
+                        for turn in (1, 2):
+                            ids.append(journey_case_id(persona.key, language, journey, modality, turn))
         if persona_filter in (None, "generic_user") and not journey_filter and not modality_filter:
-            if profile != "smoke" and repeat == 1:
+            if profile != "smoke":
                 ids.append("control::generic_user::no_tools::email")
     if not contact_only:
         inventory_language = language_filter or "en"
@@ -176,17 +156,6 @@ def expected_case_ids(
                 ]
             )
     return ids
-
-
-def initial_message(language: str, initial: str) -> str:
-    if language == "es":
-        return f"{ORG_NAME} está en México y ofrece ayuda legal. {initial} Responde en español."
-    return f"{ORG_NAME} is in Mexico and provides legal help. {initial} Answer in English."
-
-
-def context_free_followup(text: str) -> bool:
-    forbidden = (ORG_NAME, "Acme Legal Aid", "Mexico", "legal help", "legal aid")
-    return not any(term.casefold() in text.casefold() for term in forbidden)
 
 
 def contact_prompt(language: str, modality: str, *, turn: int) -> str:
@@ -226,17 +195,6 @@ class _ComposeBackendRunner:
     def run_backend_python(self, source: str, timeout: int = 120) -> str:
         return "\n".join(backend_python(source))
 
-
-def preflight_synthetic_environment(
-    *, verifier=verify_synthetic_environment, token: str | None = None
-) -> dict[str, Any]:
-    """Reject a local instance containing unknown rows before fixture mutation."""
-    return verifier(_ComposeBackendRunner(), token=token)
-
-
-def preflight_http_target(*, api_base: str) -> bool:
-    """Prove that the HTTP origin and backend used by this run are the same."""
-    return verify_http_target(_ComposeBackendRunner(), api_base)
 
 def derive_ephemeral_admin_pubkey(suffix: str) -> str:
     """Derive a deterministic valid secp256k1 x-only public key marker."""
@@ -350,7 +308,16 @@ print(json.dumps({{"token": auth.create_session_token(user_id, email), "user_id"
     return fixtures
 
 def req(base: str, token: str, method: str, path: str, payload: dict[str, Any] | None = None, timeout: float = 180) -> requests.Response:
-    return requests.request(method, base.rstrip("/") + path, headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"}, json=payload, timeout=timeout)
+    with requests.Session() as session:
+        session.trust_env = False
+        return session.request(
+            method,
+            base.rstrip("/") + path,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json=payload,
+            timeout=timeout,
+            allow_redirects=False,
+        )
 
 def parse_sse(raw: str) -> list[dict[str, Any]]:
     out = []
@@ -505,32 +472,6 @@ def evidence_entry(
     if isinstance(observed_model, str) and observed_model:
         entry["model"] = observed_model
     return entry
-
-
-def score_contact_turn(
-    answer: str,
-    trace: Any,
-    fresh: str,
-    stale_contacts: dict[str, str],
-    tool_enabled: bool = True,
-) -> tuple[bool, str]:
-    dimensions = score_contact_dimensions(
-        answer,
-        trace,
-        expected=fresh,
-        old_contacts=stale_contacts,
-        lookup_required=tool_enabled,
-        tool_enabled=tool_enabled,
-    )
-    # Compatibility wrapper: historical callers treated any old literal as a
-    # deterministic failure. The modern matrix uses quality_passed below and
-    # leaves old-literal interpretation to semantic review.
-    return bool(dimensions["quality_passed"] and dimensions["current_old"]["passed"]), (
-        f"exact_pointer={dimensions['exact_pointer']['passed']} "
-        f"current_old={dimensions['current_old']['passed']} "
-        f"lookup={dimensions['lookup']['passed']} "
-        f"stale_absent={dimensions['current_old']['passed']}"
-    )
 
 
 def exact_pointer_match(answer: str, expected: str, modality: str | None = None) -> bool:
@@ -778,41 +719,6 @@ def score_inventory_turn(
     return passed, f"tool={tool_ok} metadata={len(metadata)} previous_metadata={len(previous_metadata)} page={page_ok} names={len(answer_names)} new_names={len(answer_names - previous_names)} combined_names={len(combined_names)} backend_totals={sorted(actual_totals)} unsupported_complete={unsupported_complete_claim} qualified={qualified_or_negated} wrong_numeric={wrong_numeric_claim} duplicate_names={duplicate_names}"
 
 
-def expected_case_count(
-    persona_filter: str | None,
-    inventory_only: bool,
-    contact_only: bool,
-    language_filter: str | None = None,
-) -> int:
-    selected = [
-        persona for persona in PERSONAS if persona_filter is None or persona.key == persona_filter
-    ]
-    languages = [
-        language
-        for language in REPLAY_LANGUAGES
-        if language_filter is None or language == language_filter
-    ]
-    # Legacy count retained for callers that compare historical v2 evidence.
-    # New executions use ``planned_case_count``/``expected_case_ids``.
-    contact_cases = 0 if inventory_only else len(selected) * sum(
-        1 + (len(CONTACT_REPLAY_CASES[language]) if language == "en" else 1)
-        for language in languages
-    )
-    inventory_cases = 0 if contact_only else len(selected) * 2
-    disabled_control = (
-        1
-        if not inventory_only
-        and any(persona.key == "generic_user" for persona in selected)
-        else 0
-    )
-    return contact_cases + inventory_cases + disabled_control
-
-
-def planned_case_count(**kwargs: Any) -> int:
-    """Count the modern plan, including both turns of each independent journey."""
-    return len(expected_case_ids(**kwargs))
-
-
 def validate_case_ids(evidence: list[dict[str, Any]], expected_ids: list[str]) -> tuple[bool, str]:
     """Fail closed when a run silently omits or repeats a planned turn."""
     expected = list(expected_ids)
@@ -987,7 +893,8 @@ def audit_contains_fine_timing(value: Any) -> bool:
 def run_turn(base: str, token: str, payload: dict[str, Any], stream: bool, timeout: float) -> tuple[str, Any, str | None]:
     started = time.perf_counter()
     response = req(base, token, "POST", "/llm/chat/stream" if stream else "/llm/chat", payload, timeout)
-    if response.status_code != 200: raise RuntimeError(f"chat returned {response.status_code}: {response.text[:400]}")
+    if response.status_code != 200:
+        raise RuntimeError(f"chat returned HTTP {response.status_code}")
     if not stream:
         body = response.json()
         trace = dict(body.get("trace") or body)
@@ -1040,7 +947,8 @@ def resource(
         body["resource_id"] = rid
     path = "/admin/resources" if method == "POST" else f"/admin/resources/{rid}"
     r = req(base, token, method, path, body)
-    if r.status_code not in ({200, 201} if method == "POST" else {200}): raise RuntimeError(f"resource {method}: {r.status_code} {r.text[:400]}")
+    if r.status_code not in ({200, 201} if method == "POST" else {200}):
+        raise RuntimeError(f"resource {method} returned HTTP {r.status_code}")
 
 
 def configure_persona_tools(
@@ -1065,9 +973,7 @@ def configure_persona_tools(
                 timeout=30,
             )
             if original.status_code != 200:
-                raise RuntimeError(
-                    f"read global tools: {original.status_code} {original.text[:300]}"
-                )
+                raise RuntimeError(f"read global tools returned HTTP {original.status_code}")
             original_value = original.json().get("value")
             if not isinstance(original_value, str):
                 raise RuntimeError("global Tool default did not return a string value")
@@ -1089,7 +995,7 @@ def configure_persona_tools(
         timeout=30,
     )
     if response.status_code != 200:
-        raise RuntimeError(f"configure {label}: {response.status_code} {response.text[:300]}")
+        raise RuntimeError(f"configure {label} returned HTTP {response.status_code}")
 
 
 def cleanup_persona_tools(base: str, admin_token: str, user_type_id: int) -> bool:
@@ -1366,39 +1272,10 @@ def restore_replaced_admins(fixtures: dict[str, Any], *, backend_runner=backend_
     return result.get("remaining") == 0
 
 
-def initial_all_contacts_message(language: str) -> str:
-    if language == "es":
-        return (
-            f"{ORG_NAME} está en México y ofrece ayuda legal. "
-            "Dame su email, teléfono, sitio web, dirección y canal seguro. Responde en español."
-        )
-    return (
-        f"{ORG_NAME} is in Mexico and provides legal help. "
-        "Give me its email, phone, website, address, and secure channel. Answer in English."
-    )
-
-
 def exit_code_for_summary(summary: dict[str, Any]) -> int:
     if summary.get("fatal") is True:
         return 2
     return 0 if summary.get("passed") is True else 1
-
-
-def validate_loopback_api_base(value: str) -> str:
-    parsed = urlsplit(value)
-    if parsed.scheme.casefold() not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("--api-base must be an HTTP(S) loopback origin")
-    if parsed.username is not None or parsed.password is not None:
-        raise ValueError("--api-base must not contain credentials")
-    if parsed.hostname not in {"localhost", "127.0.0.1", "::1"}:
-        raise ValueError("--api-base is restricted to localhost, 127.0.0.1, or [::1]")
-    try:
-        parsed.port
-    except ValueError as exc:
-        raise ValueError(f"invalid --api-base port: {exc}") from exc
-    if parsed.path not in {"", "/"} or parsed.query or parsed.fragment:
-        raise ValueError("--api-base must be an origin without a path, query, or fragment")
-    return f"{parsed.scheme.casefold()}://{parsed.netloc}".rstrip("/")
 
 
 def runtime_identity_snapshot(
@@ -1489,7 +1366,6 @@ def main(*, preflight=None) -> int:
     ap.add_argument("--modality", choices=CONTACT_MODALITIES)
     ap.add_argument("--journey", choices=("changed", "unchanged"))
     ap.add_argument("--profile", choices=("smoke", "full"), default="smoke")
-    ap.add_argument("--repeat", type=int, choices=range(1, 11), default=1)
     mode = ap.add_mutually_exclusive_group()
     mode.add_argument("--inventory-only", action="store_true")
     mode.add_argument("--contact-only", action="store_true")
@@ -1501,8 +1377,6 @@ def main(*, preflight=None) -> int:
         ap.error(str(exc))
     if not math.isfinite(args.timeout) or args.timeout <= 0:
         ap.error("--timeout must be a finite positive number")
-    if args.repeat < 1:
-        ap.error("--repeat must be a positive integer")
     sessions: list[tuple[str, str]] = []
     suffix = str(int(time.time() * 1000))
     rid = f"issue-539-contact-{suffix}"
@@ -1519,7 +1393,6 @@ def main(*, preflight=None) -> int:
         modality_filter=args.modality,
         journey_filter=args.journey,
         profile=args.profile,
-        repeat=args.repeat,
     )
     expected_cases = len(expected_ids)
     quality_failures = 0
@@ -1531,14 +1404,14 @@ def main(*, preflight=None) -> int:
     runtime_start = runtime_identity_snapshot(probe_runtime=True)
     synthetic_preflight: dict[str, Any] = {}
     try:
-        synthetic_preflight = preflight() if preflight is not None else preflight_synthetic_environment(token=None)
-        if not isinstance(synthetic_preflight, dict) or not synthetic_preflight.get("eligible"):
+        synthetic_preflight = preflight() if preflight is not None else verify_empty_synthetic_environment(_ComposeBackendRunner())
+        if not isinstance(synthetic_preflight, dict) or not is_empty_synthetic_environment(synthetic_preflight):
             raise RuntimeError(
                 f"synthetic benchmark preflight rejected this instance: {synthetic_preflight.get('unknown_counts') if isinstance(synthetic_preflight, dict) else 'invalid result'}"
             )
         # Injected preflight hooks are used by unit tests. Live CLI runs also
         # bind the HTTP origin to the same backend before minting fixtures.
-        if preflight is None and not preflight_http_target(api_base=args.api_base):
+        if preflight is None and not verify_http_target(_ComposeBackendRunner(), args.api_base):
             raise RuntimeError("HTTP target does not match the preflight backend")
         mint(fixtures)
         for persona in fixtures["users"]:
@@ -1579,8 +1452,7 @@ def main(*, preflight=None) -> int:
         if not args.inventory_only and selected_personas:
             fixtures["resource_ids"].append(rid)
             resource(args.api_base, fixtures["admin"], rid, baseline)
-        for repeat_index in range(args.repeat):
-          for persona_index, persona in enumerate(selected_personas):
+        for persona_index, persona in enumerate(selected_personas):
             key = str(persona["key"]); token = str(persona["token"])
             if args.inventory_only:
                 continue
@@ -1598,8 +1470,8 @@ def main(*, preflight=None) -> int:
                         first_dimensions = score_contact_dimensions(first, first_trace, expected=source_before[modality], old_contacts=source_after if journey == "changed" else baseline, lookup_required=True, modality=modality)
                         first_ok = bool(first_dimensions["quality_passed"])
                         base_id = journey_case_id(key, language, journey, modality, 1)
-                        case_id = base_id if args.repeat == 1 else f"{base_id}::repeat{repeat_index + 1}"
-                        journey_identity = f"contact::{key}::{language}::{journey}::{modality}" if args.repeat == 1 else f"contact::{key}::{language}::{journey}::{modality}::repeat{repeat_index + 1}"
+                        case_id = base_id
+                        journey_identity = f"contact::{key}::{language}::{journey}::{modality}"
                         quality_failures += 0 if first_ok else 1
                         evidence.append(evidence_entry(persona=key, case=f"{journey}_{modality}_turn1", case_id=case_id, journey_id=journey_identity, turn_index=1, answer=first, trace=first_trace, passed=first_ok, dimensions=first_dimensions, prompt=first_prompt, context={"journey": journey, "turn": 1, "modality": modality, "source_before": "baseline" if journey == "changed" else "updated", "source_after": "baseline" if journey == "changed" else "updated", "between_turn_mutation": {"applied": False}}, detail=json.dumps(first_dimensions, ensure_ascii=False, sort_keys=True)))
                         if journey == "changed":
@@ -1612,7 +1484,7 @@ def main(*, preflight=None) -> int:
                         second_dimensions = score_contact_dimensions(second, second_trace, expected=source_after[modality], old_contacts=baseline, lookup_required=journey == "changed", modality=modality)
                         second_ok = bool(second_dimensions["quality_passed"])
                         base_id = journey_case_id(key, language, journey, modality, 2)
-                        case_id = base_id if args.repeat == 1 else f"{base_id}::repeat{repeat_index + 1}"
+                        case_id = base_id
                         quality_failures += 0 if second_ok else 1
                         evidence.append(evidence_entry(persona=key, case=f"{journey}_{modality}_turn2", case_id=case_id, journey_id=journey_identity, turn_index=2, answer=second, trace=second_trace, passed=second_ok, dimensions=second_dimensions, prompt=second_prompt, context={"journey": journey, "turn": 2, "modality": modality, "initial_prompt": first_prompt, "initial_answer": first, "source_before": "baseline" if journey == "changed" else "updated", "source_after": "updated", "between_turn_mutation": {"applied": journey == "changed", "from": "baseline" if journey == "changed" else "updated", "to": "updated"}}, detail=json.dumps(second_dimensions, ensure_ascii=False, sort_keys=True)))
 
@@ -1651,7 +1523,7 @@ def main(*, preflight=None) -> int:
             fixtures["resource_ids"].append(rid)
             resource(args.api_base, fixtures["admin"], rid, updated)
 
-        if args.repeat == 1 and not args.inventory_only and args.profile == "full" and (args.persona is None or args.persona == "generic_user") and args.modality is None and args.journey is None:
+        if not args.inventory_only and args.profile == "full" and (args.persona is None or args.persona == "generic_user") and args.modality is None and args.journey is None:
             generic = next(p for p in selected_personas if p["key"] == "generic_user")
             configure_persona_tools(
                 args.api_base,
@@ -1677,7 +1549,7 @@ def main(*, preflight=None) -> int:
             evidence.append(evidence_entry(persona="generic_user", case="disabled_tools_no_invented_contact", case_id="control::generic_user::no_tools::email", journey_id="control::generic_user::no_tools", turn_index=1, answer=answer, trace=trace, passed=ok, dimensions=dimensions, prompt=prompt, context={"tools_enabled": False}, detail=json.dumps(dimensions, ensure_ascii=False, sort_keys=True)))
         audit = req(args.api_base, fixtures["admin"], "GET", "/admin/deployment/audit-log?limit=500", timeout=30)
         if audit.status_code != 200:
-            raise RuntimeError(f"audit lookup returned {audit.status_code}: {audit.text[:300]}")
+            raise RuntimeError(f"audit lookup returned HTTP {audit.status_code}")
         harness_failures += 0 if expect("Audit Log excludes fine Conversation timing", not audit_contains_fine_timing(audit.json())) else 1
     except Exception as exc:
         print(f"[ERROR] {exc}"); fatal = True; harness_failures += 1; fatal_error_type = type(exc).__name__
@@ -1768,7 +1640,6 @@ def main(*, preflight=None) -> int:
                 "modality_filter": args.modality,
                 "journey_filter": args.journey,
                 "profile": args.profile,
-                "repeat": args.repeat,
                 "planned_case_ids": expected_ids,
                 "runner_code_hash": RUNNER_CODE_HASH,
                 "scenario_catalog_hash": hashlib.sha256(
@@ -1795,7 +1666,7 @@ def main(*, preflight=None) -> int:
             print(f"[EVIDENCE] {args.evidence_file}")
         else:
             print(f"[FAIL] write evidence: {evidence_error}")
-    print(f"[SUMMARY] status={summary['status']} passed={summary['passed']} profile={args.profile} repeat={args.repeat} expected_cases={summary['expected_case_count']} completed_cases={summary['completed_case_count']} quality_failures={quality_failures} harness_failures={harness_failures} cleanup_failures={cleanup_failures}")
+    print(f"[SUMMARY] status={summary['status']} passed={summary['passed']} profile={args.profile} expected_cases={summary['expected_case_count']} completed_cases={summary['completed_case_count']} quality_failures={quality_failures} harness_failures={harness_failures} cleanup_failures={cleanup_failures}")
     return exit_code_for_summary(summary)
 
 if __name__ == "__main__": raise SystemExit(main())

@@ -41,10 +41,6 @@ def validate_loopback_api_base(value: str) -> str:
     return f"{parsed.scheme.casefold()}://{parsed.netloc}".rstrip("/")
 
 
-def _is_prefixed(value: Any, prefixes: tuple[str, ...]) -> bool:
-    return isinstance(value, str) and value.startswith(prefixes)
-
-
 def _preflight_script(has_token: bool) -> str:
     return f"""
 import auth
@@ -106,6 +102,22 @@ def verify_synthetic_environment(environment: BackendScriptRunner, *, token: str
             "counts": {"users": None, "resources": None, "documents": None},
             "unknown_counts": {"users": None, "resources": None, "documents": None},
         }
+
+
+def is_empty_synthetic_environment(result: dict[str, Any]) -> bool:
+    """A fresh cohort must start without rows left by earlier synthetic runs."""
+    counts = result.get("counts")
+    return (
+        result.get("eligible") is True
+        and isinstance(counts, dict)
+        and all(type(counts.get(key)) is int and counts[key] == 0
+                for key in ("users", "resources", "documents"))
+    )
+
+
+def verify_empty_synthetic_environment(environment: BackendScriptRunner) -> dict[str, Any]:
+    result = verify_synthetic_environment(environment)
+    return {**result, "eligible": is_empty_synthetic_environment(result)}
 
 
 def verify_http_target(environment: BackendScriptRunner, api_base: str, *, get=None) -> bool:

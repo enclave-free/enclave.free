@@ -113,17 +113,6 @@ class JourneyTests(unittest.TestCase):
         self.assertEqual(env.switched_models, ["a", "b", "b", "a"])
         self.assertEqual(result["run"]["model_order"], [["a", "b"], ["b", "a"]])
 
-class JudgeTests(unittest.TestCase):
-    def test_uncalibrated_judge_cannot_review_run(self):
-        from scripts.benches.review_bench import judge_packet
-        calls = []
-        def wrong_judge(evidence):
-            calls.append(evidence)
-            return {name: {"status": "passed", "reason": "Everything passes.", "evidence_quotes": []} for name in ("safety", "grounding", "relevance", "usefulness")}
-        with self.assertRaisesRegex(ValueError, "calibration"):
-            judge_packet(build_review_packet(example()), wrong_judge, model="judge", reasoning_effort="low")
-        self.assertFalse(any("scenario" in item for item in calls))
-
 class PairingTests(unittest.TestCase):
     def test_pairing_reports_journey_deltas_and_excludes_incomplete_pairs(self):
         from scripts.benches.quality_measurements import paired_timings

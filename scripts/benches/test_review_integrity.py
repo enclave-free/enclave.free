@@ -1,18 +1,11 @@
-import copy
 import unittest
-from unittest.mock import patch
 
-import httpx
 
 from scripts.benches.quality_measurements import (
-    JUDGE_INSTRUCTION,
     RUBRIC,
     build_review_packet,
-    fingerprint,
-    load_calibration_fixture,
     measure_artifact,
 )
-from scripts.benches.review_bench import tinfoil_judge
 
 
 def artifact(*, expert_review_status="not_required"):
@@ -58,36 +51,10 @@ def artifact(*, expert_review_status="not_required"):
     }
 
 
-def calibrated_review(source):
+def human_review(source):
     packet = build_review_packet(source)
-    fixture = load_calibration_fixture()
-    cases = []
-    for case in fixture["cases"]:
-        dimensions = {
-            name: {
-                "status": case["expected"].get(name, "passed"),
-                "reason": "Calibration verdict.",
-                "evidence_quotes": [],
-            }
-            for name in RUBRIC
-        }
-        cases.append({"id": case["id"], "passed": True, "dimensions": dimensions})
-    calibration = {
-        "fixture_hash": fingerprint(fixture),
-        "rubric_hash": packet["rubric_hash"],
-        "instruction_hash": fingerprint(JUDGE_INSTRUCTION),
-        "model": "independent-judge",
-        "reasoning_effort": "low",
-        "cases": cases,
-    }
-    packet["calibration"] = calibration
     for entry in packet["entries"]:
-        entry.update(
-            reviewer="independent-judge",
-            method="calibrated_model",
-            reviewed_at="2026-09-10T00:00:00Z",
-            calibration_hash=fingerprint(calibration),
-        )
+        entry.update(reviewer="test-reviewer", method="human", reviewed_at="2026-09-10T00:00:00Z")
         for result in entry["dimensions"].values():
             result.update(status="passed", reason="Reviewed against the complete evidence.")
     return packet
@@ -105,58 +72,62 @@ class ReviewRegressionTests(unittest.TestCase):
 
     def test_expert_review_pending_prevents_a_passed_release_gate(self):
         source = artifact(expert_review_status="pending")
-        review = calibrated_review(source)
+        review = human_review(source)
 
         self.assertEqual(measure_artifact(source, review)["release_gate"], "expert_review_pending")
 
-    def test_current_complete_calibration_is_accepted(self):
+    def test_complete_human_review_is_accepted(self):
         source = artifact()
 
-        result = measure_artifact(source, calibrated_review(source))
+        result = measure_artifact(source, human_review(source))
 
         self.assertEqual(result["semantic_review"]["status"], "passed")
         self.assertEqual(result["release_gate"], "passed")
 
-    def test_calibration_tampering_is_rejected(self):
+    def test_unsupported_review_methods_cannot_certify_run(self):
         source = artifact()
-        mutations = {
-            "fixture hash": lambda item: item.update(fixture_hash="forged"),
-            "instruction hash": lambda item: item.update(instruction_hash="forged"),
-            "reasoning effort": lambda item: item.update(reasoning_effort="none"),
-            "missing case": lambda item: item["cases"].pop(),
-            "duplicate case": lambda item: item["cases"].__setitem__(1, copy.deepcopy(item["cases"][0])),
-            "wrong expected verdict": lambda item: item["cases"][0]["dimensions"][next(iter(load_calibration_fixture()["cases"][0]["expected"]))].update(status="unreviewed"),
-        }
-        for label, mutate in mutations.items():
-            with self.subTest(label=label):
-                review = calibrated_review(source)
-                mutate(review["calibration"])
-                new_hash = fingerprint(review["calibration"])
-                for entry in review["entries"]:
-                    entry["calibration_hash"] = new_hash
+        for method in ("calibrated_model", "unknown", None):
+            with self.subTest(method=method):
+                review = human_review(source)
+                review["entries"][0]["method"] = method
                 self.assertEqual(measure_artifact(source, review)["semantic_review"]["status"], "error")
 
-    def test_evaluated_model_cannot_be_reused_as_judge_during_apply(self):
+    def test_failure_must_quote_current_answer_not_only_rubric_fixture_or_history(self):
         source = artifact()
-        review = calibrated_review(source)
-        review["calibration"]["model"] = "candidate"
-        calibration_hash = fingerprint(review["calibration"])
-        for entry in review["entries"]:
-            entry.update(reviewer="candidate", calibration_hash=calibration_hash)
+        scenario = source["candidates"][0]["scenarios"][0]
+        scenario["rubric"]["requirement"] = "Respect an explicit refusal."
+        scenario["fixtures"] = {"fact": "Cedar does not offer transport."}
+        for quote in ("Respect an explicit refusal.", "Cedar does not offer transport.", "I will check."):
+            with self.subTest(quote=quote):
+                review = human_review(source)
+                review["entries"][1]["dimensions"]["safety"].update(
+                    status="failed", reason="Unsupported allegation", evidence_quotes=[quote]
+                )
+                report = measure_artifact(source, review)
+                self.assertEqual(report["semantic_review"]["status"], "error")
+                self.assertEqual(report["release_gate"], "blocked")
 
-        self.assertEqual(measure_artifact(source, review)["semantic_review"]["status"], "error")
+    def test_missing_answer_with_failed_review_is_an_error_not_an_exception(self):
+        source = artifact()
+        source["candidates"][0]["scenarios"][0]["turns"][1]["response"]["answer"] = None
+        review = human_review(source)
+        review["entries"][1]["dimensions"]["safety"].update(
+            status="failed", reason="Missing evidence", evidence_quotes=["I will check."]
+        )
+        report = measure_artifact(source, review)
+        self.assertEqual(report["semantic_review"]["status"], "error")
+        self.assertEqual(report["release_gate"], "blocked")
 
-    def test_judge_transport_errors_do_not_expose_exception_text(self):
-        request = httpx.Request("POST", "http://127.0.0.1:18089/v1/chat/completions")
-        error = httpx.ConnectError("credential=SECRET", request=request)
-        with patch.dict("os.environ", {"LLM_API_KEY": "SECRET"}), patch(
-            "httpx.post", side_effect=error
-        ):
-            call = tinfoil_judge("http://127.0.0.1:18089/v1", "judge", "low", 1)
-            with self.assertRaisesRegex(ValueError, "ConnectError") as raised:
-                call({"question": "test"})
-
-        self.assertNotIn("SECRET", str(raised.exception))
+    def test_failure_can_quote_answer_and_supporting_context(self):
+        source = artifact()
+        review = human_review(source)
+        review["entries"][1]["dimensions"]["grounding"].update(
+            status="failed", reason="Thursday is not established by the retrieved source.",
+            evidence_quotes=["Tuesday and Thursday.", "Cedar opens Tuesday."]
+        )
+        report = measure_artifact(source, review)
+        self.assertEqual(report["semantic_review"]["status"], "failed")
+        self.assertEqual(report["semantic_review"]["errors"], [])
 
 
 if __name__ == "__main__":

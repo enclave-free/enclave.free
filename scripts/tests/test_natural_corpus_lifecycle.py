@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from scripts import run_benchmark
 from scripts.benches import run_natural_corpus
@@ -65,15 +65,14 @@ class NaturalCorpusLifecycleTests(unittest.TestCase):
         environment = FakeEnvironment()
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "setup-failed.json"
-            with patch.object(run_natural_corpus, "verify_synthetic_environment", return_value={
+            with patch.object(run_benchmark, "verify_synthetic_environment", return_value={
                 "eligible": False,
                 "counts": {"users": 1, "resources": 0, "documents": 0},
                 "unknown_counts": {"users": 1, "resources": 0, "documents": 0},
-            }), patch.object(run_natural_corpus, "verify_http_target") as target, patch.object(
-                run_natural_corpus.run_benchmark, "main"
-            ) as runner:
-                code = run_natural_corpus.run_lifecycle(
-                    ["--api-base", "http://127.0.0.1:18000", "--output", str(output)],
+            }), patch.object(run_benchmark, "verify_http_target") as target:
+                runner = Mock()
+                code = run_benchmark.run_isolated(
+                    ["4", "--api-base", "http://127.0.0.1:18000", "--output", str(output)],
                     environment_factory=lambda: environment,
                     runner=runner,
                 )
@@ -83,19 +82,22 @@ class NaturalCorpusLifecycleTests(unittest.TestCase):
         self.assertEqual(environment.cleanup_calls, 1)
         target.assert_not_called()
         runner.assert_not_called()
-        self.assertEqual(report["measurements"]["execution"]["expected_turns"], 25)
+        self.assertEqual(report["measurements"]["execution"]["expected_turns"], 5)
         self.assertEqual(report["measurements"]["execution"]["completed_turns"], 0)
+        self.assertEqual(report["summary"]["journeys"], 1)
+        turns = report["candidates"][0]["scenarios"][0]["turns"]
+        self.assertTrue(all(not turn["completed"] for turn in turns))
+        self.assertTrue(all(turn["timing"]["done_ms"] == 0 for turn in turns))
         self.assertEqual(report["lifecycle"]["status"], "failed")
 
     def test_runner_gets_seed_manifest_and_cleanup_failure_is_canonical(self):
         environment = FakeEnvironment(cleanup_error=RuntimeError("cleanup SECRET"))
         captured = {}
 
-        def fake_runner(runner_args):
+        def fake_runner(runner_args, *, token_override, fixture_manifest_override):
             captured["args"] = list(runner_args)
-            captured["token"] = os.environ.get("BENCHMARK_AUTH_TOKEN")
-            manifest_path = Path(runner_args[runner_args.index("--fixture-manifest") + 1])
-            captured["manifest"] = json.loads(manifest_path.read_text(encoding="utf-8"))
+            captured["token"] = token_override
+            captured["manifest"] = fixture_manifest_override
             output = Path(runner_args[runner_args.index("--output") + 1])
             report = run_benchmark.build_report(
                 [],
@@ -109,12 +111,12 @@ class NaturalCorpusLifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {}, clear=False):
             os.environ.pop("BENCHMARK_AUTH_TOKEN", None)
             output = Path(directory) / "natural-final.json"
-            with patch.object(run_natural_corpus, "verify_synthetic_environment", return_value={
+            with patch.object(run_benchmark, "verify_synthetic_environment", return_value={
                 "eligible": True,
                 "counts": {"users": 0, "resources": 0, "documents": 0},
                 "unknown_counts": {"users": 0, "resources": 0, "documents": 0},
-            }), patch.object(run_natural_corpus, "verify_http_target", return_value=True):
-                code = run_natural_corpus.run_lifecycle(
+            }), patch.object(run_benchmark, "verify_http_target", return_value=True):
+                code = run_benchmark.run_isolated(
                     ["--api-base", "http://127.0.0.1:18000", "--output", str(output)],
                     environment_factory=lambda: environment,
                     runner=fake_runner,
@@ -132,6 +134,9 @@ class NaturalCorpusLifecycleTests(unittest.TestCase):
             self.assertEqual(report["measurements"]["release_gate"], "blocked")
             self.assertNotIn("SECRET", serialized)
             self.assertNotIn("temporary-benchmark-token", serialized)
+
+    def test_compatibility_module_exports_the_consolidated_runner(self):
+        self.assertIs(run_natural_corpus.run_isolated, run_benchmark.run_isolated)
 
 
 if __name__ == "__main__":

@@ -31,6 +31,7 @@ if __package__ in (None, ""):
 
 from scripts.benches.quality_measurements import measure_artifact
 from scripts.benches.synthetic_environment import (
+    is_empty_synthetic_environment,
     validate_loopback_api_base,
     verify_http_target,
     verify_synthetic_environment,
@@ -130,30 +131,10 @@ def load_fixture_manifest(path: Path | None) -> dict[str, Any] | None:
     fixture_version = manifest.get("fixture_version")
     if not isinstance(fixture_version, str) or not fixture_version.strip():
         raise ValueError("fixture manifest must declare a fixture_version")
-    normalized: dict[str, Any] = {**manifest}
-    raw_knowledge = manifest.get("knowledge")
-    raw_resources = manifest.get("resources")
-    if not isinstance(raw_knowledge, list) or not isinstance(raw_resources, list):
+    knowledge_entries = manifest.get("knowledge")
+    resource_entries = manifest.get("resources")
+    if not isinstance(knowledge_entries, list) or not isinstance(resource_entries, list):
         raise ValueError("fixture manifest knowledge and resources must be lists")
-    knowledge_entries = []
-    for entry in raw_knowledge:
-        job_ids = entry.get("job_ids") if isinstance(entry, dict) else None
-        sources = entry.get("sources") if isinstance(entry, dict) else None
-        if isinstance(entry, dict) and "job_id" not in entry and isinstance(job_ids, list) and len(job_ids) == 1:
-            entry = {**entry, "job_id": entry["job_ids"][0]}
-        if isinstance(entry, dict) and "source_file" not in entry and isinstance(sources, list) and len(sources) == 1:
-            entry = {**entry, "source_file": entry["sources"][0]}
-        if isinstance(entry, dict) and "source_text" not in entry and "content" in entry:
-            entry = {**entry, "source_text": entry["content"]}
-        knowledge_entries.append(entry)
-    resource_entries = []
-    for entry in raw_resources:
-        nested_resources = entry.get("resources") if isinstance(entry, dict) else None
-        if isinstance(entry, dict) and "resource_id" not in entry and isinstance(nested_resources, list) and len(nested_resources) == 1:
-            entry = nested_resources[0]
-        resource_entries.append(entry)
-    normalized["knowledge"] = knowledge_entries
-    normalized["resources"] = resource_entries
     seen_ids: set[tuple[str, str]] = set()
     for collection, entries, prefixes, identifier in (("knowledge", knowledge_entries, ("conversation-bench-", "issue-539-"), "job_id"), ("resources", resource_entries, ("conversation-bench-", "issue-539-"), "resource_id")):
         if not isinstance(entries, list) or not entries:
@@ -167,7 +148,7 @@ def load_fixture_manifest(path: Path | None) -> dict[str, Any] | None:
             seen_ids.add(marker)
             if collection == "knowledge" and (not isinstance(entry.get("chunk_id"), str) or not isinstance(entry.get("source_file"), str) or not isinstance(entry.get("source_text"), str)):
                 raise ValueError("knowledge entries must include chunk_id, source_file, and source_text")
-    return normalized
+    return manifest
 
 
 def canonical_hash(value: Any) -> str:
@@ -338,7 +319,7 @@ def run_session(
     session_key: str,
     session_data: dict[str, Any],
     *,
-    client: BenchmarkClient,
+    client: BenchmarkClient | None,
     token: str,
     timeout: float = 120.0,
     session_id: str | None = None,
@@ -367,9 +348,13 @@ def run_session(
                 "rubric": turn_data.get("rubric", {}),
                 "coverage": turn_data.get("coverage", {}),
                 "history": [dict(item) for item in history],
-                "started_at": datetime.now(timezone.utc).isoformat(),
             }
             turn_started = time.perf_counter()
+            if client is None:
+                turn_record.update({"status": "not_run", "answer": "", "tool_evidence": [], "elapsed_seconds": 0})
+                turns.append(turn_record)
+                continue
+            turn_record["started_at"] = datetime.now(timezone.utc).isoformat()
             try:
                 response = client.chat(token, payload, timeout)
                 if not isinstance(response, dict):
@@ -403,10 +388,14 @@ def run_session(
                 errors.append(_error("provider_error", str(exc), turn=turn_number))
             turns.append(turn_record)
     finally:
-        try:
-            client.delete_session(token, requested_session_id, timeout)
-        except Exception as exc:
-            errors.append(_error("cleanup_error", str(exc)))
+        if client is not None:
+            try:
+                client.delete_session(token, requested_session_id, timeout)
+            except Exception as exc:
+                errors.append(_error("cleanup_error", str(exc)))
+
+    if client is None:
+        errors.append(_error("not_run", "lifecycle setup failed"))
 
     expected_turns = len(session_data.get("turns", []))
     completed_turns = sum(turn.get("status") == "completed" for turn in turns)
@@ -501,16 +490,14 @@ def build_report(
     artifact = _measurement_artifact(runs, metadata=run_metadata, fixture_manifest=fixture_manifest)
     measurements = measure_artifact(artifact)
     return {
-        "schema_version": "natural-conversation-benchmark-report/v2",
+        "schema_version": "natural-conversation-benchmark-report/v3",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "metadata": run_metadata,
         "run": artifact["run"],
         "candidates": artifact["candidates"],
         "corpus": {"schema_version": corpus.get("schema_version"), "version": corpus.get("version"), "hash": catalog_hash, "catalog_hash": catalog_hash, "review": corpus.get("review", {"status": "expert_review_pending"})},
         "fixture_manifest": fixture_manifest,
-        "artifact": artifact,
         "measurements": measurements,
-        "runs": runs,
         "summary": {"journeys": len(runs), "complete_journeys": sum(run.get("completed", False) for run in runs), "transport_errors": sum(len(run.get("errors", [])) for run in runs), "semantic_quality": {"status": "unreviewed", "reviewed_journeys": 0}, "measurements": measurements},
     }
 
@@ -519,6 +506,15 @@ def configured_tools(corpus: dict[str, Any]) -> list[str]:
     measurement = corpus.get("measurement", {})
     tools = measurement["explicit_tools"] if "explicit_tools" in measurement else DEFAULT_TOOLS
     return [str(tool) for tool in tools] if isinstance(tools, list) else list(DEFAULT_TOOLS)
+
+
+def selected_session_ids(requested: list[str], sessions: dict[str, Any]) -> list[str]:
+    unknown = [key for key in requested if key not in sessions]
+    if unknown:
+        raise ValueError(f"Unknown session(s): {', '.join(unknown)}. Use --list.")
+    if len(requested) != len(set(requested)):
+        raise ValueError("Duplicate session IDs are not allowed; use --repeat to repeat a journey.")
+    return requested or list(sessions)
 
 
 def positive_finite_timeout(value: str) -> float:
@@ -575,6 +571,8 @@ def main(
     *,
     client: BenchmarkClient | None = None,
     preflight: Callable[[str, str], dict[str, Any]] | None = None,
+    token_override: str | None = None,
+    fixture_manifest_override: dict[str, Any] | None = None,
 ) -> int:
     load_dotenv()
     args = parse_args(argv)
@@ -585,7 +583,7 @@ def main(
         return 2
     corpus = load_corpus()
     try:
-        fixture_manifest = load_fixture_manifest(args.fixture_manifest)
+        fixture_manifest = fixture_manifest_override if fixture_manifest_override is not None else load_fixture_manifest(args.fixture_manifest)
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         print(f"invalid fixture manifest: {exc}", file=sys.stderr)
         return 2
@@ -597,14 +595,12 @@ def main(
     if args.repeat < 1:
         print("--repeat must be at least 1", file=sys.stderr)
         return 2
-    unknown = [key for key in args.session_ids if key not in sessions]
-    if unknown:
-        print(f"Unknown session(s): {', '.join(unknown)}. Use --list.", file=sys.stderr)
+    try:
+        selected = selected_session_ids(args.session_ids, sessions)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
-    if len(args.session_ids) != len(set(args.session_ids)):
-        print("Duplicate session IDs are not allowed; use --repeat to repeat a journey.", file=sys.stderr)
-        return 2
-    token = os.getenv(args.token_env)
+    token = token_override or os.getenv(args.token_env)
     if not token:
         print(f"{args.token_env} must contain a signed user token", file=sys.stderr)
         return 2
@@ -620,7 +616,6 @@ def main(
             counts = result.get("unknown_counts") if isinstance(result, dict) else None
             print(f"synthetic benchmark preflight rejected this instance (unknown row counts: {counts})", file=sys.stderr)
             return 2
-    selected = args.session_ids or list(sessions)
     http_client = client or HttpBenchmarkClient(args.api_base)
     runs: list[dict[str, Any]] = []
     for repeat_index in range(args.repeat):
@@ -639,6 +634,143 @@ def main(
     execution_status = report["measurements"].get("execution", {}).get("status")
     contract_status = report["measurements"].get("contracts", {}).get("status")
     return 0 if execution_status == "passed" and contract_status == "passed" else 1
+
+
+def _seed_manifest(environment: Any, tools: tuple[str, ...]) -> dict[str, Any] | None:
+    """Create the canonical manifest directly from the local fixture owner."""
+    knowledge_fixture = environment.seed_knowledge() if "knowledge-search" in tools else None
+    resource_fixture = environment.seed_resources() if "curated-resources" in tools else None
+    if knowledge_fixture is None and resource_fixture is None:
+        return None
+    knowledge: list[dict[str, Any]] = []
+    resources: list[dict[str, Any]] = []
+    if knowledge_fixture is not None:
+        job_ids = knowledge_fixture.get("job_ids", [])
+        sources = knowledge_fixture.get("sources", [])
+        if len(job_ids) != 1 or len(sources) != 1:
+            raise ValueError("knowledge seed must create exactly one source")
+        knowledge.append({
+            "job_id": job_ids[0],
+            "source_file": sources[0],
+            "chunk_id": knowledge_fixture["chunk_id"],
+            "source_text": knowledge_fixture["source_text"],
+        })
+    if resource_fixture is not None:
+        resources = resource_fixture.get("resources", [])
+        if not resources or not all(isinstance(row, dict) for row in resources):
+            raise ValueError("resource seed did not return complete rows")
+    return {
+        "schema_version": SYNTHETIC_FIXTURE_SCHEMA,
+        "fixture_version": (knowledge_fixture or {}).get("fixture_version", "post-release-v2"),
+        "knowledge": knowledge,
+        "resources": resources,
+    }
+
+
+def _not_run_report(
+    args: argparse.Namespace,
+    manifest: dict[str, Any] | None,
+    corpus: dict[str, Any],
+    selected: list[str],
+) -> dict[str, Any]:
+    runs: list[dict[str, Any]] = []
+    for repetition in range(1, args.repeat + 1):
+        for key in selected:
+            session = corpus["sessions"][key]
+            run = run_session(key, session, client=None, token="", tools=configured_tools(corpus))
+            run["session_id"] = None
+            run["model"] = args.model
+            run["repeat"] = repetition
+            runs.append(run)
+    return build_report(runs, corpus=corpus, metadata={
+        "api_base": args.api_base, "model_expected": args.model,
+        "repeat": args.repeat, "tools": configured_tools(corpus),
+    }, fixture_manifest=manifest)
+
+
+def run_isolated(
+    argv: list[str] | None = None,
+    *,
+    environment_factory: Callable[[], Any] | None = None,
+    runner: Callable[..., int] = main,
+) -> int:
+    """Own synthetic setup, exact-fixture execution, cleanup, and failure evidence."""
+    args = parse_args(argv)
+    if args.list:
+        return main(argv)
+    try:
+        args.api_base = validate_loopback_api_base(args.api_base)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    if args.repeat < 1 or args.output is None:
+        print("isolated runs require --output and --repeat of at least 1", file=sys.stderr)
+        return 2
+    if args.fixture_manifest is not None:
+        print("isolated runs create their own fixture manifest", file=sys.stderr)
+        return 2
+    if args.output.exists():
+        print(f"refusing to overwrite existing output: {args.output}", file=sys.stderr)
+        return 2
+
+    if environment_factory is None:
+        from scripts.benches.conversation_model_bench import LocalComposeEnvironment
+        environment_factory = LocalComposeEnvironment
+    environment = None
+    manifest = None
+    initial_preflight = None
+    target_verified = None
+    runner_exit_code = 1
+    harness_errors: list[dict[str, str]] = []
+    corpus = load_corpus()
+    try:
+        selected = selected_session_ids(args.session_ids, corpus["sessions"])
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    try:
+        environment = environment_factory()
+        initial_preflight = verify_synthetic_environment(environment)
+        if not is_empty_synthetic_environment(initial_preflight):
+            raise RuntimeError("initial synthetic environment was not empty and eligible")
+        target_verified = verify_http_target(environment, args.api_base)
+        if not target_verified:
+            raise RuntimeError("HTTP target did not bind to the verified local backend")
+        tools = tuple(configured_tools(corpus))
+        token = environment.user_token(tools)
+        manifest = _seed_manifest(environment, tools)
+        if tools and manifest is None:
+            raise RuntimeError("configured source tools did not produce a fixture manifest")
+        runner_exit_code = int(runner(argv, token_override=token, fixture_manifest_override=manifest))
+    except Exception as exc:
+        harness_errors.append({"kind": "lifecycle", "message": f"lifecycle failed ({type(exc).__name__})"})
+    finally:
+        if environment is not None:
+            try:
+                environment.cleanup_scenario()
+            except Exception as exc:
+                harness_errors.append({"kind": "cleanup", "message": f"cleanup failed ({type(exc).__name__})"})
+        try:
+            report = json.loads(args.output.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            report = _not_run_report(args, manifest, corpus, selected)
+        report["lifecycle"] = {
+            "status": "failed" if harness_errors or runner_exit_code else "passed",
+            "initial_preflight": initial_preflight, "http_target_verified": target_verified,
+            "runner_exit_code": runner_exit_code, "harness_errors": harness_errors,
+        }
+        if harness_errors:
+            report["harness_errors"] = harness_errors
+            report["run"]["harness_errors"] = harness_errors
+        measurements = measure_artifact(report)
+        if harness_errors:
+            measurements["release_gate"] = "blocked"
+        report["measurements"] = measurements
+        report["summary"]["measurements"] = measurements
+        report["summary"]["transport_errors"] += len(harness_errors)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return 1 if harness_errors else runner_exit_code
 
 
 if __name__ == "__main__":

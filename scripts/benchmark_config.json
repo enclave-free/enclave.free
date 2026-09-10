@@ -6,7 +6,7 @@
   "review": {
     "status": "unreviewed",
     "grader": null,
-    "policy": "Do not transfer benchmark content to an automatic external grader. Record human or approved Tinfoil review separately against full captured turns."
+    "policy": "Do not transfer benchmark content to an automatic external grader. Record structured human or agent review separately against full captured turns; agents cannot certify passes."
   },
   "measurement": {
     "transport": "POST /llm/chat with a fresh requested session id per journey",

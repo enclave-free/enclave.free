@@ -79,11 +79,6 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             MODULE.CONTACT_FOLLOWUPS["es"]["email"].casefold(),
         )
         self.assertEqual(MODULE.REPLAY_LANGUAGES, ("en", "es"))
-        self.assertEqual(
-            MODULE.CONTACT_REPLAY_CASES["es"],
-            tuple(MODULE.CONTACT_FOLLOWUPS["es"].items()),
-        )
-
     def test_global_effective_defaults_omit_fake_user_type_query(self):
         class Response:
             status_code = 200
@@ -453,59 +448,7 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             )
         )
 
-    def test_fixture_name_and_prompts_use_one_organization(self):
-        for language, _key, initial, followup, _stream in MODULE.CASES:
-            self.assertIn(MODULE.ORG_NAME, MODULE.initial_message(language, initial))
-            self.assertTrue(MODULE.context_free_followup(followup), followup)
-        self.assertNotIn("Acme Legal Aid", MODULE.ORG_NAME)
-
-    def test_cases_reset_stale_before_fresh_update(self):
-        stale = {"email": "stale@example.test"}
-        fresh = {"email": "fresh@example.test"}
-        self.assertNotEqual(stale["email"], fresh["email"])
-        self.assertEqual(len(MODULE.CASES), 10)
-        self.assertEqual({case[1] for case in MODULE.CASES}, {"email", "phone", "url", "address", "secure_channel"})
-
-    def test_score_requires_fresh_contact_and_tool_trace(self):
-        ok, _ = MODULE.score_contact_turn(
-            "Use fresh-535@example.test.",
-            {"tools": [{"id": "find_resources", "status": "completed"}]},
-            "fresh-535@example.test",
-            {"email": "stale-535@example.test", "phone": "+52-555-0100"},
-        )
-        self.assertTrue(ok)
-
-    def test_score_rejects_any_stale_contact_modality_on_every_followup(self):
-        ok, detail = MODULE.score_contact_turn(
-            "Use fresh-535@example.test or call the old number +52-555-0100.",
-            {"tools": [{"id": "find_resources", "status": "completed"}]},
-            "fresh-535@example.test",
-            {"email": "stale-535@example.test", "phone": "+52-555-0100"},
-        )
-        self.assertFalse(ok)
-        self.assertIn("stale_absent=False", detail)
-
-    def test_score_rejects_stale_or_disabled_tool_trace(self):
-        stale, _ = MODULE.score_contact_turn(
-            "Use stale-535@example.test.",
-            {"tools": [{"id": "find_resources", "status": "completed"}]},
-            "fresh-535@example.test",
-            {"email": "stale-535@example.test"},
-        )
-        disabled, _ = MODULE.score_contact_turn(
-            "I cannot look that up.",
-            {"tools": []},
-            "fresh-535@example.test",
-            {"email": "stale-535@example.test"},
-            tool_enabled=False,
-        )
-        self.assertFalse(stale)
-        self.assertTrue(disabled)
-
     def test_disabled_turn_can_be_tracked_and_cleanup_requires_status(self):
-        self.assertTrue(MODULE.context_free_followup("¿Me das el email?"))
-        self.assertFalse(MODULE.context_free_followup("¿Me das el email de Acme Legal Aid en Mexico?"))
-        self.assertTrue(MODULE.score_contact_turn("No puedo consultarlo.", {"tools": []}, "fresh", {"email": "stale"}, False)[0])
         self.assertTrue(MODULE.session_cleanup_ok(200, {"status": "deleted", "deletion": {"status": "succeeded"}}))
         self.assertFalse(MODULE.session_cleanup_ok(200, {"status": "deleted", "deletion": {"status": "failed"}}))
         self.assertTrue(MODULE.resource_delete_ok(200, {"success": True}))
@@ -801,17 +744,6 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertEqual(passed["status"], "passed")
         self.assertTrue(passed["passed"])
 
-    def test_expected_case_count_tracks_filters_and_disabled_control(self):
-        self.assertEqual(MODULE.expected_case_count(None, False, False), 41)
-        self.assertEqual(MODULE.expected_case_count("family_member", False, False), 10)
-        self.assertEqual(MODULE.expected_case_count("generic_user", False, False), 11)
-        self.assertEqual(MODULE.expected_case_count(None, True, False), 8)
-        self.assertEqual(MODULE.expected_case_count(None, False, True), 33)
-        self.assertEqual(
-            MODULE.expected_case_count("generic_user", False, True, language_filter="es"),
-            3,
-        )
-
     def test_exit_code_uses_final_summary_pass_state(self):
         self.assertEqual(MODULE.exit_code_for_summary({"passed": True, "fatal": False}), 0)
         self.assertEqual(MODULE.exit_code_for_summary({"passed": False, "fatal": False}), 1)
@@ -828,8 +760,8 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         mint.assert_not_called()
 
-    def test_invalid_timeout_and_repeat_are_rejected_before_fixture_mutation(self):
-        for args in (("--timeout", "nan"), ("--timeout", "0"), ("--repeat", "0")):
+    def test_invalid_timeout_is_rejected_before_fixture_mutation(self):
+        for args in (("--timeout", "nan"), ("--timeout", "0")):
             with self.subTest(args=args), patch.object(sys, "argv", ["eval", *args]), patch.object(MODULE, "mint") as mint:
                 with self.assertRaises(SystemExit) as raised:
                     MODULE.main()
@@ -849,6 +781,49 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             MODULE.validate_loopback_api_base("http://[::1]:18000"),
             "http://[::1]:18000",
         )
+
+    def test_requests_ignore_proxy_environment_and_redirects(self):
+        class Session:
+            trust_env = True
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return None
+
+            def request(self, method, url, **kwargs):
+                self.call = (method, url, kwargs)
+                return self
+
+        session = Session()
+        with patch.object(MODULE.requests, "Session", return_value=session):
+            response = MODULE.req(
+                "http://localhost:18000",
+                "synthetic-token",
+                "GET",
+                "/test",
+                timeout=3,
+            )
+        self.assertIs(response, session)
+        self.assertFalse(session.trust_env)
+        self.assertFalse(session.call[2]["allow_redirects"])
+
+    def test_http_errors_do_not_include_response_bodies(self):
+        class Response:
+            status_code = 503
+            text = "private provider response"
+
+        with patch.object(MODULE, "req", return_value=Response()):
+            with self.assertRaisesRegex(RuntimeError, "chat returned HTTP 503") as raised:
+                MODULE.run_turn(
+                    "http://localhost:18000",
+                    "synthetic-token",
+                    {"message": "hello"},
+                    False,
+                    3,
+                )
+        self.assertNotIn("private provider response", str(raised.exception))
 
     def test_evidence_write_failure_recomputes_failed_summary_and_exit(self):
         with patch.object(Path, "write_text", side_effect=OSError("disk full")):

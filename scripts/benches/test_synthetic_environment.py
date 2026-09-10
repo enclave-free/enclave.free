@@ -38,3 +38,24 @@ class TargetBindingTests(unittest.TestCase):
         env = self.environment()
         env.run_backend_python.side_effect = [json.dumps({'user_id':17,'token':'temporary'}), RuntimeError('cleanup failed')]
         self.assertFalse(verify_http_target(env, 'http://localhost:18000', get=Mock(return_value=Mock(status_code=401))))
+
+
+class EmptyCohortTests(unittest.TestCase):
+    def test_old_synthetic_rows_and_missing_counts_are_rejected(self):
+        from scripts.benches.synthetic_environment import is_empty_synthetic_environment
+        empty = {"eligible": True, "counts": {"users": 0, "resources": 0, "documents": 0}}
+        self.assertTrue(is_empty_synthetic_environment(empty))
+        for field in empty["counts"]:
+            for value in (1, None, False, "0"):
+                with self.subTest(field=field, value=value):
+                    self.assertFalse(is_empty_synthetic_environment({**empty, "counts": {**empty["counts"], field: value}}))
+        self.assertFalse(is_empty_synthetic_environment({"eligible": True}))
+
+    def test_empty_guard_preserves_counts_but_rejects_contamination(self):
+        from scripts.benches.synthetic_environment import verify_empty_synthetic_environment
+        payload = {"eligible": True, "counts": {"users": 0, "resources": 1, "documents": 0}}
+        environment = Mock()
+        environment.run_backend_python.return_value = json.dumps(payload)
+        result = verify_empty_synthetic_environment(environment)
+        self.assertFalse(result["eligible"])
+        self.assertEqual(result["counts"], payload["counts"])

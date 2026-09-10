@@ -351,8 +351,8 @@ def run_bench(
     for scenario_id in options.scenarios:
         scenario_by_id(scenario_id)
     if live_run:
-        from scripts.benches.synthetic_environment import verify_synthetic_environment, verify_http_target
-        if not verify_synthetic_environment(environment).get("eligible"):
+        from scripts.benches.synthetic_environment import verify_empty_synthetic_environment, verify_http_target
+        if not verify_empty_synthetic_environment(environment).get("eligible"):
             raise ValueError("local benchmark requires an isolated synthetic environment")
         if not verify_http_target(environment, options.api_base):
             raise ValueError("HTTP target does not match the verified synthetic backend, or probe cleanup failed")

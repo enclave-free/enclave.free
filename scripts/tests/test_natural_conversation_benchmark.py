@@ -313,21 +313,6 @@ class NaturalBenchmarkRunnerTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "duplicate knowledge"):
                 run_benchmark.load_fixture_manifest(path)
 
-    def test_seed_return_shapes_are_normalized_for_manifest_matching(self):
-        manifest = {
-            "schema_version": "synthetic-benchmark-fixture-manifest/v1",
-            "fixture_version": "post-release-v2",
-            "knowledge": [{"job_ids": ["conversation-bench-job"], "sources": ["synthetic.md"], "chunk_id": "chunk", "source_text": "Synthetic source."}],
-            "resources": [{"resources": [{"resource_id": "conversation-bench-resource", "name": "Synthetic resource"}]}],
-        }
-        with tempfile.TemporaryDirectory() as directory:
-            path = Path(directory) / "seed-shape.json"
-            path.write_text(json.dumps(manifest), encoding="utf-8")
-            loaded = run_benchmark.load_fixture_manifest(path)
-        self.assertEqual(loaded["knowledge"][0]["job_id"], "conversation-bench-job")
-        self.assertEqual(loaded["knowledge"][0]["source_file"], "synthetic.md")
-        self.assertEqual(loaded["resources"][0]["resource_id"], "conversation-bench-resource")
-
     def test_manifest_is_retained_in_each_canonical_scenario(self):
         manifest = {
             "schema_version": "synthetic-benchmark-fixture-manifest/v1",
@@ -358,6 +343,9 @@ class NaturalBenchmarkRunnerTests(unittest.TestCase):
             metadata={"model": "glm-5-3-flash"},
         )
         self.assertTrue(report["corpus"]["hash"])
+        self.assertEqual(report["schema_version"], "natural-conversation-benchmark-report/v3")
+        self.assertNotIn("artifact", report)
+        self.assertNotIn("runs", report)
         self.assertEqual(report["corpus"]["catalog_hash"], report["corpus"]["hash"])
         self.assertEqual(report["run"]["catalog_hash"], report["corpus"]["catalog_hash"])
         self.assertTrue(report["run"]["config_hash"])
@@ -365,7 +353,7 @@ class NaturalBenchmarkRunnerTests(unittest.TestCase):
         self.assertEqual(report["candidates"][0]["scenarios"][0]["fixture_version"], None)
         self.assertEqual(report["summary"]["semantic_quality"]["status"], "unreviewed")
         self.assertEqual(report["measurements"]["semantic_review"]["status"], "unreviewed")
-        self.assertEqual(report["artifact"]["candidates"][0]["scenarios"][0]["turns"][0]["response"]["answer"], "answer")
+        self.assertEqual(report["candidates"][0]["scenarios"][0]["turns"][0]["response"]["answer"], "answer")
         packet = build_review_packet(report)
         self.assertEqual(packet["artifact_hash"], report["measurements"]["artifact_hash"])
         self.assertEqual(measure_artifact(report)["semantic_review"]["status"], "unreviewed")
