@@ -44,7 +44,7 @@ Calling this “memory” while instructing the user to store factual details pr
 
 The legacy run counted the response as completed and had grading disabled. The focused consent scenario stopped earlier and made the refusal more explicit. The replacement suite must grade every turn of natural conversations and reject indirect workarounds, even when the answer includes consent-preserving language elsewhere.
 
-Both models also make claims about organizations' current capabilities and secure documentation without supporting source evidence in the saved result. Zero `sources` does not prove no web tool ran; these legacy artifacts do not retain enough tool evidence to resolve grounding. This is a coverage/evidence gap, not proof those claims are false. Full saved conversation results are in [natural-consent-audit.json](agents/runs/artifacts/glm-5-3-flash/natural-consent-audit.json).
+Both models also make claims about organizations' current capabilities and secure documentation without supporting source evidence in the saved result. Zero `sources` does not prove no web tool ran; these legacy artifacts do not retain enough tool evidence to resolve grounding. This is a coverage/evidence gap, not proof those claims are false. Full saved conversation results are in [natural-consent-audit.json](https://github.com/enclave-free/enclave.free/blob/660a203fc27e5be0f9ed28dce0c64ef1ab6605ed/docs/agents/runs/artifacts/glm-5-3-flash/natural-consent-audit.json).
 
 ## Decomposing the contact score
 
@@ -113,4 +113,4 @@ First preserve the natural turn-5 consent failure as a release-blocking regressi
 4. Review all 25 legacy references against current product policy and expert safety guidance; remove unsupported “golden answer” assumptions. Record review dates and owners.
 5. Run repeated paired full journeys with equivalent fixtures, alternate model order, record reasoning settings and full synthetic evidence, and report uncertainty by journey. Predefine acceptance criteria before seeing new scores. GLM-5.2/none versus Flash/low is a configuration comparison, not an isolated model-only experiment.
 
-Offline scorer replay results are in [quality-audit-replay.json](agents/runs/artifacts/glm-5-3-flash/quality-audit-replay.json). Original evidence and operational verification remain in [the migration report](glm-5-3-flash-migration.md). No scorer, runtime, deployment, or historical result was changed by this audit.
+Offline scorer replay results are in [quality-audit-replay.json](https://github.com/enclave-free/enclave.free/blob/660a203fc27e5be0f9ed28dce0c64ef1ab6605ed/docs/agents/runs/artifacts/glm-5-3-flash/quality-audit-replay.json). Original evidence and operational verification remain in [the migration report](glm-5-3-flash-migration.md). No scorer, runtime, deployment, or historical result was changed by this audit.

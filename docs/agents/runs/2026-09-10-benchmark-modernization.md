@@ -115,3 +115,9 @@ The 28 contact failures all occurred on changed-contact follow-ups: 12 English a
 All owned `enclaveglm53` containers, volumes, and network were removed after live verification. The contact review CLI generated a complete unreviewed packet successfully. Captured artifact byte hashes remained unchanged through formatting; source formatting occurred after live capture, and recorded capture-time source hashes remain authoritative. The local commit did not invoke a Git hook, so formatting and frontend tests were run explicitly.
 
 Frontend verification: `npm run test` passed **488 tests across 81 files**. Both Python suites were rerun after final source formatting and passed again (101 and 92 tests). All 45 retained artifact files kept their pre-format byte hashes.
+
+## PR scope reduction
+
+Full raw captures, initial attempts, derived replays, and machine review packets are preserved at the immutable commit linked from the [evidence index](artifacts/benchmark-modernization/README.md), rather than included in the current file diff. Only the saved consent evidence/review pair used by an offline regression test remains under `scripts/benches/fixtures`. The artifact-specific formatting configuration and incidental migration-report formatting were removed. Earlier formatter verification above describes the original capture workflow, not the final configuration.
+
+PR #675 is stacked on `feature/glm-5-3-flash` (PR #674) to isolate benchmark changes from the model migration. Retarget it to staging after that dependency merges. The implementation retains the requested corpus, measurement integrity, contact matrix, repeatable setup, and offline tests.

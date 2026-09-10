@@ -1,6 +1,0 @@
-{
-  "source_artifact": "contact-final.json",
-  "source_artifact_sha256": "3b2d964037536287d93fffb284dbd26556fe1a422bd9a4e08f533e9a5333ab9f",
-  "scorer_source_sha256": "ab6d83bd8bf5d4c597e40b9290e7d93eb5e82331ea778dc241962195a314d9c7",
-  "capture_method": "Operator captured the unchanged scorer file immediately after the final run; this is a sidecar observation, not metadata recorded by that running process."
-}

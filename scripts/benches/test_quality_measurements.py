@@ -209,7 +209,7 @@ class ReviewRegressionTests(unittest.TestCase):
         import json
         from pathlib import Path
         root = Path(__file__).resolve().parents[2]
-        folder = root / 'docs/agents/runs/artifacts/benchmark-modernization'
+        folder = root / 'scripts/benches/fixtures'
         artifact = json.loads((folder / 'historical-consent-evidence.json').read_text())
         saved_review = json.loads((folder / 'historical-consent-review.json').read_text())
         # Regenerate bindings under the current schema, retain the audit's exact verdict.
