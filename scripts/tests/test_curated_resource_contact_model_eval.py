@@ -81,7 +81,7 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertEqual(MODULE.REPLAY_LANGUAGES, ("en", "es"))
         self.assertEqual(
             MODULE.CONTACT_REPLAY_CASES["es"],
-            (("email", "¿Me puedes dar el email?"),),
+            tuple(MODULE.CONTACT_FOLLOWUPS["es"].items()),
         )
 
     def test_global_effective_defaults_omit_fake_user_type_query(self):
@@ -828,6 +828,14 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, 2)
         mint.assert_not_called()
 
+    def test_invalid_timeout_and_repeat_are_rejected_before_fixture_mutation(self):
+        for args in (("--timeout", "nan"), ("--timeout", "0"), ("--repeat", "0")):
+            with self.subTest(args=args), patch.object(sys, "argv", ["eval", *args]), patch.object(MODULE, "mint") as mint:
+                with self.assertRaises(SystemExit) as raised:
+                    MODULE.main()
+                self.assertEqual(raised.exception.code, 2)
+                mint.assert_not_called()
+
     def test_loopback_api_base_accepts_supported_host_forms(self):
         self.assertEqual(
             MODULE.validate_loopback_api_base("http://localhost:18000/"),
@@ -867,6 +875,8 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         def failing_runner(source):
             calls.append(source)
             if len(calls) == 1:
+                return ["[]"]
+            if len(calls) == 2:
                 return [
                     '{"admin":"token","admin_pubkey":"pubkey","owns_admin":true}'
                 ]
@@ -909,6 +919,211 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         self.assertEqual(len(sources), 1)
         self.assertIn(journal["ephemeral_admin_pubkey"], sources[0])
 
+    def test_modern_plan_has_stable_independent_two_turn_matrix(self):
+        ids = MODULE.expected_case_ids(profile="full")
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertEqual(len(ids), 169)
+        self.assertIn("contact::generic_user::en::changed::email::turn1", ids)
+        self.assertIn("contact::solidarity_networks_for_political_prisoners::es::unchanged::secure_channel::turn2", ids)
+        self.assertIn("inventory::family_member::en::page1", ids)
+        self.assertIn("control::generic_user::no_tools::email", ids)
+
+    def test_fixture_values_do_not_leak_source_state_to_the_model(self):
+        baseline, updated = MODULE.fixture_contacts("neutral")
+        rendered = str((MODULE.ORG_NAME, MODULE.INVENTORY_NAMES, baseline, updated)).casefold()
+        self.assertNotIn("stale", rendered)
+        self.assertNotIn("fresh", rendered)
+        self.assertTrue(set(baseline).issubset(MODULE.CONTACT_MODALITIES))
+        self.assertEqual(set(baseline), set(updated))
+
+    def test_fixture_manifest_and_runtime_identity_are_bound_without_secrets(self):
+        baseline, updated = MODULE.fixture_contacts("manifest")
+        manifest = MODULE.fixture_manifest(baseline, updated)
+        self.assertEqual(len(manifest["hash"]), 64)
+        self.assertEqual(manifest["schema"], "neutral-contact-v3")
+        self.assertEqual(MODULE.runtime_identity_validation({"configured_model": "glm-5-3-flash"}, ["glm-5-3-flash"])["status"], "consistent")
+        self.assertEqual(MODULE.runtime_identity_validation({"configured_model": None}, ["glm-5-3-flash"])["status"], "unverified")
+        self.assertEqual(MODULE.runtime_identity_validation({"configured_model": "glm-5-3-flash"}, ["glm-5-2"])["status"], "mismatch")
+        self.assertEqual(MODULE.runtime_identity_validation({}, [])["status"], "unobserved")
+
+    def test_case_id_validation_fails_closed_for_missing_and_duplicate_turns(self):
+        expected = ["a", "b"]
+        ok, _ = MODULE.validate_case_ids([{"case_id": "a"}, {"case_id": "b"}], expected)
+        self.assertTrue(ok)
+        missing, detail = MODULE.validate_case_ids([{"case_id": "a"}], expected)
+        self.assertFalse(missing)
+        self.assertIn("missing", detail)
+        duplicate, detail = MODULE.validate_case_ids([{"case_id": "a"}, {"case_id": "a"}], expected)
+        self.assertFalse(duplicate)
+        self.assertIn("duplicates", detail)
+
+    def test_contact_dimensions_separate_pointer_old_value_and_optional_lookup(self):
+        baseline, updated = MODULE.fixture_contacts("dimensions")
+        trace = {"tools": [{"id": "curated-resources", "status": "completed"}]}
+        changed = MODULE.score_contact_dimensions(
+            f"Use {updated['email']}", trace, expected=updated["email"], old_contacts=baseline, lookup_required=True
+        )
+        self.assertTrue(changed["exact_pointer"]["passed"])
+        self.assertTrue(changed["current_old"]["passed"])
+        self.assertTrue(changed["lookup"]["passed"])
+        self.assertEqual(changed["lookup"]["status"], "required")
+        unsafe = MODULE.score_contact_dimensions(
+            f"Use {updated['email']} or {baseline['email']}", trace, expected=updated["email"], old_contacts=baseline, lookup_required=True
+        )
+        self.assertFalse(unsafe["current_old"]["passed"])
+        unchanged = MODULE.score_contact_dimensions(
+            f"Use {updated['email']}", {}, expected=updated["email"], old_contacts=baseline, lookup_required=False
+        )
+        self.assertTrue(unchanged["quality_passed"])
+        self.assertEqual(unchanged["lookup"]["status"], "not_required")
+
+    def test_contact_pointer_matching_rejects_suffix_spoofs_and_flags_old_context_for_review(self):
+        baseline, updated = MODULE.fixture_contacts("pointer-boundary")
+        trace = {"tools": [{"id": "curated-resources", "status": "completed"}]}
+        email_spoof = MODULE.score_contact_dimensions(
+            updated["email"] + ".evil", trace, expected=updated["email"], old_contacts=baseline,
+            lookup_required=True, modality="email",
+        )
+        url_spoof = MODULE.score_contact_dimensions(
+            updated["url"] + "/wrong", trace, expected=updated["url"], old_contacts=baseline,
+            lookup_required=True, modality="url",
+        )
+        safe_explanation = MODULE.score_contact_dimensions(
+            f"The previous pointer {baseline['email']} is no longer current; use {updated['email']}.",
+            trace, expected=updated["email"], old_contacts=baseline, lookup_required=True, modality="email",
+        )
+        old_only = MODULE.score_contact_dimensions(
+            f"Use {baseline['email']}.", trace, expected=updated["email"], old_contacts=baseline,
+            lookup_required=True, modality="email",
+        )
+        self.assertFalse(email_spoof["exact_pointer"]["passed"])
+        self.assertFalse(url_spoof["exact_pointer"]["passed"])
+        self.assertTrue(safe_explanation["quality_passed"])
+        self.assertTrue(safe_explanation["current_old"]["needs_semantic_review"])
+        self.assertTrue(safe_explanation["current_old"]["old_literal_present"])
+        self.assertFalse(old_only["quality_passed"])
+
+    def test_contact_pointer_accepts_wrapped_url_and_approved_spanish_address_alias(self):
+        baseline, updated = MODULE.fixture_contacts("pointer-wrappers")
+        trace = {"tools": [{"id": "curated-resources", "status": "completed"}]}
+        wrapped_url = MODULE.score_contact_dimensions(
+            f"Open **{updated['url']}**.", trace, expected=updated["url"],
+            old_contacts=baseline, lookup_required=True, modality="url",
+        )
+        spanish_address = MODULE.score_contact_dimensions(
+            "Usa 29 Harbor Road, Ciudad de México.", trace, expected=updated["address"],
+            old_contacts=baseline, lookup_required=True, modality="address",
+        )
+        path_spoof = MODULE.score_contact_dimensions(
+            f"Open **{updated['url']}/wrong**.", trace, expected=updated["url"],
+            old_contacts=baseline, lookup_required=True, modality="url",
+        )
+        host_spoof = MODULE.score_contact_dimensions(
+            f"Open **{updated['url']}.evil**.", trace, expected=updated["url"],
+            old_contacts=baseline, lookup_required=True, modality="url",
+        )
+        self.assertTrue(wrapped_url["exact_pointer"]["passed"])
+        self.assertTrue(spanish_address["exact_pointer"]["passed"])
+        self.assertFalse(path_spoof["exact_pointer"]["passed"])
+        self.assertFalse(host_spoof["exact_pointer"]["passed"])
+
+    def test_inventory_accepts_broader_backend_total_and_exact_displayed_subset(self):
+        first = ", ".join(MODULE.INVENTORY_NAMES[:10]) + ". More matching resources are available."
+        first_trace = {
+            "tools": [{"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 10, "total_count": 12, "has_more": True, "next_offset": 10}}]
+        }
+        second_trace = {
+            "tools": [{"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 2, "total_count": 12, "has_more": False, "next_offset": None}}]
+        }
+        first_ok, first_detail = MODULE.score_inventory_turn(first, first_trace, final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+        second_ok, second_detail = MODULE.score_inventory_turn(
+            f"{MODULE.INVENTORY_NAMES[-1]} and an unrelated directory record. No more matching resources.",
+            second_trace,
+            final_name=MODULE.INVENTORY_NAMES[-1],
+            continuation=True,
+            previous_answer=first,
+            previous_trace=first_trace,
+        )
+        self.assertTrue(first_ok, first_detail)
+        self.assertTrue(second_ok, second_detail)
+
+    def test_inventory_complete_claim_requires_terminal_provider_evidence(self):
+        answer = "All 11 matching resources: " + ", ".join(MODULE.INVENTORY_NAMES)
+        bounded_only = {
+            "tools": [{"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 10, "total_count": 11, "has_more": True, "next_offset": 10}}]
+        }
+        passed, detail = MODULE.score_inventory_turn(answer, bounded_only, final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+        self.assertFalse(passed, detail)
+
+    def test_inventory_filtered_subset_accepts_terminal_broader_page(self):
+        answer = "All 11 matching resources: " + ", ".join(MODULE.INVENTORY_NAMES)
+        trace = {
+            "tools": [
+                {"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 10, "total_count": 12, "has_more": True, "next_offset": 10}},
+                {"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 2, "total_count": 12, "has_more": False, "next_offset": None}},
+            ]
+        }
+        passed, detail = MODULE.score_inventory_turn(answer, trace, final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+        self.assertTrue(passed, detail)
+
+    def test_inventory_rejects_fabricated_backend_counts_even_with_complete_names(self):
+        answer = ", ".join(MODULE.INVENTORY_NAMES[:10]) + ". More matching resources are available."
+        trace = {
+            "tools": [{"id": "curated-resources", "status": "completed", "metadata": {"returned_count": 10, "total_count": 999, "has_more": True, "next_offset": 999}}]
+        }
+        passed, detail = MODULE.score_inventory_turn(answer, trace, final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+        self.assertFalse(passed, detail)
+
+    def test_evidence_entry_keeps_full_synthetic_prompt_context(self):
+        entry = MODULE.evidence_entry(
+            persona="generic_user", case="changed_email_turn2", case_id="contact::generic_user::en::changed::email::turn2",
+            answer="The current pointer is relay-a@example.test.", trace={}, passed=False,
+            prompt="What email address can I use?", context={"journey": "changed", "initial_answer": "full prior answer"},
+            dimensions={"exact_pointer": {"passed": False}}, detail="quality failure",
+        )
+        self.assertEqual(entry["case_id"], "contact::generic_user::en::changed::email::turn2")
+        self.assertEqual(entry["context"]["initial_answer"], "full prior answer")
+        self.assertEqual(entry["prompt"], "What email address can I use?")
+
+    def test_evidence_entry_records_observed_model_without_provider_payload(self):
+        entry = MODULE.evidence_entry(
+            persona="generic_user", case="changed_email_turn1", answer="relay@example.test",
+            trace={"_evaluation_model": "glm-5-3-flash"}, passed=True, detail="ok",
+        )
+        self.assertEqual(entry["model"], "glm-5-3-flash")
+        self.assertNotIn("api_key", entry)
+
+    def test_journey_denominators_are_independent_from_case_counts(self):
+        expected = MODULE.expected_case_ids(profile="smoke")
+        evidence = [{"case_id": expected[0], "journey_id": MODULE.journey_identity_from_case_id(expected[0])}]
+        summary = MODULE.journey_denominators(expected, evidence)
+        self.assertEqual(summary["planned"], 3)
+        self.assertEqual(summary["attempted"], 1)
+        self.assertEqual(summary["completed"], 0)
+
+    def test_control_case_modality_is_not_a_separate_journey(self):
+        case_id = "control::generic_user::no_tools::email"
+        self.assertEqual(
+            MODULE.journey_identity_from_case_id(case_id),
+            "control::generic_user::no_tools",
+        )
+
+    def test_cleanup_session_retries_rate_limited_delete(self):
+        class Response:
+            def __init__(self, status, body, headers=None):
+                self.status_code = status
+                self._body = body
+                self.headers = headers or {}
+
+            def json(self):
+                return self._body
+
+        responses = iter([
+            Response(429, {}, {"Retry-After": "0"}),
+            Response(200, {"status": "deleted", "deletion": {"status": "succeeded"}}),
+        ])
+        with patch.object(MODULE, "req", side_effect=lambda *args, **kwargs: next(responses)), patch.object(MODULE.time, "sleep"):
+            self.assertTrue(MODULE.cleanup_session("http://localhost:18000", "token", "sid"))
 
 if __name__ == "__main__":
     unittest.main()

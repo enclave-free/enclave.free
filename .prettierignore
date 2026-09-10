@@ -1,0 +1,2 @@
+# Captured benchmark evidence is immutable; byte hashes bind replay provenance.
+docs/agents/runs/artifacts/**

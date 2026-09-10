@@ -138,6 +138,8 @@ All five separate admin timing scenarios completed:
 - Admin timing: [before](agents/runs/artifacts/glm-5-3-flash/baseline-admin-timing.json), [after](agents/runs/artifacts/glm-5-3-flash/candidate-admin-timing.json)
 - [Verified provider preflight](agents/runs/artifacts/glm-5-3-flash/provider-preflight.json) and [model catalog snapshot](agents/runs/artifacts/glm-5-3-flash/tinfoil-models.json)
 
+These commands record the September 9 migration run. The benchmark interfaces have since been modernized; use the [current measurement guide](benchmark-measurements.md) for new cohorts and source-fixture setup.
+
 Principal commands, run before and after in the isolated worktree:
 
 ```bash
