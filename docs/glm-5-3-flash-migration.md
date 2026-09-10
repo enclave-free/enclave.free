@@ -216,3 +216,38 @@ The corrected isolated live smoke **failed** after bounded retries on truncated 
 The Sage pin is now `22d342dacc0b4c180b847c5526af9a8068c724b0`. The verification failure came from harness drift: Sage standalone Compose and smoke still used `tinfoil-cli:latest proxy`, while the application already used `tinfoil-proxy:0.1.6`. The same minimal GLM request repeatedly failed through the CLI proxy with exactly 20 body bytes missing; requesting identity encoding did not help. Through the pinned standalone proxy, three requests completed with exact Content-Length, the requested model, and finish_reason=stop. The strict application response-integrity smoke also passed live.
 
 The fix changes two Sage files (6 additions, 4 deletions) to use the application's proxy image/arguments, including the internal host allowlist. No truncation tolerance or weaker completion check was added. Rendered Sage Compose and Bash syntax checks passed. The actual standalone smoke now passes chat and embeddings; it subsequently fails on its separate default vision model returning HTTP 404. That vision configuration is unchanged, so the full multi-model smoke is not claimed green. All diagnostic and smoke containers were removed. The [standalone proxy](https://github.com/tinfoilsh/tinfoil-proxy/) retains verified enclave transport.
+
+## Explicit Enclave verification mode
+
+The Sage pin is now `bf1950838e2fdcd88c8f5f0c879427d902a96453`. Run
+`just smoke-tinfoil enclave` in Sage for this Deployment. Full Sage verification
+remains the default (`just smoke-tinfoil`); Enclave mode excludes only the
+messenger vision provider check and prints `NOT TESTED vision`. All workspace
+and database checks remain mandatory in both modes. This is provider and shared
+memory verification, not a full authenticated web Conversation/session test.
+
+The first Enclave run reproduced the existing Linux endpoint-retry test failure.
+The test constructed a fresh HTTP client inside each short request deadline.
+Moving client construction into test setup fixed the failure without changing
+production code, timeout values, or assertions. The retry contract then passed
+10 consecutive Linux runs.
+
+Verification of this revision:
+
+- Enclave smoke exited 0: chat completion, 768-dimensional embeddings, invalid-model
+  rejection, fresh migrations, recall before/after embedding, and tagged archival
+  retrieval passed.
+- All 256 containerized workspace tests, workspace compilation, and all-target/
+  all-feature Clippy with warnings denied passed. Rust formatting and Bash syntax
+  checks passed.
+- Four offline smoke-mode tests passed, covering exclusion reporting, full-mode
+  vision failures, shared embedding failures, and argument validation.
+- Full Sage smoke was rerun through the default command and exited 1 on the
+  unchanged vision-model HTTP 404, after passing chat and embeddings. Vision is
+  untested in Enclave mode; its availability has not been repaired.
+- All containers, networks, volumes, and images created by these smoke runs were
+  removed. The six application response-integrity unit tests also passed.
+
+This removes the Enclave provider/storage verification blocker. The earlier
+consent and contact-refresh quality findings remain unresolved; this result does
+not certify Deployment Readiness. No merge or deployment was performed.
