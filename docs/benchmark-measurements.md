@@ -4,13 +4,13 @@ The September 2026 overhaul separates execution, deterministic contracts, semant
 
 ## What each suite measures
 
-| Suite | Unit and scope | Appropriate interpretation |
-| --- | --- | --- |
-| Conversation Model Bench | 12 scenarios, 19 turns per model/repetition; natural and explicit contract prompts | Runtime contracts plus reviewable whole conversations |
-| Natural conversation corpus | 5 independent journeys, 25 ordinary user questions | Continuity, autonomy, relevance, grounding, and useful next steps; expert criteria review pending |
+| Suite                        | Unit and scope                                                                             | Appropriate interpretation                                                                                |
+| ---------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Conversation Model Bench     | 12 scenarios, 19 turns per model/repetition; natural and explicit contract prompts         | Runtime contracts plus reviewable whole conversations                                                     |
+| Natural conversation corpus  | 5 independent journeys, 25 ordinary user questions                                         | Continuity, autonomy, relevance, grounding, and useful next steps; expert criteria review pending         |
 | Curated contact matrix, full | 80 independent two-turn journeys, 8 inventory cases, 1 disabled-tool control: 169 requests | Exact current pointer, lookup behavior, stale reuse, inventory coverage, and harness integrity separately |
-| Curated contact smoke | 2 two-turn email journeys plus 2 inventory cases: 6 requests | Fast harness smoke, not full contact coverage |
-| Offline evaluator tests | Synthetic positive, negative, malformed, and saved failure evidence | Evaluator correctness, not model quality |
+| Curated contact smoke        | 2 two-turn email journeys plus 2 inventory cases: 6 requests                               | Fast harness smoke, not full contact coverage                                                             |
+| Offline evaluator tests      | Synthetic positive, negative, malformed, and saved failure evidence                        | Evaluator correctness, not model quality                                                                  |
 
 Natural questions avoid prescribing an answer or a tool. Explicit contract probes remain useful for permissions, persistence, confirmation, and exact contacts, but they are not matched natural/contract quality experiments. The old three golden answers and automatic OpenAI grading are removed. Each natural turn instead names required and forbidden behavior. Review only the current and previous turns; future questions cannot supply missing context.
 
@@ -74,15 +74,15 @@ No judge is selected automatically. Its eight bundled adversarial calibration co
 
 ## Interpret results
 
-| Field | Meaning |
-| --- | --- |
-| `execution` | Completed / attempted / planned turns; missing journeys remain in the denominator |
-| `contracts` | Objective invariants, returned identity, fixture/session cleanup, and harness failures |
-| `semantic_review` | Fully reviewed turns / planned turns, failures, and invalid-review errors |
-| `safety` | Separate supported safety failures; never averaged away |
-| `release_gate` | Blocked, unreviewed, expert review pending, or passed; not a deployment action |
-| `timing` | Completed-turn sample counts and descriptive p50/p90/p95, min/max by model |
-| `paired_timing` | Whole-journey deltas only with balanced repeated order, matching known runtime settings, and matching scenario/fixture definitions |
+| Field             | Meaning                                                                                                                            |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `execution`       | Completed / attempted / planned turns; missing journeys remain in the denominator                                                  |
+| `contracts`       | Objective invariants, returned identity, fixture/session cleanup, and harness failures                                             |
+| `semantic_review` | Fully reviewed turns / planned turns, failures, and invalid-review errors                                                          |
+| `safety`          | Separate supported safety failures; never averaged away                                                                            |
+| `release_gate`    | Blocked, unreviewed, expert review pending, or passed; not a deployment action                                                     |
+| `timing`          | Completed-turn sample counts and descriptive p50/p90/p95, min/max by model                                                         |
+| `paired_timing`   | Whole-journey deltas only with balanced repeated order, matching known runtime settings, and matching scenario/fixture definitions |
 
 Two-model runs alternate A/B then B/A. An even repetition count is required for the paired comparison. Pairing excludes incomplete journeys and reports them separately. Changed reasoning budgets, unknown fixture semantics, or missing ordering evidence withhold the automated comparison. Small cohorts do not establish reliability or quality parity. Turns within a conversation are correlated; do not count them as independent quality samples. Provider caching and warm-up remain potential confounders. Percentile tails with small sample counts are descriptive only; the observed delta range is not a confidence interval.
 

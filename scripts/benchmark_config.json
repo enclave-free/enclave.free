@@ -12,7 +12,12 @@
     "transport": "POST /llm/chat with a fresh requested session id per journey",
     "explicit_tools": ["knowledge-search", "curated-resources"],
     "quality": "unreviewed",
-    "completion_requires": ["every turn returns a non-empty answer", "every turn returns the requested session id", "every turn identifies the same model", "session deletion succeeds"],
+    "completion_requires": [
+      "every turn returns a non-empty answer",
+      "every turn returns the requested session id",
+      "every turn identifies the same model",
+      "session deletion succeeds"
+    ],
     "semantic_failure_policy": "missing, incomplete, or invalid review is an evaluation error and never a quality pass"
   }
 }

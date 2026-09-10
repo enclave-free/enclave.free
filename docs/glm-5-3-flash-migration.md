@@ -74,36 +74,36 @@ The local stack was rebuilt and its Sage environment, backend environment, and
 `GET /llm/test` all verified as `glm-5-3-flash`; Sage uses `low` reasoning.
 Raw local command logs are in `/tmp/enclave-glm53-results`.
 
-| Check | Before | After |
-| --- | --- | --- |
-| Backend, fresh image | 435 passed, 1 error, 1 skipped | 435 passed, same error, 1 skipped |
-| Frontend | 487 passed, 1 timeout; affected file's 6 tests passed on rerun | 488 passed |
-| Frontend production build | Passed | Passed |
-| Sage host workspace | 256 passed | 256 passed |
-| Sage host Clippy and formatting | Passed | Passed |
-| Benchmark unit tests | 67 passed | 67 passed |
-| Script unit tests | 53 passed | 53 passed |
-| Compose contracts | 3 passed | 3 passed |
-| Frontend HTTP contracts | 5 passed | 5 passed |
-| Integration runner with local harness adjustments | 14/18 scripts passed | 14/18 scripts passed; same failure categories |
-| Direct chunk retrieval | Functional checks passed; cleanup failed | Functional checks passed; same cleanup failure |
-| Standalone Sage Linux smoke | Endpoint-retry unit test failed | Same test failed |
+| Check                                             | Before                                                         | After                                          |
+| ------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- |
+| Backend, fresh image                              | 435 passed, 1 error, 1 skipped                                 | 435 passed, same error, 1 skipped              |
+| Frontend                                          | 487 passed, 1 timeout; affected file's 6 tests passed on rerun | 488 passed                                     |
+| Frontend production build                         | Passed                                                         | Passed                                         |
+| Sage host workspace                               | 256 passed                                                     | 256 passed                                     |
+| Sage host Clippy and formatting                   | Passed                                                         | Passed                                         |
+| Benchmark unit tests                              | 67 passed                                                      | 67 passed                                      |
+| Script unit tests                                 | 53 passed                                                      | 53 passed                                      |
+| Compose contracts                                 | 3 passed                                                       | 3 passed                                       |
+| Frontend HTTP contracts                           | 5 passed                                                       | 5 passed                                       |
+| Integration runner with local harness adjustments | 14/18 scripts passed                                           | 14/18 scripts passed; same failure categories  |
+| Direct chunk retrieval                            | Functional checks passed; cleanup failed                       | Functional checks passed; same cleanup failure |
+| Standalone Sage Linux smoke                       | Endpoint-retry unit test failed                                | Same test failed                               |
 
 ### Live model comparison
 
-| Measurement | GLM-5.2 / `none` | GLM-5.3 Flash / `low` |
-| --- | ---: | ---: |
-| Conversation benchmark completed turns | 12/12 | 12/12 |
-| Automated conversation scenarios passed | 9/10 | 8/10 |
-| Median first visible answer | 2.767 s | 2.126 s |
-| Median completed turn | 3.567 s | 3.307 s |
-| Conversation warning checks | 13 | 8 |
-| Contact-refresh cases completed | 41/41 | 41/41 |
-| Contact-refresh cases passed | 7/41 | 4/41 |
-| Contact-refresh cleanup failures | 0 | 0 |
-| Legacy benchmark completed turns | 25/25 | 25/25 |
-| Legacy summed response time | 254.5 s | 162.4 s |
-| Legacy median response time | 6.8 s | 5.4 s |
+| Measurement                             | GLM-5.2 / `none` | GLM-5.3 Flash / `low` |
+| --------------------------------------- | ---------------: | --------------------: |
+| Conversation benchmark completed turns  |            12/12 |                 12/12 |
+| Automated conversation scenarios passed |             9/10 |                  8/10 |
+| Median first visible answer             |          2.767 s |               2.126 s |
+| Median completed turn                   |          3.567 s |               3.307 s |
+| Conversation warning checks             |               13 |                     8 |
+| Contact-refresh cases completed         |            41/41 |                 41/41 |
+| Contact-refresh cases passed            |             7/41 |                  4/41 |
+| Contact-refresh cleanup failures        |                0 |                     0 |
+| Legacy benchmark completed turns        |            25/25 |                 25/25 |
+| Legacy summed response time             |          254.5 s |               162.4 s |
+| Legacy median response time             |            6.8 s |                 5.4 s |
 
 The GLM-5.2 conversation failure was failure to surface the seeded vetted
 resource. GLM-5.3 Flash passed that scenario, but failed the exact-wording checks
@@ -122,13 +122,13 @@ proceeds with these results disclosed.
 
 All five separate admin timing scenarios completed:
 
-| Admin scenario | Before: first visible / done | After: first visible / done |
-| --- | ---: | ---: |
-| No tools | 0.919 / 1.160 s | 0.485 / 0.638 s |
-| Setup summary | 3.603 / 3.628 s | 2.429 / 2.455 s |
-| Config only | 2.262 / 2.285 s | 2.059 / 2.087 s |
-| Natural-language database query | 6.069 / 6.148 s | 4.285 / 4.362 s |
-| Direct database select | 1.848 / 1.875 s | 1.004 / 1.026 s |
+| Admin scenario                  | Before: first visible / done | After: first visible / done |
+| ------------------------------- | ---------------------------: | --------------------------: |
+| No tools                        |              0.919 / 1.160 s |             0.485 / 0.638 s |
+| Setup summary                   |              3.603 / 3.628 s |             2.429 / 2.455 s |
+| Config only                     |              2.262 / 2.285 s |             2.059 / 2.087 s |
+| Natural-language database query |              6.069 / 6.148 s |             4.285 / 4.362 s |
+| Direct database select          |              1.848 / 1.875 s |             1.004 / 1.026 s |
 
 ### Evidence and commands
 

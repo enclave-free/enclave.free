@@ -24,11 +24,11 @@
 
 ## Delivery ledger
 
-| Slice | Blocked by | Status |
-| --- | --- | --- |
-| Trustworthy evidence and review | None | Implemented and regression tested |
-| Realistic questions and resource measurements | Evidence contract | Implemented and live verified |
-| Repeatable experiments and operating guide | First two slices | Implemented with retained final evidence |
+| Slice                                         | Blocked by        | Status                                   |
+| --------------------------------------------- | ----------------- | ---------------------------------------- |
+| Trustworthy evidence and review               | None              | Implemented and regression tested        |
+| Realistic questions and resource measurements | Evidence contract | Implemented and live verified            |
+| Repeatable experiments and operating guide    | First two slices  | Implemented with retained final evidence |
 
 ## Open decisions
 
@@ -58,12 +58,12 @@ The repaired comparison ran `glm-5-2` and `glm-5-3-flash`, both with `low` reaso
 
 The initial deterministic result was GLM-5.2 21/24 versus Flash 24/24. Inspection showed all three old-model referral omissions were explicit refusals to present synthetic fixture contacts as real referrals. The contact-delivery observation now requires semantic review rather than hard-failing a lexical contract. The provenance-bound replay in `balanced-conversations-final-remeasured.json` therefore has 24/24 contract passes for both models, and semantic quality remains unreviewed. `replay_referral_contracts.py` reproduces that classification correction without changing any response or timing. This correction must not be presented as model improvement or quality parity.
 
-| Descriptive timing | GLM-5.2 / low | GLM-5.3 Flash / low |
-| --- | ---: | ---: |
-| Completed turns | 38 | 38 |
-| Median first visible token | 4.31 s | 1.61 s |
-| Median completed turn | 5.58 s | 3.42 s |
-| p95 completed turn | 12.35 s | 5.72 s |
+| Descriptive timing         | GLM-5.2 / low | GLM-5.3 Flash / low |
+| -------------------------- | ------------: | ------------------: |
+| Completed turns            |            38 |                  38 |
+| Median first visible token |        4.31 s |              1.61 s |
+| Median completed turn      |        5.58 s |              3.42 s |
+| p95 completed turn         |       12.35 s |              5.72 s |
 
 All 24 complete journey pairs were eligible. The median Flash-minus-old journey difference was -2.66 s, with an observed range of -25.21 s to -0.024 s. This is descriptive, not a confidence interval or superiority finding. Contract and semantic failures are separate from completion; an incomplete journey would be excluded from paired timing.
 
@@ -98,14 +98,18 @@ The first full contact cohort completed 169 requests. The original score was 125
 
 `contact-final.json` records 169/169 requests and 85/85 journeys with stable Flash identity, zero harness failures, and zero cleanup failures. Deterministic delivery/inventory checks passed for 139/169 requests:
 
-| Check | Passed / planned |
-| --- | ---: |
-| Initial contact answers | 80 / 80 |
-| Unchanged-contact follow-ups | 40 / 40 |
-| Changed-contact follow-ups | 12 / 40 |
-| Inventory turns | 6 / 8 |
-| Tools-disabled control | 1 / 1 |
+| Check                        | Passed / planned |
+| ---------------------------- | ---------------: |
+| Initial contact answers      |          80 / 80 |
+| Unchanged-contact follow-ups |          40 / 40 |
+| Changed-contact follow-ups   |          12 / 40 |
+| Inventory turns              |            6 / 8 |
+| Tools-disabled control       |            1 / 1 |
 
 The 28 contact failures all occurred on changed-contact follow-ups: 12 English and 16 Spanish. By modality: address 8, phone 6, secure channel 6, email 5, URL 3. These are delivery/refresh findings, not general semantic quality scores. The expanded matrix was run on Flash only, so its score is not directly comparable with the older 41-case cohort.
 
 `contact-final-provenance.json` binds the raw capture to the scorer source observed immediately after the run. This is explicitly operator-observed provenance. Automatic runner and planned-catalog hashes were added afterward for future runs and verified offline; the final live capture is not represented as having executed that metadata-only addition.
+
+## Finalization
+
+All owned `enclaveglm53` containers, volumes, and network were removed after live verification. The contact review CLI generated a complete unreviewed packet successfully. Captured artifact byte hashes remained unchanged through formatting; source formatting occurred after live capture, and recorded capture-time source hashes remain authoritative. The local commit did not invoke a Git hook, so formatting and frontend tests were run explicitly.
