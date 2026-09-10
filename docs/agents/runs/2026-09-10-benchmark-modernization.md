@@ -113,3 +113,5 @@ The 28 contact failures all occurred on changed-contact follow-ups: 12 English a
 ## Finalization
 
 All owned `enclaveglm53` containers, volumes, and network were removed after live verification. The contact review CLI generated a complete unreviewed packet successfully. Captured artifact byte hashes remained unchanged through formatting; source formatting occurred after live capture, and recorded capture-time source hashes remain authoritative. The local commit did not invoke a Git hook, so formatting and frontend tests were run explicitly.
+
+Frontend verification: `npm run test` passed **488 tests across 81 files**. Both Python suites were rerun after final source formatting and passed again (101 and 92 tests). All 45 retained artifact files kept their pre-format byte hashes.
