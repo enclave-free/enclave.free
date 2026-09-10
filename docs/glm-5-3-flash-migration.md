@@ -69,7 +69,7 @@ diagnostic-model override that environment inspection alone misses.
 
 ## Verification results
 
-The candidate pins Sage `0f24926` ([Sage PR #55](https://github.com/enclave-free/sage/pull/55)).
+The original measured candidate pinned Sage `0f24926` ([Sage PR #55](https://github.com/enclave-free/sage/pull/55)).
 The local stack was rebuilt and its Sage environment, backend environment, and
 `GET /llm/test` all verified as `glm-5-3-flash`; Sage uses `low` reasoning.
 Raw local command logs are in `/tmp/enclave-glm53-results`.
@@ -132,11 +132,11 @@ All five separate admin timing scenarios completed:
 
 ### Evidence and commands
 
-- [Machine-readable comparison](agents/runs/artifacts/glm-5-3-flash/comparison.json)
-- Conversation artifacts: [before](agents/runs/artifacts/glm-5-3-flash/baseline-conversation.json), [after](agents/runs/artifacts/glm-5-3-flash/candidate-conversation.json)
-- Contact artifacts: [before](agents/runs/artifacts/glm-5-3-flash/baseline-contact-eval.json), [after](agents/runs/artifacts/glm-5-3-flash/candidate-contact-eval.json)
-- Admin timing: [before](agents/runs/artifacts/glm-5-3-flash/baseline-admin-timing.json), [after](agents/runs/artifacts/glm-5-3-flash/candidate-admin-timing.json)
-- [Verified provider preflight](agents/runs/artifacts/glm-5-3-flash/provider-preflight.json) and [model catalog snapshot](agents/runs/artifacts/glm-5-3-flash/tinfoil-models.json)
+- [Machine-readable comparison](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/comparison.json)
+- Conversation artifacts: [before](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/baseline-conversation.json), [after](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/candidate-conversation.json)
+- Contact artifacts: [before](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/baseline-contact-eval.json), [after](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/candidate-contact-eval.json)
+- Admin timing: [before](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/baseline-admin-timing.json), [after](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/candidate-admin-timing.json)
+- [Verified provider preflight](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/provider-preflight.json) and [model catalog snapshot](https://github.com/enclave-free/enclave.free/blob/b37cbe1f0cace0669ae8c4b9522df7dc9b920474/docs/agents/runs/artifacts/glm-5-3-flash/tinfoil-models.json)
 
 Principal commands, run before and after in the isolated worktree:
 
@@ -196,3 +196,17 @@ Live benchmark results are single-run observations with possible provider cache
 effects, not a statistically powered latency or reliability claim. The legacy
 multi-session benchmark ran with grading disabled because no grading credential
 was configured; completing those conversations is not a quality-pass score.
+
+## Review packaging refinement
+
+The original provider catalog, preflight, and before/after evidence are preserved at the immutable migration commit linked above. Generated run dumps are excluded from the current PR diff. This packaging change does not rerun or rescore the migration cohort.
+
+## Second migration review
+
+The revised candidate pins Sage `07fcd7850a6e68a7a880373ffad5ab2f292e4e2c`. Flash now rejects unsupported legacy reasoning settings (`none`, `minimal`, `medium`, `xhigh`) at startup while accepting `low`, `high`, and `max`. Custom models retain their existing explicit effort overrides. Sage's configuration owns the `low` deployment default; the generic native-client enum default stays unchanged at `none`. ADR-0031 now labels its GLM 5.2 / `none` decision as historical.
+
+The application response-integrity smoke sends the configured reasoning effort and requires the requested model, a finished response, and nonempty content. Tests reject missing/wrong identity, length-limited/empty answers, and incomplete bodies. A Compose contract verifies operator model/effort overrides reach both runtimes. These two app suites pass **10 tests**.
+
+Sage's standalone smoke additionally forwards stdin (`docker run -i`) into the embedded Python checks. Previously those checks could execute no Python; their apparent success must not be used as provider evidence. Provider checks now run before the unrelated Linux workspace suite. Host verification passed **256 tests**, Clippy with all targets/features and warnings denied, and formatting.
+
+The corrected isolated live smoke **failed** after bounded retries on truncated HTTP bodies (`IncompleteRead: 1312 bytes received, 20 more expected`). It did not certify live model identity or reach the memory/workspace stages. This is a current verification blocker, not a green smoke or a newly measured model-quality regression. All owned smoke containers, networks, volumes, and image were removed. Earlier before/after cohorts above remain historical evidence; no production rollout was performed.
