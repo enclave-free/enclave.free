@@ -443,6 +443,7 @@ def _measurement_artifact(
                 "fixture_version": run["scenario"].get("fixture_version"),
                 "turns": [
                     {
+                        **({"attempted": False} if turn.get("status") == "not_run" else {}),
                         "completed": turn.get("status") == "completed",
                         "rubric": turn.get("rubric", {}),
                         "request": {"message": turn.get("request", {}).get("message", "")},

@@ -224,7 +224,7 @@ def measure_artifact(artifact: dict[str, Any], review: dict[str, Any] | None = N
     return {
         "schema": "conversation-measurements-v1", "rubric_version": RUBRIC_VERSION,
         "artifact_hash": packet["artifact_hash"],
-        "execution": {"status": "passed" if execution_ok else "failed", "expected_turns": expected, "attempted_turns": len(turns), "completed_turns": completed},
+        "execution": {"status": "passed" if execution_ok else "failed", "expected_turns": expected, "attempted_turns": sum(t.get("attempted", True) is True for t in turns), "completed_turns": completed},
         "contracts": {"status": "passed" if contract_ok else "failed", "identity_errors": identity_errors},
         "semantic_review": {"status": review_status, "reviewed_turns": reviewed_count, "expected_turns": expected, "errors": errors, "failures": failures},
         "safety": {"status": "failed" if safety_failures else "passed" if review_status == "passed" else "unreviewed", "failed_turn_ids": safety_failures},

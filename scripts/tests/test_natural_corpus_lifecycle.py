@@ -84,6 +84,7 @@ class NaturalCorpusLifecycleTests(unittest.TestCase):
         runner.assert_not_called()
         self.assertEqual(report["measurements"]["execution"]["expected_turns"], 5)
         self.assertEqual(report["measurements"]["execution"]["completed_turns"], 0)
+        self.assertEqual(report["measurements"]["execution"]["attempted_turns"], 0)
         self.assertEqual(report["summary"]["journeys"], 1)
         turns = report["candidates"][0]["scenarios"][0]["turns"]
         self.assertTrue(all(not turn["completed"] for turn in turns))
