@@ -18,7 +18,7 @@ BASE_COMPOSE_FILES = (
 DEVELOPMENT_OVERRIDE = "docker-compose.frontend-dev.yml"
 
 
-def render_compose(*files: str) -> dict[str, object]:
+def render_compose(*files: str, overrides: dict[str, str] | None = None) -> dict[str, object]:
     command = ["docker", "compose", "--env-file", os.devnull]
     for compose_file in files:
         command.extend(("-f", compose_file))
@@ -33,6 +33,7 @@ def render_compose(*files: str) -> dict[str, object]:
     environment.setdefault(
         "SECRET_KEY", "compose-contract-test-secret-key-00000000"
     )
+    environment.update(overrides or {})
     completed = subprocess.run(
         command,
         cwd=REPO_ROOT,
@@ -70,6 +71,15 @@ class FrontendComposeContractTests(unittest.TestCase):
         self.assertEqual(sage_environment["TINFOIL_REASONING_EFFORT"], "low")
         self.assertNotIn("TINFOIL_MODEL_FALLBACKS", sage_environment)
         self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-3-flash")
+
+    def test_operator_model_and_effort_overrides_reach_both_runtimes(self) -> None:
+        config = render_compose(*BASE_COMPOSE_FILES, overrides={
+            "TINFOIL_MODEL": "operator-model", "TINFOIL_REASONING_EFFORT": "max"
+        })
+        services = config["services"]
+        self.assertEqual(services["sage"]["environment"]["TINFOIL_MODEL"], "operator-model")
+        self.assertEqual(services["sage"]["environment"]["TINFOIL_REASONING_EFFORT"], "max")
+        self.assertEqual(services["core-backend"]["environment"]["LLM_MODEL"], "operator-model")
 
     def test_default_topology_is_the_production_frontend(self) -> None:
         frontend = frontend_service(render_compose(*BASE_COMPOSE_FILES))
