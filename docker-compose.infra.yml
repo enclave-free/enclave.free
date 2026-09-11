@@ -42,6 +42,15 @@ services:
     networks:
       - enclave-net
 
+  maple-proxy:
+    image: ghcr.io/opensecretcloud/maple-proxy:0.3.2
+    profiles: [maple]
+    environment:
+      - MAPLE_HOST=0.0.0.0
+      - MAPLE_BACKEND_URL=https://enclave.trymaple.ai
+    networks:
+      - enclave-net
+
   qdrant:
     image: qdrant/qdrant:v1.12.6
     container_name: enclave-qdrant
