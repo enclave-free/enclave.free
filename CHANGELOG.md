@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.23 - 2026-09-11
+
+- Migrated the main model from deprecated GLM 5.2 to GLM 5.3 Flash through verified Tinfoil transport, with low reasoning effort and strict response-integrity checks.
+- Modernized Conversation benchmarks to separate completion, deterministic checks, semantic review, and observed quality failures; reduced the added measurement implementation by 25%.
+- Added explicit Enclave smoke verification, retained full Sage vision checks, and stabilized the Linux retry test without weakening its deadlines.
+- Known limitations: the full Sage vision model remains unavailable; consent and contact-refresh quality findings remain open. Enclave smoke success alone does not certify Conversation quality.
+
 ## 0.4.22 - 2026-09-08
 
 - Removed the unused Accelerate checkpoint loader (CVE-2026-69112) by selecting the PDF-only Docling dependency set and its layout model directly.
