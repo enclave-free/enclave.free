@@ -219,7 +219,7 @@ The fix changes two Sage files (6 additions, 4 deletions) to use the application
 
 ## Explicit Enclave verification mode
 
-The Sage pin is now `bf1950838e2fdcd88c8f5f0c879427d902a96453`. Run
+The Sage pin is now `73b2a792708122bbeee47f89460b2722ab0e9be2`. Run
 `just smoke-tinfoil enclave` in Sage for this Deployment. Full Sage verification
 remains the default (`just smoke-tinfoil`); Enclave mode excludes only the
 messenger vision provider check and prints `NOT TESTED vision`. All workspace
@@ -241,7 +241,9 @@ Verification of this revision:
   all-feature Clippy with warnings denied passed. Rust formatting and Bash syntax
   checks passed.
 - Four offline smoke-mode tests passed, covering exclusion reporting, full-mode
-  vision failures, shared embedding failures, and argument validation.
+  vision failures, shared embedding failures, and argument validation. Final
+  review caught that routine gates did not invoke them; a dedicated workflow
+  now covers all PR target branches, and `just ci-check` runs the same command.
 - Full Sage smoke was rerun through the default command and exited 1 on the
   unchanged vision-model HTTP 404, after passing chat and embeddings. Vision is
   untested in Enclave mode; its availability has not been repaired.
