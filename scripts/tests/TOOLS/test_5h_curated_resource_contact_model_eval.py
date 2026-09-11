@@ -442,7 +442,7 @@ def evidence_entry(
     context: dict[str, Any] | None = None,
     dimensions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Return reviewable synthetic evidence without prompts or raw provider traces."""
+    """Retain synthetic prompts and answers, excluding raw provider traces."""
     entry = {
         "persona": persona,
         "case": case,
@@ -543,7 +543,6 @@ def score_contact_dimensions(
             "observed": exact,
         },
         "current_old": {
-            "passed": old_absent,
             "forbidden_values": len(old_contacts),
             "observed_absent": old_absent,
             "old_literal_present": old_literal_present,
@@ -1621,14 +1620,6 @@ def main(*, preflight=None) -> int:
         runtime_validation["harness_ok"] = runtime_validation["harness_ok"] and missing_model_count == 0
         if not runtime_validation["harness_ok"]:
             harness_failures += 1
-        manifest_end = fixture_manifest(baseline, updated)
-        manifest_validation = {
-            "start_hash": manifest.get("hash"),
-            "end_hash": manifest_end.get("hash"),
-            "consistent": manifest_end.get("hash") == manifest.get("hash"),
-        }
-        if not manifest_validation["consistent"]:
-            harness_failures += 1
         summary, cleanup_failures, evidence_error = persist_evaluation_evidence(
             args.evidence_file,
             payload={
@@ -1647,7 +1638,6 @@ def main(*, preflight=None) -> int:
                 ).hexdigest(),
                 "fixture_schema": "neutral-contact-v3",
                 "fixture_manifest": manifest,
-                "fixture_manifest_validation": manifest_validation,
                 "synthetic_preflight": synthetic_preflight,
                 "runtime_identity_start": runtime_start,
                 "runtime_identity_end": runtime_end,

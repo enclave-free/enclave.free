@@ -859,6 +859,8 @@ class ConversationModelBenchTest(unittest.TestCase):
 
     def test_cli_defaults_include_natural_and_contract_scenarios(self) -> None:
         options = parse_args([])
+        self.assertTrue(options.seed_knowledge)
+        self.assertFalse(parse_args(["--scenario", "user_natural_knowledge"]).seed_knowledge)
 
         self.assertEqual(
             options.scenarios,

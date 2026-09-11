@@ -2969,7 +2969,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
         help="repeat each selected scenario in a fresh Conversation",
     )
     parser.add_argument("--reset", action="store_true")
-    parser.add_argument("--seed-knowledge", action="store_true")
+    parser.add_argument("--seed-knowledge", action="store_true", help="seed synthetic knowledge (automatic for the default scenario suite)")
     parser.add_argument("--seed-resources", action="store_true")
     parser.add_argument("--no-restore-model", action="store_true")
     parser.add_argument("--verbose", action="store_true")
@@ -2982,7 +2982,7 @@ def parse_args(argv: list[str]) -> BenchOptions:
         models=parse_models(args.models),
         timeout=args.timeout,
         reset=args.reset,
-        seed_knowledge=args.seed_knowledge,
+        seed_knowledge=args.seed_knowledge or args.scenarios is None,
         seed_resources=args.seed_resources,
         restore_model=not args.no_restore_model,
         verbose=args.verbose,

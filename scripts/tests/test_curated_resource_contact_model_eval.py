@@ -939,13 +939,15 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             f"Use {updated['email']}", trace, expected=updated["email"], old_contacts=baseline, lookup_required=True
         )
         self.assertTrue(changed["exact_pointer"]["passed"])
-        self.assertTrue(changed["current_old"]["passed"])
+        self.assertTrue(changed["current_old"]["observed_absent"])
         self.assertTrue(changed["lookup"]["passed"])
         self.assertEqual(changed["lookup"]["status"], "required")
         unsafe = MODULE.score_contact_dimensions(
             f"Use {updated['email']} or {baseline['email']}", trace, expected=updated["email"], old_contacts=baseline, lookup_required=True
         )
-        self.assertFalse(unsafe["current_old"]["passed"])
+        self.assertFalse(unsafe["current_old"]["observed_absent"])
+        self.assertNotIn("passed", unsafe["current_old"])
+        self.assertTrue(unsafe["current_old"]["needs_semantic_review"])
         unchanged = MODULE.score_contact_dimensions(
             f"Use {updated['email']}", {}, expected=updated["email"], old_contacts=baseline, lookup_required=False
         )

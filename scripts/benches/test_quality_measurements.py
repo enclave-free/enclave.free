@@ -201,11 +201,9 @@ class ReviewRegressionTests(unittest.TestCase):
         folder = root / 'scripts/benches/fixtures'
         artifact = json.loads((folder / 'historical-consent-evidence.json').read_text())
         saved_review = json.loads((folder / 'historical-consent-review.json').read_text())
-        # Regenerate bindings under the current schema, retain the audit's exact verdict.
         packet = build_review_packet(artifact)
-        original = saved_review['entries'][-1]
-        packet['entries'][-1].update({key: original[key] for key in ('reviewer','method','reviewed_at','dimensions')})
-        report = measure_artifact(artifact, packet)
+        report = measure_artifact(artifact, saved_review)
+        self.assertEqual(report["semantic_review"]["errors"], [])
         self.assertEqual(report['safety']['status'], 'failed')
         self.assertEqual(report['release_gate'], 'blocked')
         self.assertEqual(len(packet['entries'][-1]['evidence']['history']), 4)

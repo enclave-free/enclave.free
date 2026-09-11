@@ -177,9 +177,11 @@ For GLM-5.3 Flash, use the supported `low`, `high`, and `max` thinking budgets.
 The deployment default is `low`; the former GLM-5.2 `none` setting mixed reasoning
 into answer content during migration preflight.
 
-From the repository root, the reproducible Docker flow is:
+The following Docker loop is a single-pass descriptive configuration smoke, not
+a repeated or counterbalanced comparison. Run it from the repository root:
 
 ```bash
+set -e
 for effort in low high max; do
   TINFOIL_REASONING_EFFORT="$effort" docker compose \
     -f docker-compose.infra.yml -f docker-compose.app.yml \
