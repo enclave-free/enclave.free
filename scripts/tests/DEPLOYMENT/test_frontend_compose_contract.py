@@ -28,6 +28,7 @@ def render_compose(*files: str, overrides: dict[str, str] | None = None) -> dict
     environment.pop("TINFOIL_MODEL", None)
     environment.pop("TINFOIL_REASONING_EFFORT", None)
     environment.pop("TINFOIL_MODEL_FALLBACKS", None)
+    environment.pop("MAPLE_API_KEY", None)
     environment.setdefault("LLM_API_KEY", "compose-contract-test")
     environment.setdefault("INTERNAL_AGENT_TOKEN", "compose-contract-test")
     environment.setdefault(
@@ -54,7 +55,7 @@ def frontend_service(config: dict[str, object]) -> dict[str, object]:
 
 
 class FrontendComposeContractTests(unittest.TestCase):
-    def test_conversations_use_one_glm_model_without_fallback_configuration(self) -> None:
+    def test_conversations_use_one_glm_model_with_fallback_disabled_by_default(self) -> None:
         config = render_compose(*BASE_COMPOSE_FILES)
         services = config["services"]
         assert isinstance(services, dict)
@@ -70,6 +71,7 @@ class FrontendComposeContractTests(unittest.TestCase):
         self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-3-flash")
         self.assertEqual(sage_environment["TINFOIL_REASONING_EFFORT"], "low")
         self.assertNotIn("TINFOIL_MODEL_FALLBACKS", sage_environment)
+        self.assertEqual(sage_environment["MAPLE_API_KEY"], "")
         self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-3-flash")
 
     def test_operator_model_and_effort_overrides_reach_both_runtimes(self) -> None:
