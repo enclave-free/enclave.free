@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.24 - 2026-09-13
+
+- Added optional Maple fallback when Tinfoil rejects Conversation credentials with HTTP 401 or 403, before streaming begins. The model, messages, Tools and inference settings stay unchanged.
+- Added a pinned private Maple proxy profile with automatic restart. Fallback stays disabled until a Maple API key is configured; embeddings and diagnostics retain their existing Tinfoil path.
+
 ## 0.4.23 - 2026-09-11
 
 - Migrated the main model from deprecated GLM 5.2 to GLM 5.3 Flash through verified Tinfoil transport, with low reasoning effort and strict response-integrity checks.
