@@ -33,7 +33,7 @@ The user requested systematic end-to-end modernization after reviewing the Septe
 - Correct paraphrases no longer cause hard factual failures; unsupported additions remain visible for semantic review.
 - Full synthetic answers and earlier turns are reviewable without preview clipping.
 - Missing turns, incomplete streams, model/session mismatch, invalid reviews, or cleanup failure cannot yield a complete successful run.
-- A correct 11-name inventory drawn from a broader result set is not failed solely because the backend reports 12 records; omitted/duplicate/wrong names and unsupported completeness still fail.
+- A correct 11-name inventory drawn from a broader result set is not failed solely because the backend reports 12 records; omitted or wrong names and unsupported completeness still fail. Repeated names cannot replace missing records, but a recap is not itself a coverage failure. Unambiguous numbered ranges and suffix lists count as presentation of the named records.
 - Neutral contact fixtures and complete English/Spanish coverage have explicit denominators, and unchanged controls do not impose an unnecessary fresh-call requirement.
 - Both offline deterministic verification and fresh live evidence are documented with exact commands and limitations.
 
