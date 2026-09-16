@@ -1,0 +1,15 @@
+# Align application colors with the approved entry design
+
+The saved Instance primary color is already `blue`. The older temporary body tokens overrode it with teal accents and green-tinted dark surfaces. This follow-up changes only the temporary stylesheet and its existing browser verification expectation.
+
+| Before | After |
+| --- | --- |
+| Separate light palettes for application and landing. | Body and entry share the exact approved landing-card palette: pale blue surfaces, navy text/actions, blue links and selections. The duplicated entry token definitions are removed. |
+| Teal/cyan application accents and green-tinted dark surfaces. | Deep blue application surfaces with readable lighter blue links/focus in dark mode. Primary actions retain the landing's navy/white treatment; dark-mode actions gain a visible border. |
+| Independent application and entry status colors. | Shared light status colors, while dark application status colors stay readable; entry continues to use its own light tokens under either theme. |
+
+The landing's resolved colors, layout, background, imagery and copy remain unchanged. The side-panel scope fix remains intact. Saved settings, backend behavior and the generic build are unaffected; the WLC build flag still gates the entire stylesheet.
+
+Verify exact before/after entry screenshots, palette parity for task/admin/chat screens, both themes, primary button text/border and link contrast, mobile 320px, keyboard focus, existing frontend tests and production build. The existing `verify-browser-v2.mjs` expects the updated deep-blue dark surface.
+
+Rollback: revert the commit introducing this document to restore the prior application palette. Operational rollback retains the previous frontend image and recreates only `frontend`, preserving all backend/Sage containers and stored settings. Deployment records are in workspace `docs/releases/wlc-color-alignment/` outside the repository.

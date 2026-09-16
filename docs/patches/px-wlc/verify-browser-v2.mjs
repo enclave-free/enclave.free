@@ -150,7 +150,7 @@ try {
       document.documentElement.classList.contains("dark") &&
       getComputedStyle(document.body)
         .getPropertyValue("--color-surface")
-        .trim() === "#0b1e29",
+        .trim() === "#081f3d",
   );
   await shot("after-chat-dark");
   check("Approved User reaches chat and theme toggle works");

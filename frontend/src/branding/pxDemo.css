@@ -1,23 +1,36 @@
 /* TEMPORARY PX demo. Body-scoped tokens override inherited Instance colors,
    including custom inline colors on <html>, without mutating saved settings. */
+/* Shared light palette: the approved landing card is the source of truth.
+   Entry declares its own tokens so it stays light when the surrounding app is dark. */
+html[data-demo-brand='wlc'] body,
+html[data-demo-brand='wlc'] .px-welcome {
+  --color-surface: #f5f9fd;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #e2ecf6;
+  --color-text: #092d59;
+  --color-text-secondary: #385676;
+  --color-text-muted: #4d6781;
+  --color-border: #cbd9e7;
+  --color-border-strong: #8aa4be;
+  --color-accent: #0759a0;
+  --color-accent-hover: #003b73;
+  --color-accent-subtle: #e0eefb;
+  --color-accent-text: #ffffff;
+  --color-success: #15803d;
+  --color-success-subtle: #dcfce7;
+  --color-warning: #a16207;
+  --color-warning-subtle: #fef9c3;
+  --color-error: #b91c1c;
+  --color-error-subtle: #fee2e2;
+  --color-info: #0369a1;
+  --color-info-subtle: #e0f2fe;
+  --px-action: #062d5c;
+  --px-action-hover: #0c447e;
+  --px-action-text: #ffffff;
+  --px-action-border: transparent;
+}
 html[data-demo-brand='wlc'] body {
   --font-sans: 'IBM Plex Sans', 'Inter', system-ui, sans-serif;
-  --color-surface: #ffffff;
-  --color-surface-raised: #f6f8f9;
-  --color-surface-overlay: #edf2f4;
-  --color-text: #0a2533;
-  --color-text-secondary: #405563;
-  --color-text-muted: #586c77;
-  --color-border: #dce4e8;
-  --color-border-strong: #afbec7;
-  --color-accent: #006c80;
-  --color-accent-hover: #005565;
-  --color-accent-subtle: #e0f5f8;
-  --color-accent-text: #ffffff;
-  --px-action: #0a2533;
-  --px-action-hover: #174557;
-  --px-action-text: #ffffff;
-  --px-intro: #faf2e5;
   --px-cyan: #00b2cb;
   --px-yellow: #f8dd04;
   --px-lime: #9bc335;
@@ -29,28 +42,33 @@ html[data-demo-brand='wlc'] body {
 }
 
 html[data-demo-brand='wlc'].dark body {
-  --color-surface: #0b1e29;
-  --color-surface-raised: #102a37;
-  --color-surface-overlay: #193744;
-  --color-text: #f3f7fa;
-  --color-text-secondary: #c0cfd7;
-  --color-text-muted: #a0b4c0;
-  --color-border: #304b5a;
-  --color-border-strong: #617d8d;
-  --color-accent: #62d8e8;
-  --color-accent-hover: #9ce7f1;
-  --color-accent-subtle: #183f4a;
-  --color-accent-text: #0a2533;
-  --px-action: #62d8e8;
-  --px-action-hover: #9ce7f1;
-  --px-action-text: #0a2533;
-  --px-intro: #102a37;
+  --color-surface: #081f3d;
+  --color-surface-raised: #0d2d50;
+  --color-surface-overlay: #153b63;
+  --color-text: #f5f9fd;
+  --color-text-secondary: #c4d7eb;
+  --color-text-muted: #a7bfd8;
+  --color-border: #345578;
+  --color-border-strong: #698aac;
+  --color-accent: #87c6ff;
+  --color-accent-hover: #b4dcff;
+  --color-accent-subtle: #173e65;
+  --color-accent-text: #081f3d;
+  --color-success: #22c55e;
+  --color-success-subtle: #14532d;
+  --color-warning: #facc15;
+  --color-warning-subtle: #713f12;
+  --color-error: #f87171;
+  --color-error-subtle: #7f1d1d;
+  --color-info: #38bdf8;
+  --color-info-subtle: #0c4a6e;
+  --px-action-border: #698aac;
 }
 
 html[data-demo-brand='wlc'] .btn-primary {
   background: var(--px-action);
   color: var(--px-action-text);
-  border-color: transparent;
+  border-color: var(--px-action-border);
   border-radius: 10px;
   box-shadow: none;
 }
@@ -135,29 +153,6 @@ html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors i {
 /* Entry-only palette stays consistent across system themes. Application tokens above
    continue to follow the user's theme preference. */
 html[data-demo-brand='wlc'] .px-welcome {
-  --color-surface: #f5f9fd;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: #e2ecf6;
-  --color-text: #092d59;
-  --color-text-secondary: #385676;
-  --color-text-muted: #4d6781;
-  --color-border: #cbd9e7;
-  --color-border-strong: #8aa4be;
-  --color-accent: #0759a0;
-  --color-accent-hover: #003b73;
-  --color-accent-subtle: #e0eefb;
-  --color-accent-text: #ffffff;
-  --color-success: #15803d;
-  --color-success-subtle: #dcfce7;
-  --color-warning: #a16207;
-  --color-warning-subtle: #fef9c3;
-  --color-error: #b91c1c;
-  --color-error-subtle: #fee2e2;
-  --color-info: #0369a1;
-  --color-info-subtle: #e0f2fe;
-  --px-action: #062d5c;
-  --px-action-hover: #0c447e;
-  --px-action-text: #ffffff;
   position: relative;
   isolation: isolate;
   width: 100%;
