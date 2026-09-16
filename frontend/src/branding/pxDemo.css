@@ -68,7 +68,9 @@ html[data-demo-brand='wlc'].dark body {
 html[data-demo-brand='wlc'] .btn-primary {
   background: var(--px-action);
   color: var(--px-action-text);
-  border-color: var(--px-action-border);
+  border-color: transparent;
+  outline: 1px solid var(--px-action-border);
+  outline-offset: -1px;
   border-radius: 10px;
   box-shadow: none;
 }
