@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useInstanceConfig } from '../context/InstanceConfigContext';
 import { PxBrand } from './PxBrand';
+import { PX_DEMO_ORGANIZATION } from './pxDemo';
 
 export function PxWelcome({ children }: { children: ReactNode }) {
   const { config } = useInstanceConfig();
@@ -13,14 +14,16 @@ export function PxWelcome({ children }: { children: ReactNode }) {
             {config.headerTagline}
           </p>
         )}
-        <div className="px-welcome-art" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
       </aside>
       <div className="px-welcome-content">{children}</div>
+      <footer className="px-welcome-credit">
+        <img
+          src="/demo-branding/wlc-white.svg"
+          alt={PX_DEMO_ORGANIZATION}
+          width="182"
+          height="66"
+        />
+      </footer>
     </div>
   );
 }

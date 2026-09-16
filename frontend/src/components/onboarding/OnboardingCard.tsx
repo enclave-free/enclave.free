@@ -64,9 +64,10 @@ export function OnboardingCard({
             </div>
           )}
           {children}
+          {isEntry && footer && <div className="px-entry-footer">{footer}</div>}
         </div>
 
-        {footer && (
+        {!isEntry && footer && (
           <div className="text-center mt-6 text-sm text-text-muted animate-fade-in">
             {footer}
           </div>

@@ -127,92 +127,147 @@ html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors i {
   border-radius: 5px;
 }
 
+/* Entry-only palette stays consistent across system themes. Application tokens above
+   continue to follow the user's theme preference. */
 html[data-demo-brand='wlc'] .px-welcome {
+  --color-surface: #f5f9fd;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #e2ecf6;
+  --color-text: #092d59;
+  --color-text-secondary: #385676;
+  --color-text-muted: #4d6781;
+  --color-border: #cbd9e7;
+  --color-border-strong: #8aa4be;
+  --color-accent: #0759a0;
+  --color-accent-hover: #003b73;
+  --color-accent-subtle: #e0eefb;
+  --color-accent-text: #ffffff;
+  --px-action: #062d5c;
+  --px-action-hover: #0c447e;
+  --px-action-text: #ffffff;
+  position: relative;
+  isolation: isolate;
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   min-height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 1fr auto;
+  column-gap: clamp(32px, 5vw, 80px);
+  row-gap: 48px;
+  padding: 84px clamp(32px, 6.5vw, 104px) 64px;
+  background: #06396d url('/demo-branding/entry-background.svg') center / cover;
 }
 html[data-demo-brand='wlc'] .px-welcome-intro {
-  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 48px;
-  padding: clamp(32px, 5vw, 80px);
-  background: var(--px-intro);
-  overflow: hidden;
-  isolation: isolate;
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand {
+  color: #ffffff;
+  max-width: 100%;
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand-large {
+  font-size: clamp(32px, 4vw, 60px);
+  gap: clamp(12px, 1.6vw, 24px);
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand-text {
+  min-width: 0;
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand-byline {
+  color: #c0daed;
+  font-size: clamp(14px, 1.5vw, 20px);
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand-colors {
+  flex-shrink: 0;
+  height: clamp(64px, 8vw, 112px);
+}
+html[data-demo-brand='wlc'] .px-welcome .px-brand-colors i {
+  width: clamp(8px, 1.1vw, 14px);
+  border-radius: 999px;
 }
 html[data-demo-brand='wlc'] .px-welcome-tagline {
-  max-width: 12ch;
-  font-size: clamp(32px, 3.3vw, 56px);
+  color: #ffffff;
+  max-width: 14ch;
+  font-size: clamp(32px, 3.6vw, 52px);
   font-weight: 600;
   letter-spacing: -0.035em;
-  line-height: 1.12;
+  line-height: 1.08;
   overflow-wrap: anywhere;
   text-wrap: balance;
   margin: 0;
 }
-html[data-demo-brand='wlc'] .px-welcome-art {
-  display: flex;
-  gap: clamp(10px, 1.8vw, 28px);
-  align-items: flex-end;
-  min-height: 180px;
-  height: 26vh;
-  max-height: 300px;
-  width: 100%;
-  max-width: 400px;
-  margin-top: auto;
-  padding-top: 32px;
+html[data-demo-brand='wlc'] .px-welcome-tagline::before {
+  content: '';
+  display: block;
+  width: 52px;
+  height: 5px;
+  border-radius: 3px;
+  background: #56d4ed;
+  margin-bottom: 24px;
 }
-html[data-demo-brand='wlc'] .px-welcome-art span {
-  flex: 1;
-  height: 80%;
-  border-radius: 999px 999px 12px 12px;
-  background: var(--px-cyan);
+html[data-demo-brand='wlc'] .px-welcome-credit {
+  grid-column: 1;
+  grid-row: 2;
 }
-html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(2) {
-  background: var(--px-yellow);
-  height: 100%;
-}
-html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(3) {
-  background: var(--px-lime);
-  height: 90%;
-}
-html[data-demo-brand='wlc'] .px-welcome-art span:nth-child(4) {
-  background: var(--px-pink);
-  height: 65%;
+html[data-demo-brand='wlc'] .px-welcome-credit img {
+  width: 182px;
+  height: auto;
 }
 html[data-demo-brand='wlc'] .px-welcome-content {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
   min-width: 0;
+  width: 100%;
+  max-width: 560px;
+  justify-self: end;
 }
 html[data-demo-brand='wlc'] .px-onboarding {
-  min-height: 100svh;
-  padding: 64px clamp(20px, 4vw, 64px) 40px;
-  background: var(--color-surface);
+  position: static;
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--color-text);
   overflow: visible;
+}
+html[data-demo-brand='wlc'] .px-onboarding-actions {
+  top: 20px;
+  inset-inline: clamp(24px, 4vw, 64px);
+  color: #ffffff;
+}
+html[data-demo-brand='wlc'] .px-onboarding-actions > * > button {
+  color: #ffffff;
 }
 html[data-demo-brand='wlc'] .px-onboarding > div:not(.px-onboarding-actions) {
   width: 100%;
-  max-width: 640px;
+  max-width: 560px;
 }
 html[data-demo-brand='wlc'] .px-onboarding .card {
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  box-shadow: none;
-  background: transparent;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: 16px;
+  padding: clamp(24px, 3vw, 40px);
+  box-shadow:
+    0 20px 60px rgb(0 18 49 / 0.18),
+    0 2px 8px rgb(0 18 49 / 0.08);
+  background: var(--color-surface);
   overflow: visible;
   animation: none;
 }
 html[data-demo-brand='wlc'] .px-onboarding h1 {
-  font-size: clamp(26px, 2.5vw, 36px);
+  font-size: clamp(26px, 2.8vw, 38px);
   letter-spacing: -0.035em;
   line-height: 1.15;
 }
 html[data-demo-brand='wlc'] .px-onboarding .card > .text-center:first-child {
   text-align: start;
+  margin-bottom: 24px;
 }
 html[data-demo-brand='wlc']
   .px-onboarding
@@ -221,40 +276,62 @@ html[data-demo-brand='wlc']
   > p {
   margin-inline: 0;
 }
+html[data-demo-brand='wlc'] .px-entry-footer {
+  border-top: 1px solid var(--color-border);
+  padding-top: 20px;
+  margin-top: 24px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-muted);
+}
 html[data-demo-brand='wlc'] .px-onboarding [role='radio'] {
   border-radius: 10px;
   box-shadow: none;
 }
-
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   html[data-demo-brand='wlc'] .px-welcome {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 32px;
+    padding: 80px 24px 32px;
+  }
+  html[data-demo-brand='wlc'] .px-welcome-intro,
+  html[data-demo-brand='wlc'] .px-welcome-content,
+  html[data-demo-brand='wlc'] .px-welcome-credit {
+    grid-column: 1;
+    grid-row: auto;
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
   }
   html[data-demo-brand='wlc'] .px-welcome-intro {
-    padding: 24px;
-    gap: 20px;
+    gap: 24px;
   }
-  html[data-demo-brand='wlc'] .px-brand-large {
-    font-size: 32px;
+  html[data-demo-brand='wlc'] .px-welcome .px-brand-large {
+    font-size: 34px;
     gap: 12px;
   }
-  html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors {
-    height: 40px;
+  html[data-demo-brand='wlc'] .px-welcome .px-brand-byline {
+    font-size: 14px;
+  }
+  html[data-demo-brand='wlc'] .px-welcome .px-brand-colors {
+    height: 60px;
     gap: 3px;
   }
-  html[data-demo-brand='wlc'] .px-brand-large .px-brand-colors i {
-    width: 5px;
+  html[data-demo-brand='wlc'] .px-welcome .px-brand-colors i {
+    width: 6px;
   }
   html[data-demo-brand='wlc'] .px-welcome-tagline {
     max-width: 26ch;
     font-size: 28px;
+    line-height: 1.15;
   }
-  html[data-demo-brand='wlc'] .px-welcome-art {
-    display: none;
+  html[data-demo-brand='wlc'] .px-welcome-tagline::before {
+    height: 4px;
+    margin-bottom: 16px;
   }
-  html[data-demo-brand='wlc'] .px-onboarding {
-    min-height: auto;
-    padding: 64px 24px 32px;
+  html[data-demo-brand='wlc'] .px-welcome-credit img {
+    width: 150px;
   }
 }
 

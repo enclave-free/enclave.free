@@ -67,6 +67,11 @@ const server = createServer(async (req, res) => {
         setup_complete: true,
         ready_for_users: true,
       });
+    if (path === "/admin/session") return json({ authenticated: true });
+    if (path === "/admin/user-types") return json({ types: [{ id: 1, name: "Family member", description: "Fixture family member", icon: "Users" }] });
+    if (path === "/admin/user-fields") return json({ fields: [] });
+    if (path === "/admin/users") return json({ users: [] });
+    if (path === "/admin/settings") return json({ settings });
     if (path === "/auth/magic-link")
       return json(
         requestFails
