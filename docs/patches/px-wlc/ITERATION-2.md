@@ -15,6 +15,8 @@ Implemented 2026-09-16 on `temp/px-demo-wlc-visual-only`, retaining generic rele
 
 The source changes are confined to temporary branding files, `OnboardingCard`, and the two entry-page callers. No authentication, approval, backend, database or saved Instance Settings changes are included. The earlier sign-in protection-card removal is retained.
 
+Screenshots: [desktop entry](screenshots/iteration-2/entry-1178.png), [320px entry](screenshots/iteration-2/entry-320.png), [admin configuration with assistant](screenshots/iteration-2/admin-config-with-assistant.png).
+
 ## Official logo provenance
 
 Source: [World Liberty Congress, Pathway to Freedom handbook](https://worldlibertycongress.org/wp-content/uploads/2023/12/231121_WLC_Political-Prisoners_EN_A5_RZ_web.pdf), cover page. The white logo's existing vector paths were extracted with Poppler `pdftocairo -f 1 -l 1 -svg`; only the logo paths are retained with a tight SVG viewBox. No font substitution, redraw, external resources, scripts or customer-screenshot crop. This is WLC's published monochrome logo; its geometry and white fill are preserved. The four-color LIBERATOR product mark remains.
@@ -24,6 +26,8 @@ Source: [World Liberty Congress, Pathway to Freedom handbook](https://worldliber
 ## Verification
 
 `OnboardingCard.test.tsx` covers standard/default scope, explicit entry scope and disabled-demo behavior. `verify-browser-v2.mjs` runs against the isolated fixture (never deploy it): entry widths 320–1440px, light/dark, Arabic RTL, language persistence, email failure/retry/success, verification, pending approval, profile completion, chat controls, admin configuration with its assistant, and same-browser disabled-brand rollback. Required full frontend tests and both enabled/disabled production builds run before deployment.
+
+Local results: all 493 tests across 83 files pass; both enabled/disabled production builds pass; all 14 browser flow checks pass, including admin configuration with its assistant. The pre-iteration merged frontend matches the deployed 0.4.25 source byte for byte.
 
 Live verification is read-only: landing, signup/login, visible credit and locally served logo, mobile/theme layout and public admin entry. Authenticated admin layout is verified with fixture data without modifying live accounts.
 

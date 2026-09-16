@@ -237,13 +237,20 @@ html[data-demo-brand='wlc'] .px-onboarding {
   color: var(--color-text);
   overflow: visible;
 }
-html[data-demo-brand='wlc'] .px-onboarding-actions {
+html[data-demo-brand='wlc'] .px-onboarding .px-onboarding-actions {
   top: 20px;
   inset-inline: clamp(24px, 4vw, 64px);
   color: #ffffff;
 }
-html[data-demo-brand='wlc'] .px-onboarding-actions > * > button {
+html[data-demo-brand='wlc'] .px-onboarding .px-onboarding-actions > * > button {
   color: #ffffff;
+}
+html[data-demo-brand='wlc']
+  .px-onboarding
+  .px-onboarding-actions
+  > *
+  > button:hover {
+  background: rgb(255 255 255 / 0.12);
 }
 html[data-demo-brand='wlc'] .px-onboarding > div:not(.px-onboarding-actions) {
   width: 100%;

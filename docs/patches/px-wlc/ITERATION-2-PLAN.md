@@ -1,6 +1,6 @@
 # LIBERATOR visual iteration 2 — proposed, 2026-09-16
 
-Status: planning only. No application changes or deployment. Based on the customer's supplied blue landing reference and explicit request for team attribution beneath LIBERATOR with the WLC logo at the bottom.
+Status: approved and implemented; see [implementation and rollback record](ITERATION-2.md). Based on the customer's supplied blue landing reference and explicit request for team attribution beneath LIBERATOR with the WLC logo at the bottom.
 
 ## Intended presentation
 
