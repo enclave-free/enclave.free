@@ -54,6 +54,46 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
                 self.assertTrue(passed, detail)
             previous[journey] = (case["answer"], trace)
 
+    def test_fresh_inventory_distinguishes_first_page_from_complete_set(self):
+        fixture = json.loads((Path(__file__).parent / "fixtures/contact_inventory_v4_20260916.json").read_text())
+        previous = {}
+        for case in fixture["cases"]:
+            trace = {"tools": [{"id": "find_resources", "status": "completed", "metadata": record}
+                               for record in case["resource_tool_metadata"]]}
+            journey, page = case["case_id"].rsplit("::", 1)
+            prior_answer, prior_trace = previous.get(journey, ("", None))
+            with self.subTest(case=case["case_id"]):
+                passed, detail = MODULE.score_inventory_turn(
+                    case["answer"], trace, final_name=MODULE.INVENTORY_NAMES[-1],
+                    continuation=page == "page2", previous_answer=prior_answer, previous_trace=prior_trace,
+                )
+                self.assertTrue(passed, detail)
+            previous[journey] = (case["answer"], trace)
+
+    def test_first_page_caveat_does_not_hide_current_uncertainty(self):
+        names = "Directory Sample 01–11"
+        for text in (
+            f"The first page of 10 was not complete. This is not all matching resources: {names}",
+            f"The first page of 10 was not complete. I cannot confirm the complete set: {names}",
+            f"The first page of 10 was not complete: {names}",
+        ):
+            trace = self.resource_trace(10, True, 10) if text.endswith(f"complete: {names}") else self.complete_resource_trace()
+            with self.subTest(text=text):
+                passed, _ = MODULE.score_inventory_turn(text, trace,
+                    final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+                self.assertFalse(passed)
+
+    def test_terminal_paraphrases_do_not_override_uncertainty(self):
+        for answer in (
+            "I cannot confirm that this is the last page.",
+            "I cannot confirm that there's nothing further to list.",
+        ):
+            passed, _ = MODULE.score_inventory_turn(
+                answer, self.resource_trace(0, False, None), final_name=MODULE.INVENTORY_NAMES[-1],
+                continuation=True, previous_answer="Directory Sample 01–11",
+                previous_trace=self.complete_resource_trace())
+            self.assertFalse(passed)
+
     def test_abbreviated_inventory_requires_coverage_and_terminal_evidence(self):
         for answer in (
             "All matching resources: Directory Sample 01 through 10, Directory Sample 01.",
