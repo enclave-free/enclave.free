@@ -100,7 +100,7 @@ booting. The backend logs the degraded seed state and `/test` reports Qdrant as
 `degraded` until seeding succeeds. In production (`ENCLAVE_ENV=production`),
 the same seed failure still fails startup.
 
-### Optional Maple key fallback
+### Optional Maple provider fallback
 
 Set `MAPLE_API_KEY` in `.env` and start the verified Maple proxy with:
 
@@ -109,7 +109,7 @@ docker compose -f docker-compose.infra.yml -f docker-compose.app.yml --profile m
 ```
 
 Sage retries a Conversation model request once through Maple when Tinfoil returns
-HTTP 401 or 403, before streaming begins. The model and request settings stay the
+HTTP 401, 403, or 429, before streaming begins. The model and request settings stay the
 same, so that model must also be available to the Maple account. An empty key
 disables fallback. `MAPLE_API_URL` can point to an existing Maple proxy instead
 (default: `http://maple-proxy:8080/v1`). This covers Conversation inference only;

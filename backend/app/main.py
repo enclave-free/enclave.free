@@ -2079,6 +2079,10 @@ async def provision_test_user_admin(
 
     existing = database.get_user_by_email(email)
     if existing:
+        # A type migration may have moved this account. Restore the reserved
+        # persona so token validation derives the same key as provisioning.
+        if existing.get("user_type_id") != user_type_id:
+            database.update_user_type_id(existing["id"], user_type_id)
         if not existing.get("approved"):
             database.update_user_approval(existing["id"], True)
         # Backfill / correct the derived subkey (e.g. for users created before this).

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.25 - 2026-09-16
+
+- Fixed Admin Test User Session reuse after User Type migration, preserving the test identity while updating its persona mapping.
+- Enabled Maple Conversation fallback on Tinfoil HTTP 429 rate limits, using the same model and existing retry bounds without replaying partial streams.
+- Corrected fictional contact benchmark questions and inventory scoring, with versioned fixtures and regression evidence. A fresh DeepSeek cohort completed 169/169 requests; corrected inventory remeasurement yields 152/169 contract passes.
+- Known limitations: contact freshness and two secure-channel refusals remain visible in the evaluation; contract completion does not certify answer safety or quality.
+
 ## 0.4.24 - 2026-09-13
 
 - Added optional Maple fallback when Tinfoil rejects Conversation credentials with HTTP 401 or 403, before streaming begins. The model, messages, Tools and inference settings stay unchanged.
