@@ -59,6 +59,11 @@ html[data-demo-brand='wlc'] .btn-primary:hover:not(:disabled) {
   box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
 }
 
+html[data-demo-brand='wlc'] .btn-primary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
 html[data-demo-brand='wlc'] .px-brand {
   display: inline-flex;
   align-items: center;
@@ -142,6 +147,14 @@ html[data-demo-brand='wlc'] .px-welcome {
   --color-accent-hover: #003b73;
   --color-accent-subtle: #e0eefb;
   --color-accent-text: #ffffff;
+  --color-success: #15803d;
+  --color-success-subtle: #dcfce7;
+  --color-warning: #a16207;
+  --color-warning-subtle: #fef9c3;
+  --color-error: #b91c1c;
+  --color-error-subtle: #fee2e2;
+  --color-info: #0369a1;
+  --color-info-subtle: #e0f2fe;
   --px-action: #062d5c;
   --px-action-hover: #0c447e;
   --px-action-text: #ffffff;

@@ -10,7 +10,8 @@ Implemented 2026-09-16 on `temp/px-demo-wlc-visual-only`, retaining generic rele
 | Cream/navy split background and decorative rounded bars. | Entry-only deep blue background with lightweight diagonal SVG artwork, white product branding, cyan rule, and a pale rounded form card. |
 | “by World Liberty Congress” beneath LIBERATOR. | “by Political Prisoners Support Team”, with WLC separately credited by an official white vector logo below the branding. |
 | Admin sign-in footer outside the form card. | On entry screens it sits inside the card beneath a divider. Standard card footer placement is unchanged. |
-| Entry colors follow system theme. | Entry composition retains its blue/pale palette in both themes; application theme tokens still follow user preferences. |
+| Entry colors follow system theme. | Entry composition retains its blue/pale palette and readable validation/status colors in both themes; application theme tokens still follow user preferences. |
+| Primary-button shadow removal also suppressed keyboard focus. | WLC primary buttons have an explicit 2px accent focus outline. Language-control colors and hover backgrounds are scoped to entry pages. |
 | Large promotional panel consumes task-screen space. | Desktop admin configuration can use its declared `xl` width alongside the existing assistant. Mobile entry stacks the compact introduction, form and WLC credit. |
 
 The source changes are confined to temporary branding files, `OnboardingCard`, and the two entry-page callers. No authentication, approval, backend, database or saved Instance Settings changes are included. The earlier sign-in protection-card removal is retained.
@@ -28,6 +29,8 @@ Source: [World Liberty Congress, Pathway to Freedom handbook](https://worldliber
 `OnboardingCard.test.tsx` covers standard/default scope, explicit entry scope and disabled-demo behavior. `verify-browser-v2.mjs` runs against the isolated fixture (never deploy it): entry widths 320–1440px, light/dark, Arabic RTL, language persistence, email failure/retry/success, verification, pending approval, profile completion, chat controls, admin configuration with its assistant, and same-browser disabled-brand rollback. Required full frontend tests and both enabled/disabled production builds run before deployment.
 
 Local results: all 493 tests across 83 files pass; both enabled/disabled production builds pass; all 14 browser flow checks pass, including admin configuration with its assistant. The pre-iteration merged frontend matches the deployed 0.4.25 source byte for byte.
+
+Review: standards axis passed with no findings. Spec review found a keyboard-evidence gap; the expanded keyboard check exposed and verified the primary-button focus correction. Eight controls now pass tab-order/focus-visible checks. Additional checks cover language-menu keyboard access, language hover and standard-page contrast, German at 320px, and dark admin layout (`verify-keyboard.mjs`, `verify-entry-polish.mjs`).
 
 Live verification is read-only: landing, signup/login, visible credit and locally served logo, mobile/theme layout and public admin entry. Authenticated admin layout is verified with fixture data without modifying live accounts.
 
