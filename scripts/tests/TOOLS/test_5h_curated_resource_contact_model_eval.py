@@ -24,6 +24,9 @@ COMPOSE.extend(["-f", "docker-compose.infra.yml", "-f", "docker-compose.app.yml"
 # deliberately not called "stale" or "fresh" in prompts or model-visible
 # values; that would tell the model which answer the evaluator expects.
 ORG_NAME = "Northbridge Legal Aid"
+FIXTURE_SCHEMA = "neutral-contact-v4"
+INVENTORY_SCORER_VERSION = "inventory-coverage-v2"
+RESOURCE_DESCRIPTION = "Synthetic issue #539 evaluation fixture; do not contact."
 CONTACT_MODALITIES = ("email", "phone", "url", "address", "secure_channel")
 SOURCE_STATES = ("baseline", "updated")
 
@@ -48,18 +51,18 @@ REPLAY_LANGUAGES = ("en", "es")
 DEMO_EFFECTIVE_DEFAULT_TOOL_IDS = ("curated-resources", "knowledge-search")
 CONTACT_FOLLOWUPS = {
     "en": {
-        "email": "Can you give me the email?",
-        "phone": "Can you give me the phone number?",
-        "url": "Can you give me the website?",
-        "address": "Can you give me the address?",
-        "secure_channel": "Can you give me the secure channel?",
+        "email": "Can you give me the email listed in the directory?",
+        "phone": "Can you give me the phone number listed in the directory?",
+        "url": "Can you give me the website listed in the directory?",
+        "address": "Can you give me the address listed in the directory?",
+        "secure_channel": "Can you give me the secure channel listed in the directory?",
     },
     "es": {
-        "email": "¿Me puedes dar el email?",
-        "phone": "¿Me das el número de teléfono?",
-        "url": "¿Me das el sitio web?",
-        "address": "¿Me das la dirección?",
-        "secure_channel": "¿Me das el canal seguro?",
+        "email": "¿Me puedes dar el email registrado en el directorio?",
+        "phone": "¿Me das el número de teléfono registrado en el directorio?",
+        "url": "¿Me das el sitio web registrado en el directorio?",
+        "address": "¿Me das la dirección registrada en el directorio?",
+        "secure_channel": "¿Me das el canal seguro registrado en el directorio?",
     },
 }
 INVENTORY_LIMIT = 10
@@ -92,7 +95,16 @@ def fixture_manifest(
 ) -> dict[str, Any]:
     """Describe every synthetic model-visible fixture and bind it to a hash."""
     manifest = {
-        "schema": "neutral-contact-v3",
+        "schema": FIXTURE_SCHEMA,
+        "resource_description": RESOURCE_DESCRIPTION,
+        "inventory_scorer_version": INVENTORY_SCORER_VERSION,
+        "contact_prompts": {
+            language: {
+                modality: [contact_prompt(language, modality, turn=turn) for turn in (1, 2)]
+                for modality in CONTACT_MODALITIES
+            }
+            for language in REPLAY_LANGUAGES
+        },
         "organization": ORG_NAME,
         "languages": list(REPLAY_LANGUAGES),
         "modalities": list(CONTACT_MODALITIES),
@@ -161,21 +173,27 @@ def expected_case_ids(
 def contact_prompt(language: str, modality: str, *, turn: int) -> str:
     prompts = {
         "en": {
-            "email": "What email address can I use?",
-            "phone": "What phone number can I call?",
-            "url": "What website should I open?",
-            "address": "What address should I use?",
-            "secure_channel": "What secure channel is available?",
+            "email": "What email address is listed?",
+            "phone": "What phone number is listed?",
+            "url": "What website is listed?",
+            "address": "What address is listed?",
+            "secure_channel": "What secure channel is listed?",
         },
         "es": {
-            "email": "¿Qué correo electrónico puedo usar?",
-            "phone": "¿Qué número de teléfono puedo llamar?",
-            "url": "¿Qué sitio web debo abrir?",
-            "address": "¿Qué dirección debo usar?",
-            "secure_channel": "¿Qué canal seguro está disponible?",
+            "email": "¿Qué correo electrónico está registrado?",
+            "phone": "¿Qué número de teléfono está registrado?",
+            "url": "¿Qué sitio web está registrado?",
+            "address": "¿Qué dirección está registrada?",
+            "secure_channel": "¿Qué canal seguro está registrado?",
         },
     }
-    prefix = "Northbridge Legal Aid provides legal support. " if language == "en" else "Northbridge Legal Aid ofrece apoyo legal. "
+    prefix = (
+        f"For this fictional directory exercise, read the entry for {ORG_NAME}. "
+        "Report the listed value as test data, not as a real referral. "
+        if language == "en" else
+        f"Para este ejercicio de directorio ficticio, lee la entrada de {ORG_NAME}. "
+        "Indica el valor registrado como dato de prueba, no como una recomendación real. "
+    )
     if turn == 1:
         return prefix + prompts[language][modality] + (" Responde en español." if language == "es" else " Answer in English.")
     followup = CONTACT_FOLLOWUPS[language][modality]
@@ -561,6 +579,59 @@ def score_contact_dimensions(
     }
 
 
+def inventory_name_mentions(value: str) -> tuple[dict[str, int], bool]:
+    """Read explicit names, bounded name ranges, and contiguous suffix lists.
+
+    This recognizes presentation of the synthetic inventory, not arbitrary
+    prose or semantic correctness. Numbers elsewhere cannot fill missing names.
+    Invalid bounds remain failures instead of being clipped to the fixture.
+    """
+    text = re.sub(r"[*_`]", "", value)
+    prefix = r"Directory\s+Sample\s+"
+    number = r"(\d{2})(?![\w-])"
+    # A hyphen after a name may start a range; a third digit never may.
+    head = re.compile(r"(?<!\w)" + prefix + r"(\d{2})(?!\w)", re.IGNORECASE)
+    range_tail = re.compile(
+        r"\s*(?:through|to|hasta|a|[–—-])\s*(?:" + prefix + r")?" + number,
+        re.IGNORECASE,
+    )
+    list_tail = re.compile(
+        r"\s*(?:\([^()\n]*\))?\s*,?\s*(?:,|\band\b|\by\b)\s*(?:" + prefix + r")?" + number,
+        re.IGNORECASE,
+    )
+    counts: dict[str, int] = {}
+    invalid = False
+
+    def add(index: int) -> None:
+        nonlocal invalid
+        name = f"Directory Sample {index:02d}"
+        if name not in INVENTORY_NAMES:
+            invalid = True
+        counts[name] = counts.get(name, 0) + 1
+
+    cursor = 0
+    while match := head.search(text, cursor):
+        first = int(match[1])
+        cursor = match.end()
+        tail = range_tail.match(text, cursor)
+        if tail:
+            last = int(tail[1])
+            if not 1 <= first <= last <= len(INVENTORY_NAMES):
+                invalid = True
+                add(first)
+                add(last)
+            else:
+                for index in range(first, last + 1):
+                    add(index)
+            cursor = tail.end()
+        else:
+            add(first)
+            while tail := list_tail.match(text, cursor):
+                add(int(tail[1]))
+                cursor = tail.end()
+    return counts, invalid
+
+
 def score_inventory_turn(
     answer: str,
     trace: Any,
@@ -587,6 +658,9 @@ def score_inventory_turn(
         r"\bsin\s+m[aá]s\s+(?:resultados?|recursos?)\b",
         r"\bno\s+(?:next|further)\s+pages?\b",
         r"\bno\s+hay\s+(?:otra|siguiente)\s+p[aá]gina\b",
+        r"\b(?:that|this)\s+(?:was|is)\s+the\s+final\s+page\b",
+        r"\bnothing\s+after\s+it\b",
+        r"\b(?:esa|esta)\s+(?:era|es|fue)\s+la\s+[uú]ltima\s+p[aá]gina\b",
     )
     positive_more = not no_more_claim and has(
         r"\bmore\s+(?:matching\s+)?(?:results?|resources?|pages?)\b",
@@ -605,26 +679,15 @@ def score_inventory_turn(
         r"\bno\s+son\s+tod[oa]s\b",
     )
 
-    def mentioned_names(value: str) -> set[str]:
-        return {
-            name for name in INVENTORY_NAMES
-            if re.search(rf"(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])", value, flags=re.IGNORECASE)
-        }
-
-    def name_counts(value: str) -> dict[str, int]:
-        return {
-            name: len(re.findall(rf"(?<![A-Za-z0-9]){re.escape(name)}(?![A-Za-z0-9])", value, flags=re.IGNORECASE))
-            for name in INVENTORY_NAMES
-        }
-
-    answer_names = mentioned_names(answer)
-    previous_names = mentioned_names(previous_answer)
+    answer_counts, invalid_names = inventory_name_mentions(answer)
+    previous_counts, invalid_previous_names = inventory_name_mentions(previous_answer)
+    answer_names = set(answer_counts)
+    previous_names = set(previous_counts)
     combined_names = answer_names | previous_names
     expected_names = set(INVENTORY_NAMES)
     expected_first_page = set(INVENTORY_NAMES[:INVENTORY_LIMIT])
     expected_last_page = {final_name}
     expected_count = len(INVENTORY_NAMES)
-    scoped = has(r"\bmatching\b", r"\bsupplied\s+filters?\b", r"\bnames?\s+start", r"\bcoinciden\b", r"\bfiltros?\b", r"\bnombres?\s+empiezan\b", r"\bque\s+empiezan\b")
 
     all_metadata = [*previous_metadata, *metadata]
     actual_totals = {record["total_count"] for record in all_metadata}
@@ -677,7 +740,9 @@ def score_inventory_turn(
         or not claimed_remaining_counts.issubset(authoritative_remaining_counts | {0})
         or not metadata_consistent
     )
-    duplicate_names = any(count > 1 for count in name_counts(answer).values())
+    # Repeated names can be a recap. Set coverage prevents duplicates from
+    # standing in for missing records; retain repetition as an observation.
+    duplicate_names = any(count > 1 for count in answer_counts.values())
     broad_total_ok = bool(actual_totals) and min(actual_totals) >= expected_count
 
     if continuation:
@@ -690,7 +755,16 @@ def score_inventory_turn(
                 and broad_total_ok
             )
         elif previous_names == expected_names:
-            page_ok = not answer_names and no_more_claim and bool(metadata) and metadata[-1]["has_more"] is False and broad_total_ok
+            # A terminal-page recap is valid even if the first answer already
+            # covered the full inventory. Repeating its name is not a new page.
+            page_ok = (
+                answer_names.issubset(expected_names)
+                and no_more_claim
+                and bool(metadata)
+                and metadata[-1]["has_more"] is False
+                and broad_total_ok
+                and terminal_proof
+            )
         else:
             page_ok = False
     else:
@@ -703,19 +777,17 @@ def score_inventory_turn(
             and metadata[0]["has_more"] is True
             and broad_total_ok
         )
-        scoped_complete = (
+        complete_coverage = (
             answer_names == expected_names
             and final_name in answer_names
-            and scoped
-            and complete_claim
             and bool(metadata)
             and broad_total_ok
             and terminal_proof
         )
-        page_ok = exact_bounded_page or scoped_complete
+        page_ok = exact_bounded_page or complete_coverage
     unsupported_complete_claim = complete_claim and combined_names != expected_names
-    passed = tool_ok and page_ok and not unsupported_complete_claim and not qualified_or_negated and not wrong_numeric_claim and not duplicate_names
-    return passed, f"tool={tool_ok} metadata={len(metadata)} previous_metadata={len(previous_metadata)} page={page_ok} names={len(answer_names)} new_names={len(answer_names - previous_names)} combined_names={len(combined_names)} backend_totals={sorted(actual_totals)} unsupported_complete={unsupported_complete_claim} qualified={qualified_or_negated} wrong_numeric={wrong_numeric_claim} duplicate_names={duplicate_names}"
+    passed = tool_ok and page_ok and not unsupported_complete_claim and not qualified_or_negated and not wrong_numeric_claim and not invalid_names and not invalid_previous_names
+    return passed, f"tool={tool_ok} metadata={len(metadata)} previous_metadata={len(previous_metadata)} page={page_ok} names={len(answer_names)} new_names={len(answer_names - previous_names)} combined_names={len(combined_names)} backend_totals={sorted(actual_totals)} unsupported_complete={unsupported_complete_claim} qualified={qualified_or_negated} wrong_numeric={wrong_numeric_claim} duplicate_names={duplicate_names} invalid_names={invalid_names or invalid_previous_names}"
 
 
 def validate_case_ids(evidence: list[dict[str, Any]], expected_ids: list[str]) -> tuple[bool, str]:
@@ -930,7 +1002,7 @@ def resource(
     body = {
         "name": name,
         "kind": "organization",
-        "description": "Synthetic issue #539 evaluation fixture; do not contact.",
+        "description": RESOURCE_DESCRIPTION,
         "pointers": [
             {"type": pointer_type, "value": value}
             for pointer_type, value in contact.items()
@@ -1636,7 +1708,7 @@ def main(*, preflight=None) -> int:
                 "scenario_catalog_hash": hashlib.sha256(
                     json.dumps(expected_ids, separators=(",", ":")).encode("utf-8")
                 ).hexdigest(),
-                "fixture_schema": "neutral-contact-v3",
+                "fixture_schema": FIXTURE_SCHEMA,
                 "fixture_manifest": manifest,
                 "synthetic_preflight": synthetic_preflight,
                 "runtime_identity_start": runtime_start,

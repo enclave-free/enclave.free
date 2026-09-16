@@ -1,3 +1,4 @@
+import json
 import importlib.util
 import sys
 import unittest
@@ -36,6 +37,92 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
             "tools": cls.resource_trace(10, True, 10)["tools"]
             + cls.resource_trace(1, False, None)["tools"]
         }
+
+    def test_saved_inventory_answers_accept_unambiguous_abbreviations(self):
+        fixture = json.loads((Path(__file__).parent / "fixtures/contact_inventory_20260916.json").read_text())
+        previous = {}
+        for case in fixture["cases"]:
+            trace = {"tools": [{"id": "find_resources", "status": "completed", "metadata": record}
+                               for record in case["resource_tool_metadata"]]}
+            journey, page = case["case_id"].rsplit("::", 1)
+            prior_answer, prior_trace = previous.get(journey, ("", None))
+            with self.subTest(case=case["case_id"]):
+                passed, detail = MODULE.score_inventory_turn(
+                    case["answer"], trace, final_name=MODULE.INVENTORY_NAMES[-1],
+                    continuation=page == "page2", previous_answer=prior_answer, previous_trace=prior_trace,
+                )
+                self.assertTrue(passed, detail)
+            previous[journey] = (case["answer"], trace)
+
+    def test_abbreviated_inventory_requires_coverage_and_terminal_evidence(self):
+        for answer in (
+            "All matching resources: Directory Sample 01 through 10, Directory Sample 01.",
+            "All matching resources: Directory Sample 01 through 10.",
+            "All matching resources: Directory Sample 01 through 12.",
+            "All matching resources: Directory Sample 11 through 01.",
+            "All matching resources: Directory Sample 01 and Directory Sample 11.",
+            "All matching resources: Directory Sample 010 through 11.",
+            "All matching resources: Directory Sample 01, 02, 03. There are 04, 05, 06, 07, 08, 09, 10, 11 people.",
+        ):
+            with self.subTest(answer=answer):
+                passed, _ = MODULE.score_inventory_turn(answer, self.complete_resource_trace(),
+                    final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+                self.assertFalse(passed)
+        passed, _ = MODULE.score_inventory_turn(
+            "All matching resources: Directory Sample 01 through 11.", self.resource_trace(10, True, 10),
+            final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+        self.assertFalse(passed)
+
+    def test_inventory_name_variants_are_language_and_model_independent(self):
+        for names in (
+            "Directory Sample 01–11",
+            "Directory Sample 01 through Directory Sample 11",
+            "Directory Sample 01 hasta Directory Sample 11",
+            "Directory Sample 01 a 11",
+            "Directory Sample " + ", ".join(f"{i:02d}" for i in range(1, 11)) + " and 11",
+            "Directory Sample " + ", ".join(f"{i:02d}" for i in range(1, 11)) + " y 11",
+        ):
+            with self.subTest(names=names):
+                passed, detail = MODULE.score_inventory_turn(names, self.complete_resource_trace(),
+                    final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+                self.assertTrue(passed, detail)
+                without_tool, _ = MODULE.score_inventory_turn(names, {},
+                    final_name=MODULE.INVENTORY_NAMES[-1], continuation=False)
+                self.assertFalse(without_tool)
+
+    def test_test_data_caveats_do_not_bypass_current_contact_checks(self):
+        baseline, updated = MODULE.fixture_contacts("regression")
+        trace = {"tools": [{"id": "find_resources", "status": "completed"}]}
+        for modality in MODULE.CONTACT_MODALITIES:
+            with self.subTest(modality=modality):
+                current = MODULE.score_contact_dimensions(
+                    f'The fictional entry lists {updated[modality]}. Test data; do not contact.',
+                    trace, expected=updated[modality], old_contacts=baseline,
+                    lookup_required=True, modality=modality)
+                stale = MODULE.score_contact_dimensions(
+                    f'The fictional entry lists {baseline[modality]}. Test data; do not contact.',
+                    {}, expected=updated[modality], old_contacts=baseline,
+                    lookup_required=True, modality=modality)
+                refusal = MODULE.score_contact_dimensions(
+                    'I cannot provide fictional contact data.', trace,
+                    expected=updated[modality], old_contacts=baseline,
+                    lookup_required=True, modality=modality)
+                self.assertTrue(current["quality_passed"])
+                self.assertFalse(stale["quality_passed"])
+                self.assertTrue(stale["current_old"]["needs_semantic_review"])
+                self.assertFalse(refusal["quality_passed"])
+
+    def test_contact_prompts_request_fictional_catalog_values_not_real_referrals(self):
+        for language, scope_word, listed_word in (("en", "fictional", "listed"), ("es", "ficticio", "registrad")):
+            for modality in MODULE.CONTACT_MODALITIES:
+                first = MODULE.contact_prompt(language, modality, turn=1).casefold()
+                followup = MODULE.contact_prompt(language, modality, turn=2).casefold()
+                with self.subTest(language=language, modality=modality):
+                    self.assertIn(scope_word, first)
+                    self.assertIn(listed_word, first)
+                    self.assertIn(listed_word, followup)
+                    self.assertNotIn("updated", first + followup)
+                    self.assertNotIn("changed", first + followup)
 
     def test_regression_matrix_covers_global_plus_three_user_types(self):
         self.assertEqual(len(MODULE.PERSONAS), 4)
@@ -915,7 +1002,11 @@ class CuratedResourceContactEvalTests(unittest.TestCase):
         baseline, updated = MODULE.fixture_contacts("manifest")
         manifest = MODULE.fixture_manifest(baseline, updated)
         self.assertEqual(len(manifest["hash"]), 64)
-        self.assertEqual(manifest["schema"], "neutral-contact-v3")
+        self.assertEqual(manifest["schema"], "neutral-contact-v4")
+        self.assertEqual(manifest["resource_description"], MODULE.RESOURCE_DESCRIPTION)
+        self.assertEqual(manifest["contact_prompts"]["en"]["email"][0], MODULE.contact_prompt("en", "email", turn=1))
+        with patch.object(MODULE, "RESOURCE_DESCRIPTION", "changed fixture semantics"):
+            self.assertNotEqual(manifest["hash"], MODULE.fixture_manifest(baseline, updated)["hash"])
         self.assertEqual(MODULE.runtime_identity_validation({"configured_model": "glm-5-3-flash"}, ["glm-5-3-flash"])["status"], "consistent")
         self.assertEqual(MODULE.runtime_identity_validation({"configured_model": None}, ["glm-5-3-flash"])["status"], "unverified")
         self.assertEqual(MODULE.runtime_identity_validation({"configured_model": "glm-5-3-flash"}, ["glm-5-2"])["status"], "mismatch")
