@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { isPxDemo } from '../../branding/pxDemo';
+import { PxBrand } from '../../branding/PxBrand';
 import { PxWelcome } from '../../branding/PxWelcome';
 import { InstanceLogo } from '../shared/InstanceLogo';
 
@@ -10,6 +11,7 @@ interface OnboardingCardProps {
   subtitle?: string;
   size?: 'md' | 'lg' | 'xl';
   topRight?: ReactNode;
+  presentation?: 'standard' | 'entry';
 }
 
 export function OnboardingCard({
@@ -19,7 +21,9 @@ export function OnboardingCard({
   subtitle,
   size,
   topRight,
+  presentation = 'standard',
 }: OnboardingCardProps) {
+  const isEntry = isPxDemo && presentation === 'entry';
   const maxWidthClass = {
     md: 'max-w-2xl',
     lg: 'max-w-4xl',
@@ -28,7 +32,7 @@ export function OnboardingCard({
 
   const content = (
     <div
-      className={`${isPxDemo ? 'px-onboarding ' : ''}relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4`}
+      className={`${isEntry ? 'px-onboarding ' : ''}relative min-h-screen w-full overflow-x-hidden bg-gradient-to-br from-surface via-surface to-surface-raised/30 flex flex-col items-center justify-center p-4`}
     >
       {topRight && (
         <div className="px-onboarding-actions absolute top-4 inset-x-4 flex min-w-0 justify-end">
@@ -37,7 +41,14 @@ export function OnboardingCard({
       )}
 
       <div className={`max-w-full min-w-0 ${maxWidthClass}`}>
-        {!isPxDemo && <InstanceLogo />}
+        {!isEntry &&
+          (isPxDemo ? (
+            <div className="mb-6">
+              <PxBrand />
+            </div>
+          ) : (
+            <InstanceLogo />
+          ))}
 
         <div className="card w-full max-w-full rounded-3xl p-6 sm:p-10 min-w-0 overflow-hidden animate-fade-in-up">
           {(title || subtitle) && (
@@ -64,5 +75,5 @@ export function OnboardingCard({
     </div>
   );
 
-  return isPxDemo ? <PxWelcome>{content}</PxWelcome> : content;
+  return isEntry ? <PxWelcome>{content}</PxWelcome> : content;
 }

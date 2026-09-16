@@ -241,6 +241,7 @@ export function UserAuth() {
 
   return (
     <OnboardingCard
+      presentation="entry"
       topRight={<LanguageSwitcher />}
       title={title}
       subtitle={subtitle}
