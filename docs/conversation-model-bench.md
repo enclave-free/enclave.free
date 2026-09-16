@@ -1,6 +1,6 @@
 # Conversation Model Bench
 
-The Conversation Model Bench is an opt-in evaluation of real Sage behavior through the live Gateway and configured Model Provider. It is evidence-producing, not a required CI gate or a raw-model benchmark.
+The Conversation Model Bench is an opt-in evaluation of real Sage behavior through the live Gateway and configured Model Provider. Live model calls are opt-in. Offline evaluator regression tests run in CI. Read the [measurement and review guide](benchmark-measurements.md) for the current schema, question corpus, contact matrix, and quality gates.
 
 ## Purpose
 
@@ -79,8 +79,8 @@ Each run records:
 - model/provider identity,
 - scenario inputs,
 - each turn’s returned session identifier,
-- ordered SSE events,
-- answer deltas,
+- SSE event types and counts,
+- answer-delta counts and complete assembled answers,
 - Activity and final Trace,
 - Tool evidence,
 - timing/diagnostics,
@@ -166,17 +166,23 @@ python scripts/benches/conversation_model_bench.py \
 
 The exact current CLI remains documented by `--help`; commands in run artifacts should be copied from the successful local smoke.
 
-For a reasoning-effort comparison, recreate only Sage with one explicit
+For a descriptive reasoning-effort experiment, recreate only Sage with one explicit
 `TINFOIL_REASONING_EFFORT` value, wait for health, and run the same scenarios in
-the same order. Compare at least the ordinary no-Tool, Knowledge Search, Curated
+a recorded, counterbalanced order across repetitions. The automated paired-model summary withholds comparisons across different reasoning efforts. Inspect configuration experiments separately. Include at least the ordinary no-Tool, Knowledge Search, Curated
 Resources, combined Knowledge/Curated, tight-consent, and Nicaragua-referral
 cases. Inspect final answers as well as timings; a faster configuration does not
 win by weakening consent, grounding, Tool selection, or country relevance.
 
-From the repository root, the reproducible Docker flow is:
+For GLM-5.3 Flash, use the supported `low`, `high`, and `max` thinking budgets.
+The deployment default is `low`; the former GLM-5.2 `none` setting mixed reasoning
+into answer content during migration preflight.
+
+The following Docker loop is a single-pass descriptive configuration smoke, not
+a repeated or counterbalanced comparison. Run it from the repository root:
 
 ```bash
-for effort in none minimal low medium high xhigh max; do
+set -e
+for effort in low high max; do
   TINFOIL_REASONING_EFFORT="$effort" docker compose \
     -f docker-compose.infra.yml -f docker-compose.app.yml \
     up -d --force-recreate --no-deps sage
@@ -199,6 +205,6 @@ for effort in none minimal low medium high xhigh max; do
 done
 ```
 
-Each artifact contains timings, Tool evidence, checks, and answer previews under
+Each artifact contains timings, Tool evidence, checks, and full answers (plus compatibility previews) under
 `.candidates[0].scenarios`. Review those scenario records directly; do not rank
 candidates from the aggregate pass/fail status alone.

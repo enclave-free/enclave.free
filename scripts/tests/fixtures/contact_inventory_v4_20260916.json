@@ -1,0 +1,125 @@
+{
+  "source": "DeepSeek v4.1 Flash fresh neutral-contact-v4 cohort; unchanged synthetic answers and page metadata",
+  "cases": [
+    {
+      "case_id": "inventory::generic_user::en::page1",
+      "answer": "There are 11 Curated Resources whose names start with \"Directory Sample\": Directory Sample 01 through Directory Sample 11. I confirmed this by paging past the first bounded result set (10 items) to retrieve the final entry, so the list is complete.\n\nAll are organizations tagged \"legal,\" region MX, with email pointers directory-0@example.test through directory-10@example.test. Note their descriptions mark them as synthetic evaluation fixtures (\"do not contact\"), so they aren't real referral targets.\n\nIf you'd like, I can pull the full details for any specific one.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 11,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::generic_user::en::page2",
+      "answer": "The next page (offset 10) contains just one entry, \"Directory Sample 11\" — the same final item I already flagged. With `has_more: false` and no next offset, that's the end of the list; there are no additional resources beyond the 11 total.\n\nSo the full set is Directory Sample 01–11, all synthetic evaluation fixtures marked \"do not contact.\" Nothing further to page through.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::family_member::en::page1",
+      "answer": "There are 11 Curated Resources whose names start with \"Directory Sample\" — the full set spans two pages, so the first page of 10 was not complete:\n\nDirectory Sample 01 through Directory Sample 11 (resource IDs issue-539-inventory-0 through -10), each an organization tagged \"legal,\" region MX, languages en/es, with email pointers directory-0@example.test through directory-10@example.test.\n\nNote: these are synthetic evaluation fixtures marked \"do not contact,\" so treat them as test data rather than real referrals. Want me to pull any single entry's full details?",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 11,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::family_member::en::page2",
+      "answer": "The next page contains the final entry, so the full set of 11 is now complete:\n\nDirectory Sample 11 (resource ID issue-539-inventory-10-1789586858523) — organization tagged \"legal,\" region MX, languages en/es, email pointer directory-10@example.test. Like the others, it's a synthetic issue #539 evaluation fixture marked \"do not contact,\" so treat it as test data rather than a real referral.\n\nThat's the last page (has_more is false). Want the full details on any single entry?",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::former_political_prisoner::en::page1",
+      "answer": "All 11 curated resources with names starting \"Directory Sample\" are: Directory Sample 01 through Directory Sample 11 (IDs issue-539-inventory-0 through -10). Each is an organization tagged \"legal,\" region MX, languages en/es, with an email pointer (directory-0@example.test through directory-10@example.test).\n\nNote these are synthetic evaluation fixtures whose descriptions say \"do not contact,\" so treat them as test data rather than real referrals. The first page returned 10 with has_more=true; the second page returned the final one, confirming the total of 11.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 11,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::former_political_prisoner::en::page2",
+      "answer": "That page is empty — offset 11 returns no results, and `has_more` is false with `total_count` still 11. So the full set was already shown: Directory Sample 01–11 (IDs issue-539-inventory-0 through -10), and there's nothing further to list.\n\nAs noted before, these are synthetic evaluation fixtures marked \"do not contact,\" so they aren't real referrals. If you want, I can re-display the full list or filter them differently.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 0,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::solidarity_networks_for_political_prisoners::en::page1",
+      "answer": "There are 11 Curated Resources whose names start with \"Directory Sample\" — Directory Sample 01 through Directory Sample 11. All are organizations tagged \"legal,\" based in Mexico (MX), with English/Spanish languages, and each has an email pointer (directory-0@example.test through directory-10@example.test). They're synthetic evaluation fixtures marked \"do not contact.\"\n\nI paged through both result pages (10 + 1) to confirm the full set, since the first page was bounded and reported more results.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 10,
+          "total_count": 11,
+          "has_more": true,
+          "next_offset": 10
+        },
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    },
+    {
+      "case_id": "inventory::solidarity_networks_for_political_prisoners::en::page2",
+      "answer": "That was the final page — offset 10 returned just one item, Directory Sample 11 (organization, legal, MX, email directory-10@example.test, synthetic fixture marked \"do not contact\"), and reports no further results. So the full set is 11 resources, Directory Sample 01–11, and there's nothing beyond this page.",
+      "resource_tool_metadata": [
+        {
+          "returned_count": 1,
+          "total_count": 11,
+          "has_more": false,
+          "next_offset": null
+        }
+      ]
+    }
+  ]
+}

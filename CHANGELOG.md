@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.25 - 2026-09-16
+
+- Fixed Admin Test User Session reuse after User Type migration, preserving the test identity while updating its persona mapping.
+- Enabled Maple Conversation fallback on Tinfoil HTTP 429 rate limits, using the same model and existing retry bounds without replaying partial streams.
+- Corrected fictional contact benchmark questions and inventory scoring, with versioned fixtures and regression evidence. A fresh DeepSeek cohort completed 169/169 requests; corrected inventory remeasurement yields 152/169 contract passes.
+- Known limitations: contact freshness and two secure-channel refusals remain visible in the evaluation; contract completion does not certify answer safety or quality.
+
+## 0.4.24 - 2026-09-13
+
+- Added optional Maple fallback when Tinfoil rejects Conversation credentials with HTTP 401 or 403, before streaming begins. The model, messages, Tools and inference settings stay unchanged.
+- Added a pinned private Maple proxy profile with automatic restart. Fallback stays disabled until a Maple API key is configured; embeddings and diagnostics retain their existing Tinfoil path.
+
+## 0.4.23 - 2026-09-11
+
+- Migrated the main model from deprecated GLM 5.2 to GLM 5.3 Flash through verified Tinfoil transport, with low reasoning effort and strict response-integrity checks.
+- Modernized Conversation benchmarks to separate completion, deterministic checks, semantic review, and observed quality failures; reduced the added measurement implementation by 25%.
+- Added explicit Enclave smoke verification, retained full Sage vision checks, and stabilized the Linux retry test without weakening its deadlines.
+- Known limitations: the full Sage vision model remains unavailable; consent and contact-refresh quality findings remain open. Enclave smoke success alone does not certify Conversation quality.
+
 ## 0.4.22 - 2026-09-08
 
 - Removed the unused Accelerate checkpoint loader (CVE-2026-69112) by selecting the PDF-only Docling dependency set and its layout model directly.

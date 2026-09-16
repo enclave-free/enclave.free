@@ -18,20 +18,23 @@ BASE_COMPOSE_FILES = (
 DEVELOPMENT_OVERRIDE = "docker-compose.frontend-dev.yml"
 
 
-def render_compose(*files: str) -> dict[str, object]:
-    command = ["docker", "compose"]
+def render_compose(*files: str, overrides: dict[str, str] | None = None) -> dict[str, object]:
+    command = ["docker", "compose", "--env-file", os.devnull]
     for compose_file in files:
         command.extend(("-f", compose_file))
     command.extend(("config", "--format", "json"))
 
     environment = os.environ.copy()
     environment.pop("TINFOIL_MODEL", None)
+    environment.pop("TINFOIL_REASONING_EFFORT", None)
     environment.pop("TINFOIL_MODEL_FALLBACKS", None)
+    environment.pop("MAPLE_API_KEY", None)
     environment.setdefault("LLM_API_KEY", "compose-contract-test")
     environment.setdefault("INTERNAL_AGENT_TOKEN", "compose-contract-test")
     environment.setdefault(
         "SECRET_KEY", "compose-contract-test-secret-key-00000000"
     )
+    environment.update(overrides or {})
     completed = subprocess.run(
         command,
         cwd=REPO_ROOT,
@@ -52,7 +55,7 @@ def frontend_service(config: dict[str, object]) -> dict[str, object]:
 
 
 class FrontendComposeContractTests(unittest.TestCase):
-    def test_conversations_use_one_glm_model_without_fallback_configuration(self) -> None:
+    def test_conversations_use_one_glm_model_with_fallback_disabled_by_default(self) -> None:
         config = render_compose(*BASE_COMPOSE_FILES)
         services = config["services"]
         assert isinstance(services, dict)
@@ -65,9 +68,20 @@ class FrontendComposeContractTests(unittest.TestCase):
         backend_environment = backend["environment"]
         assert isinstance(sage_environment, dict)
         assert isinstance(backend_environment, dict)
-        self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-2")
+        self.assertEqual(sage_environment["TINFOIL_MODEL"], "glm-5-3-flash")
+        self.assertEqual(sage_environment["TINFOIL_REASONING_EFFORT"], "low")
         self.assertNotIn("TINFOIL_MODEL_FALLBACKS", sage_environment)
-        self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-2")
+        self.assertEqual(sage_environment["MAPLE_API_KEY"], "")
+        self.assertEqual(backend_environment["LLM_MODEL"], "glm-5-3-flash")
+
+    def test_operator_model_and_effort_overrides_reach_both_runtimes(self) -> None:
+        config = render_compose(*BASE_COMPOSE_FILES, overrides={
+            "TINFOIL_MODEL": "operator-model", "TINFOIL_REASONING_EFFORT": "max"
+        })
+        services = config["services"]
+        self.assertEqual(services["sage"]["environment"]["TINFOIL_MODEL"], "operator-model")
+        self.assertEqual(services["sage"]["environment"]["TINFOIL_REASONING_EFFORT"], "max")
+        self.assertEqual(services["core-backend"]["environment"]["LLM_MODEL"], "operator-model")
 
     def test_default_topology_is_the_production_frontend(self) -> None:
         frontend = frontend_service(render_compose(*BASE_COMPOSE_FILES))
