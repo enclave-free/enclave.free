@@ -32,6 +32,7 @@ jobs:
             backend.tests.test_model_dependency_contract \
             backend.tests.test_magic_link_enumeration \
             backend.tests.test_magic_link_localization \
+            backend.tests.test_test_user_provisioning \
             backend.tests.test_ingest_batch_replacement \
             backend.tests.test_query_retrieval_hydration \
             backend.tests.test_sql_safety \
