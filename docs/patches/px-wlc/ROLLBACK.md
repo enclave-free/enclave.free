@@ -60,6 +60,8 @@ Do not restore a database, delete volumes, clear localStorage, run `down -v`, us
 
 ## Permanent source removal
 
+The owner authorized main integration on 2026-09-17. The application removal patch below also applies on main while its application tree matches `b8f1625`; do not reset main or revert unrelated release history.
+
 Preferred removal keeps all patch documentation/evidence and reverses only the recorded application/build difference. From a clean dedicated removal branch/worktree based on this accepted patch:
 
 ```bash

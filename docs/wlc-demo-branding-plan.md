@@ -1,3 +1,5 @@
+> Owner update, 2026-09-17: main integration is authorized. The original isolation contract below is historical; see [the current patch index](patches/px-wlc/README.md).
+
 > Historical research. Current accepted deployment, source inventory and rollback: [LIBERATOR patch index](patches/px-wlc/README.md).
 
 # World Liberty Congress demo branding: research and proposed plan

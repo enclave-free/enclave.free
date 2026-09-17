@@ -1,10 +1,10 @@
 # Temporary LIBERATOR / WLC visual patch
 
-Customer accepted; deployed and verified. Last audited **2026-09-17**. This is the authoritative patch index; earlier release/preparation documents are historical.
+Customer accepted; deployed and verified. Main integration authorized **2026-09-17**. Last audited **2026-09-17**. This is the authoritative patch index; earlier release/preparation documents are historical.
 
 | Item | Current state |
 | --- | --- |
-| Branch | `temp/px-demo-wlc-visual-only` |
+| Integration | `main`; patch history retained on `temp/px-demo-wlc-visual-only` |
 | Deployed application source | `b8f1625da5c1198af2dda52cf19aec083575e363` |
 | Generic base | `v0.4.25` (`5dbd822f02dd0694a5178ef9001b93eb12f8e9a9`) |
 | Scope | Temporary frontend presentation for the one demo Instance |
@@ -13,7 +13,7 @@ Customer accepted; deployed and verified. Last audited **2026-09-17**. This is t
 | Organization credit | Official white World Liberty Congress logo on entry pages |
 | Live audit | Current frontend image healthy; approved appearance retained |
 
-Do not merge this organization-specific branch into generic `main` or `staging`. The historical `px` module names, CSS prefix and Compose names deliberately remain stable. No backend, authentication, database schema, email delivery or saved Instance Settings change belongs to this patch.
+The owner explicitly authorized integrating the accepted patch and documentation into `main` on 2026-09-17, superseding the original branch-isolation instruction. Branding remains opt-in through `VITE_DEMO_BRAND=wlc`; default builds do not activate the WLC identity or palette. The protection-card removal is an unconditional presentation change and therefore also reaches default builds. The historical `px` module names, CSS prefix and Compose names deliberately remain stable. No backend, authentication, database schema, email delivery or saved Instance Settings change belongs to this patch.
 
 ## Start here
 
@@ -77,7 +77,7 @@ The fixture binds to localhost port 4178, serves compiled assets with synthetic 
 
 Capture the running frontend image, source, health, exact ordered Compose files and non-frontend container inventory before replacing it. Retain the image and a `docker save` archive. Use the existing Compose project/environment and frontend-only `up -d --no-deps --no-build frontend`; do not recreate the backend. Apply the intended frontend image override last. Record new immutable image/source values and refresh rollback evidence after every deployment.
 
-When advancing the generic release, merge/review it on this temporary branch, rerun enabled/disabled checks, and prepare a generic rollback image from the **new** base. The 0.4.25 removal proof does not establish compatibility with a future backend. Keep the current release overrides and operator backups until the patch has been retired and verified.
+When advancing releases on main, rerun enabled/disabled checks and review any changes to patch-owned files. Prepare an updated unbranded rollback image from the intended release, explicitly deciding whether to retain the protection-card removal. The 0.4.25 removal proof does not establish compatibility with a future backend. Keep the current release overrides and operator backups until the patch has been retired and verified.
 
 ## Historical records
 

@@ -33,3 +33,7 @@ The patch index now names the accepted deployed source and generic base. Earlier
 | Historical rollback notes became misleading after follow-ups. | One authoritative current manifest and runbook, with immutable source/image identities and dated historical records. |
 
 The patch remains a reference implementation, not the future configuration system. No extra dependencies, database migration, backend changes or runtime WLC asset requests were introduced. Retain the design/evidence after retiring source customization.
+
+## Main integration — 2026-09-17
+
+The owner subsequently requested that the accepted patch and documentation be integrated into `main` and local/remote branches synchronized. This supersedes the original requirement to keep the patch off main. Main integration preserves the accepted application tree and the opt-in build selector. The independent protection-card removal also becomes part of default builds; all other branding remains gated. No release tag or deployment is required for this source synchronization. The immutable `b8f1625` application revision, v0.4.25 rollback base and retained images remain the rollback reference.
