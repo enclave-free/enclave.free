@@ -1,0 +1,20 @@
+{
+  "rename_commit": "574179adffa03bb475f421857b5ec7e11f58c96a",
+  "original_patch_commit": "8889acc677f6ddad4e897cb16d00c65fcb4db52b",
+  "source_removal_order": [
+    "574179adffa03bb475f421857b5ec7e11f58c96a",
+    "8889acc677f6ddad4e897cb16d00c65fcb4db52b"
+  ],
+  "changed_files": [
+    "M\tfrontend/index.html",
+    "A\tfrontend/public/demo-branding/liberator.svg",
+    "D\tfrontend/public/demo-branding/px.svg",
+    "M\tfrontend/src/branding/PxBrand.tsx",
+    "M\tfrontend/src/branding/pxDemo.css",
+    "M\tfrontend/src/branding/pxDemo.test.ts",
+    "M\tfrontend/src/branding/pxDemo.ts",
+    "M\tfrontend/src/components/shared/AppHeader.tsx",
+    "M\tfrontend/vite.config.ts"
+  ],
+  "sign_in_copy_changed": false
+}

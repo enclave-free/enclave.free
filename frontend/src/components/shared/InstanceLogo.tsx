@@ -1,25 +1,31 @@
-import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import { useInstanceConfig } from '../../context/InstanceConfigContext'
-import { DynamicIcon } from './DynamicIcon'
+import { isPxDemo } from '../../branding/pxDemo';
+import { PxBrand } from '../../branding/PxBrand';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
+import { useInstanceConfig } from '../../context/InstanceConfigContext';
+import { DynamicIcon } from './DynamicIcon';
 
 export function InstanceLogo() {
-  const { t } = useTranslation()
-  const { config } = useInstanceConfig()
-  const [logoError, setLogoError] = useState(false)
-  const hasLogoImage = Boolean(config.logoUrl?.trim()) && !logoError
+  const { t } = useTranslation();
+  const { config } = useInstanceConfig();
+  const [logoError, setLogoError] = useState(false);
+  const hasLogoImage = Boolean(config.logoUrl?.trim()) && !logoError;
   const brandingBadgeClass = hasLogoImage
     ? 'bg-surface'
-    : 'bg-gradient-to-br from-accent to-accent-hover'
+    : 'bg-gradient-to-br from-accent to-accent-hover';
 
   useEffect(() => {
-    setLogoError(false)
-  }, [config.logoUrl])
+    setLogoError(false);
+  }, [config.logoUrl]);
+
+  if (isPxDemo) return <PxBrand large />;
 
   return (
     <div className="flex flex-col items-center mb-8">
-      <div className={`w-16 h-16 rounded-2xl ${brandingBadgeClass} flex items-center justify-center shadow-xl ring-1 ring-white/10 mb-4`}>
+      <div
+        className={`w-16 h-16 rounded-2xl ${brandingBadgeClass} flex items-center justify-center shadow-xl ring-1 ring-white/10 mb-4`}
+      >
         {hasLogoImage ? (
           <img
             src={config.logoUrl}
@@ -35,5 +41,5 @@ export function InstanceLogo() {
         {config.name}
       </Link>
     </div>
-  )
+  );
 }

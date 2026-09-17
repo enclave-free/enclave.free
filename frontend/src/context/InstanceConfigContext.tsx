@@ -1,3 +1,4 @@
+import { applyDocumentTitle, applyFavicon } from '../branding/pxDocument';
 /**
  * Instance Configuration Context
  *
@@ -20,8 +21,6 @@ import {
   saveInstanceConfig,
   applyAccentColor,
   applyCustomAccentColor,
-  applyDocumentTitle,
-  applyFavicon,
   applyAppleTouchIcon,
   AccentColor,
   CURATED_ICONS,

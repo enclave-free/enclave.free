@@ -1,0 +1,14 @@
+{
+  "at": "2026-09-16T20:52:30.186Z",
+  "checks": [
+    "Fresh landing and LIBERATOR title/marker",
+    "Language selection and cleaned signup",
+    "Login tab without protection card",
+    "Mobile light/dark without overflow",
+    "320px viewport fits",
+    "Admin entry without promotional panel",
+    "No uncaught browser errors"
+  ],
+  "errors": [],
+  "scope": "Public read-only browser verification. No email sent, Nostr signature, user creation, or authenticated live flow."
+}

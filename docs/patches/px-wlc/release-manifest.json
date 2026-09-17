@@ -1,0 +1,14 @@
+{
+  "genericRelease": "v0.4.21",
+  "genericMain": "4c240681",
+  "temporarySource": "2c54a68",
+  "branch": "temp/px-demo-wlc-visual-only",
+  "frontendImage": "sha256:c81c520d9ff3fb6ee49121d81b903cacca6fc4fab4c5a73c58766bb069e60a67",
+  "sourceRevertOrder": [
+    "6eda1de",
+    "574179a",
+    "8889acc"
+  ],
+  "sourceRollbackMatchesGeneric": true,
+  "backendAdvisoryFollowup": "https://github.com/enclave-free/enclave.free/issues/670"
+}

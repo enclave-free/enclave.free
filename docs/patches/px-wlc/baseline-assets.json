@@ -1,0 +1,31 @@
+{
+  "source_base": "063e132ce0b77a238cd8bccdd4f36cfd38369eae",
+  "note": "Public entry assets compared; host commit and image are not verified.",
+  "assets": [
+    {
+      "asset": "/assets/index-bHN8iWpe.js",
+      "matches_local_base": true,
+      "live_sha256": "f7dbac7647bbd2e3eee8fa391e51551c66f1689abb107e5d8d4202742e67260c"
+    },
+    {
+      "asset": "/assets/createLucideIcon-Dv7Vx7Pn.js",
+      "matches_local_base": true,
+      "live_sha256": "14751bcd5d3dde04a79b54a3102c02ab156212054691414e85d221e03001154b"
+    },
+    {
+      "asset": "/assets/onboarding-DYtgx3Wk.js",
+      "matches_local_base": true,
+      "live_sha256": "02823ccd0e4b9d9fa619cff62b7c20ae31fdd53935fe058bbdd866ee746503a6"
+    },
+    {
+      "asset": "/assets/browserStoragePosture-E4P2s7sn.js",
+      "matches_local_base": true,
+      "live_sha256": "4b0d641882407cd3e563be6aaeae389b29ac713c1d9c952cf948691fa8c76549"
+    },
+    {
+      "asset": "/assets/index-CDx5SQpL.css",
+      "matches_local_base": true,
+      "live_sha256": "608c3469535ff9abcbae429b0a4270b07139a9cda3810a78f5e74a811eddb9c0"
+    }
+  ]
+}

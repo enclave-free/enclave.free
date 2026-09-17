@@ -177,6 +177,7 @@ export function UserOnboarding() {
 
   return (
     <OnboardingCard
+      presentation="entry"
       title={t('onboarding.language.title')}
       subtitle={t('onboarding.language.subtitle')}
       footer={footer}

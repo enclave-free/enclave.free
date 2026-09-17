@@ -1,0 +1,70 @@
+[
+  {
+    "theme": "light",
+    "entry": {
+      "--color-surface": "#f5f9fd",
+      "--color-surface-raised": "#fff",
+      "--color-surface-overlay": "#e2ecf6",
+      "--color-text": "#092d59",
+      "--color-text-secondary": "#385676",
+      "--color-text-muted": "#4d6781",
+      "--color-border": "#cbd9e7",
+      "--color-accent": "#0759a0",
+      "--color-accent-hover": "#003b73",
+      "--px-action": "#062d5c",
+      "--px-action-hover": "#0c447e",
+      "--px-action-text": "#fff",
+      "--px-action-border": "transparent"
+    },
+    "app": {
+      "--color-surface": "#f5f9fd",
+      "--color-surface-raised": "#fff",
+      "--color-surface-overlay": "#e2ecf6",
+      "--color-text": "#092d59",
+      "--color-text-secondary": "#385676",
+      "--color-text-muted": "#4d6781",
+      "--color-border": "#cbd9e7",
+      "--color-accent": "#0759a0",
+      "--color-accent-hover": "#003b73",
+      "--px-action": "#062d5c",
+      "--px-action-hover": "#0c447e",
+      "--px-action-text": "#fff",
+      "--px-action-border": "transparent"
+    },
+    "checks": "Palette parity/adaptation, text/link/button/border contrast, admin scope, chat/settings, 320px fit, no uncaught errors"
+  },
+  {
+    "theme": "dark",
+    "entry": {
+      "--color-surface": "#f5f9fd",
+      "--color-surface-raised": "#fff",
+      "--color-surface-overlay": "#e2ecf6",
+      "--color-text": "#092d59",
+      "--color-text-secondary": "#385676",
+      "--color-text-muted": "#4d6781",
+      "--color-border": "#cbd9e7",
+      "--color-accent": "#0759a0",
+      "--color-accent-hover": "#003b73",
+      "--px-action": "#062d5c",
+      "--px-action-hover": "#0c447e",
+      "--px-action-text": "#fff",
+      "--px-action-border": "transparent"
+    },
+    "app": {
+      "--color-surface": "#081f3d",
+      "--color-surface-raised": "#0d2d50",
+      "--color-surface-overlay": "#153b63",
+      "--color-text": "#f5f9fd",
+      "--color-text-secondary": "#c4d7eb",
+      "--color-text-muted": "#a7bfd8",
+      "--color-border": "#345578",
+      "--color-accent": "#87c6ff",
+      "--color-accent-hover": "#b4dcff",
+      "--px-action": "#062d5c",
+      "--px-action-hover": "#0c447e",
+      "--px-action-text": "#fff",
+      "--px-action-border": "#698aac"
+    },
+    "checks": "Palette parity/adaptation, text/link/button/border contrast, admin scope, chat/settings, 320px fit, no uncaught errors"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "file": "live-language-desktop.png",
+    "pixel_identical": true,
+    "before_size": [
+      1440,
+      1000
+    ],
+    "after_size": [
+      1440,
+      1000
+    ]
+  },
+  {
+    "file": "live-signup-desktop.png",
+    "pixel_identical": true,
+    "before_size": [
+      1440,
+      1000
+    ],
+    "after_size": [
+      1440,
+      1000
+    ]
+  },
+  {
+    "file": "live-signup-mobile.png",
+    "pixel_identical": true,
+    "before_size": [
+      390,
+      977
+    ],
+    "after_size": [
+      390,
+      977
+    ]
+  },
+  {
+    "file": "live-signup-mobile-dark.png",
+    "pixel_identical": true,
+    "before_size": [
+      390,
+      977
+    ],
+    "after_size": [
+      390,
+      977
+    ]
+  }
+]

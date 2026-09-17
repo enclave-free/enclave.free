@@ -15,6 +15,10 @@ CMD ["npm", "run", "dev"]
 
 FROM dependencies AS build
 
+# Temporary PX demo selector; production remains generic unless explicitly enabled.
+ARG VITE_DEMO_BRAND=""
+ENV VITE_DEMO_BRAND=${VITE_DEMO_BRAND}
+
 COPY . .
 RUN npm run build
 
