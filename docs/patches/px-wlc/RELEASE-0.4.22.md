@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 # Backend dependency fix after the LIBERATOR rollout
 
 Released and deployed on 2026-09-08: [v0.4.22](https://github.com/enclave-free/enclave.free/releases/tag/v0.4.22), main `8b783c8`, reviewed source `c91b9a7`. Resolves [#670](https://github.com/enclave-free/enclave.free/issues/670), the dependency scan failure recorded during the 0.4.21 visual rollout.

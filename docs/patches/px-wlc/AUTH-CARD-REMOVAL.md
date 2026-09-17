@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 # Remove the sign-in data protection card
 
 Requested on 2026-09-08 after the LIBERATOR rollout. The signup and login form now ends with the short magic-link explanation. The entire “How Enclave protects your data” card and its three unused icon imports are removed from `frontend/src/pages/UserAuth.tsx`.

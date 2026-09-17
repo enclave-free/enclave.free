@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 # LIBERATOR visual iteration 2 — proposed, 2026-09-16
 
 Status: approved and implemented; see [implementation and rollback record](ITERATION-2.md). Based on the customer's supplied blue landing reference and explicit request for team attribution beneath LIBERATOR with the WLC logo at the bottom.

@@ -1,4 +1,4 @@
-> Deployed release record: [LIBERATOR / 0.4.21](patches/px-wlc/RELEASE-0.4.21.md). This original plan remains as historical design context.
+> Historical research. Current accepted deployment, source inventory and rollback: [LIBERATOR patch index](patches/px-wlc/README.md).
 
 # World Liberty Congress demo branding: research and proposed plan
 

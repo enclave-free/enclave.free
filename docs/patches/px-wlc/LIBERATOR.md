@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 > Release follow-up: see [RELEASE-0.4.21.md](RELEASE-0.4.21.md) for the combined copy review, final rollout status, and rollback record. The preparation notes below are historical.
 
 # LIBERATOR release preparation

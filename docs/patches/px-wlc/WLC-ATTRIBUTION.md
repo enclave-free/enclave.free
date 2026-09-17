@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 # World Liberty Congress attribution
 
 Requested 2026-09-09: add the exact line “by World Liberty Congress” beneath LIBERATOR. The shared temporary `PxBrand` component displays this attribution on onboarding, signup/login, and application headers. LIBERATOR remains the product name and browser title.

@@ -1,3 +1,5 @@
+> Deployed and customer accepted. Current source/colors and complete rollback: [patch index](README.md), [color alignment](COLOR-ALIGNMENT.md), [rollback](ROLLBACK.md).
+
 # LIBERATOR entry layout, iteration 2
 
 Implemented 2026-09-16 on `temp/px-demo-wlc-visual-only`, retaining generic release 0.4.25. The original customer reference and accepted scope are summarized in [the plan](ITERATION-2-PLAN.md).

@@ -1,0 +1,128 @@
+{
+  "auditedAt": "2026-09-17",
+  "branch": "temp/px-demo-wlc-visual-only",
+  "source": "b8f1625da5c1198af2dda52cf19aec083575e363",
+  "genericBase": "5dbd822f02dd0694a5178ef9001b93eb12f8e9a9",
+  "genericRelease": "v0.4.25",
+  "frontendImage": "sha256:22916a56f9903bf28f1f233d9422edc93961c9c7ac7d01aff4d912c2b2683619",
+  "colorOnlyRollbackImage": "sha256:86524c1e9a5ba930cc9138c9ca6ff5a5378159f7fbc98f7a9958584eed7fca41",
+  "sourceRevertOrder": [
+    "b8f1625",
+    "8e5a2ce",
+    "c9199c8",
+    "4e0df74",
+    "c04120d",
+    "2c043d9",
+    "b28eb21",
+    "2e68f04",
+    "6eda1de",
+    "574179a",
+    "8889acc"
+  ],
+  "sourceRemovalAudit": {
+    "conflicts": false,
+    "applicationDiffAgainstGeneric": [],
+    "scope": [
+      "frontend",
+      "docker-compose.px-wlc.yml"
+    ],
+    "liveRollbackExecuted": false
+  },
+  "applicationFiles": [
+    {
+      "status": "A",
+      "path": "docker-compose.px-wlc.yml"
+    },
+    {
+      "status": "M",
+      "path": "frontend/Dockerfile"
+    },
+    {
+      "status": "M",
+      "path": "frontend/index.html"
+    },
+    {
+      "status": "A",
+      "path": "frontend/public/demo-branding/entry-background.svg"
+    },
+    {
+      "status": "A",
+      "path": "frontend/public/demo-branding/liberator.svg"
+    },
+    {
+      "status": "A",
+      "path": "frontend/public/demo-branding/wlc-white.svg"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/PxBrand.tsx"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/PxWelcome.tsx"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/pxDemo.css"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/pxDemo.test.ts"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/pxDemo.ts"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/branding/pxDocument.ts"
+    },
+    {
+      "status": "A",
+      "path": "frontend/src/components/onboarding/OnboardingCard.test.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/components/onboarding/OnboardingCard.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/components/shared/AppHeader.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/components/shared/InstanceLogo.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/context/InstanceConfigContext.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/main.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/pages/UserAuth.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/src/pages/UserOnboarding.tsx"
+    },
+    {
+      "status": "M",
+      "path": "frontend/vite.config.ts"
+    }
+  ],
+  "genericRollbackImage": "sha256:6045a956b0ad9bdf0d62f546078647c3371036640d3d0bce018b3b717dd7341c",
+  "genericRollbackVerification": {
+    "sourceCommit": "5dbd822f02dd0694a5178ef9001b93eb12f8e9a9",
+    "separateContainerHealthy": true,
+    "httpServed": true,
+    "demoMarkerAbsent": true,
+    "demoAssetsAbsent": true,
+    "archiveGzipIntegrity": true,
+    "restoreScriptsSyntaxAndComposeSelection": true,
+    "liveServicesRecreated": false
+  }
+}

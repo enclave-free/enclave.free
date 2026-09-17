@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 > The backend dependency finding recorded below was subsequently resolved in [0.4.22](RELEASE-0.4.22.md). This is the historical visual rollout record.
 
 # LIBERATOR / 0.4.21 rollout

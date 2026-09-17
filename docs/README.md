@@ -31,6 +31,8 @@ Start with the current-state docs below. They are the files that describe the ac
 
 ## Admin And Ops
 
+- [Temporary LIBERATOR / WLC patch](patches/px-wlc/README.md): accepted demo appearance, current manifest, verification and full rollback/source-removal runbook.
+
 - [demo-deployment-handoff.md](demo-deployment-handoff.md): simple recipient-facing walkthrough for an already-initialized demo instance. PDF: [enclave-demo-deployment-handoff.pdf](enclave-demo-deployment-handoff.pdf). Rebuild with `python3 scripts/build_demo_handoff_pdf.py`; CI rebuilds the PDF and fails on drift.
 - [release-process.md](release-process.md): minimal tag-based process for publishing versioned GitHub releases.
 - [admin-config-assistant.md](admin-config-assistant.md): admin config assistant bubble and change-apply flow.

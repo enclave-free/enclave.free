@@ -1,3 +1,5 @@
+> Historical record. For the accepted deployment and complete rollback instructions, start with [the patch index](README.md) and [rollback runbook](ROLLBACK.md).
+
 # Implementation analysis and prototype reference
 
 > Name update: the current product name is **LIBERATOR**, all caps. See [the release preparation record](LIBERATOR.md) for the rename, current screenshots, and updated rollback instructions. PX references below describe the earlier version.

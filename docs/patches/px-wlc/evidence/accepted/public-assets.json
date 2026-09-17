@@ -1,0 +1,246 @@
+[
+  {
+    "path": "index.html",
+    "sha256": "e70ac17efc05d641454905f8812a2be56e8e1777f555c52730d1c2e44ca1fefc"
+  },
+  {
+    "path": "assets/AdminAIConfig-DYpdV3yv.js",
+    "sha256": "aae03f163b15e5ee7f23cac440dca3540b471f691efd43ff71d73888b3899f93"
+  },
+  {
+    "path": "assets/AdminConfigAssistant-DXZneDp8.js",
+    "sha256": "bfb20e5381e4856047605a8abe1995426417f5b306689d75695cdb67a98e3ac2"
+  },
+  {
+    "path": "assets/AdminDatabaseExplorer-DSbOnrn4.js",
+    "sha256": "fa2f686c8eb9fa304b6f4eb26587cde362cf654dbaae1e8a63aca31d38b6dfcd"
+  },
+  {
+    "path": "assets/AdminDeploymentConfig-CQK0uQeZ.js",
+    "sha256": "d230dc638912e729918b1029fc71f6bb0ad9071040c89b49312c2ee14273f688"
+  },
+  {
+    "path": "assets/AdminDocumentUpload--V3JXOnv.js",
+    "sha256": "d3d2ef5fc2d202046a14e4a7a87c876591db0d4231d1af52cb4d818057f73c89"
+  },
+  {
+    "path": "assets/AdminGuides-CQgdO04q.js",
+    "sha256": "cc81081d1c6c53e6420c81d2bc38f13276e9d4f69a9d40674d72a04b1d64be8a"
+  },
+  {
+    "path": "assets/AdminInstanceConfig-CnfxQCvP.js",
+    "sha256": "fb29c56bd1446ce3126cf5146145439abb877166b2e7d40ce6b58a8f05034bc3"
+  },
+  {
+    "path": "assets/AdminOnboarding-WhqhDWR9.js",
+    "sha256": "a476cf4fc7b0f51ad6188d227a474dfb4da436f7172181a241d11159bafb3ec3"
+  },
+  {
+    "path": "assets/AdminOnboardingSetup-DXUGmBwL.js",
+    "sha256": "e2984b182e59ae53f5a7cad15e7f5e9e582100f4b66fdd668048e04602132083"
+  },
+  {
+    "path": "assets/AdminResourcesDirectory-C-z_qDFZ.js",
+    "sha256": "6b9d689590381b686b0ef40c29fc38848d1b16e8730f6732619d4261ff975766"
+  },
+  {
+    "path": "assets/AdminSetup-CUdmKj2K.js",
+    "sha256": "908fb13c58961967f8ffc8250e80f878b3a44a37faedb9cde1d0b57bef837861"
+  },
+  {
+    "path": "assets/AdminTestAndFeedback-D9AF3qit.js",
+    "sha256": "e4e3ff9a3e31a2c831f90e6c5999d628fdf989ceee0188060e300b80c3c0ec0d"
+  },
+  {
+    "path": "assets/AdminUserConfig-BLiWlPyG.js",
+    "sha256": "13ba6daa06f1fa67678e75c690b65c14e21c9f75d26d8425b2d832453db87673"
+  },
+  {
+    "path": "assets/AdminUserManager-C9mIY1wn.js",
+    "sha256": "91c4525dd8c2b619e5845c2a7791d2b67f14dbb27adea71b79f5d8e5cce09ed4"
+  },
+  {
+    "path": "assets/AppHeader--c0sbX4n.js",
+    "sha256": "932de02c8abd4ca0ed24137b0376136ab1acf3ba42afc58c1d32a33c8f8ade1f"
+  },
+  {
+    "path": "assets/ChatPage-DbqRUuAE.js",
+    "sha256": "5114e8b8bf90303d482e31fff9069e0ed5f3f80e3783f0587074194f969441cc"
+  },
+  {
+    "path": "assets/DynamicIcon-DfkGzohC.js",
+    "sha256": "338c54167c7ad18a2516df1a9325e59cda171247311344f7ec5af5ef923e11bd"
+  },
+  {
+    "path": "assets/IconPicker-Bd2kIAXG.js",
+    "sha256": "418230de7aeb9cfca08f2df931a08f47b866a70bf3b4d49ba0f1d9996d193d63"
+  },
+  {
+    "path": "assets/InstanceLogo-Ote8pyZj.js",
+    "sha256": "3de22746dd1197b0f7831d3567eaa8b8ed066abf93e0756d003530c6578701b1"
+  },
+  {
+    "path": "assets/LanguageSwitcher-DgZhTHRu.js",
+    "sha256": "ef1a60a386c0081eae066f9d579a8501d2d07d52a9d6f36eba38330c90a518dc"
+  },
+  {
+    "path": "assets/OnboardingCard-t_3M4Sr0.js",
+    "sha256": "7aa4f14161a7afb7aa7d5a172c19169c801e2e74a27eac2e561046f312936d3d"
+  },
+  {
+    "path": "assets/PendingApproval-DV0_vuHV.js",
+    "sha256": "99217f8508174e02266279ec85a08278d60cffc77d514d93b85620606a8c1062"
+  },
+  {
+    "path": "assets/PxBrand-DDe3fOGY.js",
+    "sha256": "b540873cd84beb9962d88dbc924795a9552db48618a5042006ec2c1654cff955"
+  },
+  {
+    "path": "assets/TestDashboard-DX__dSmm.js",
+    "sha256": "2a625743f977634603c696a90348762a5e489413f499b63f875c13bfde0e20ed"
+  },
+  {
+    "path": "assets/UserAuth-brjioRe3.js",
+    "sha256": "857368f2a5fef4818e942f9185f8530cd04134d3320709f9bb7ea48c395ee23c"
+  },
+  {
+    "path": "assets/UserOnboarding-BvHrkVHk.js",
+    "sha256": "ec418336e4797e84426bbaf72b778a41fe9e03e5c20fa89d96085bba4321be2b"
+  },
+  {
+    "path": "assets/UserProfile-Dl_FQJs3.js",
+    "sha256": "083b4620f8c820ec3af28dbe7ea6419e29c78fcec021a6292454786eeca8b80b"
+  },
+  {
+    "path": "assets/UserTypeSelection-2Z2lOL82.js",
+    "sha256": "dd852f3473c6d93ea7c0aba9f4b59835e728c9bbb45b7fbdc469aca1422fdd99"
+  },
+  {
+    "path": "assets/VerifyMagicLink-BpN4vhTs.js",
+    "sha256": "ca258b0a3fdc6bc6db9b80707d510242ea9c40c4b32d6d635caba1809a6fe4d4"
+  },
+  {
+    "path": "assets/adminResilienceInstrumentation-B48cioox.js",
+    "sha256": "0593149cacbade495f70d6251548fb1744e2b045ddd1b9f1480c6b8f9d43a7bd"
+  },
+  {
+    "path": "assets/browserStoragePosture-E4P2s7sn.js",
+    "sha256": "4b0d641882407cd3e563be6aaeae389b29ac713c1d9c952cf948691fa8c76549"
+  },
+  {
+    "path": "assets/chevron-down-DM24ZAzR.js",
+    "sha256": "dbec1f7cf0f71df6f06443fb8fa03e57cab92cde1cd37ab67684db188b9c2d19"
+  },
+  {
+    "path": "assets/config-Xf5ReHTQ.js",
+    "sha256": "9a274557b9dc5a22ace7c857dad79f3a5ff3d619a266dba4d89f0c78aafeba9c"
+  },
+  {
+    "path": "assets/createLucideIcon-Dv7Vx7Pn.js",
+    "sha256": "14751bcd5d3dde04a79b54a3102c02ab156212054691414e85d221e03001154b"
+  },
+  {
+    "path": "assets/database-Debz__bM.js",
+    "sha256": "0ab853e6ba87d6bd09bcc662f20d5cb5ddd1a57677ab89dfca2e00b9b6033c79"
+  },
+  {
+    "path": "assets/file-text-Cz2Hdqc1.js",
+    "sha256": "50f804e9f56e4b56107c27d16af8a555b680b6097dc759455ed3745fbc7dea66"
+  },
+  {
+    "path": "assets/globe-CdmhElgq.js",
+    "sha256": "4957cd5cf56c8cbf99a3ace8e8381538e17abd66edf2b93f10d98307cf0a0a0e"
+  },
+  {
+    "path": "assets/index-Cl3XDdEO.css",
+    "sha256": "29f03405adb7a4d821b012394ddcd9e7ef6d9baa5bf49e5e95e5ed06a8049475"
+  },
+  {
+    "path": "assets/index-Dk2eNEUo.js",
+    "sha256": "1db5083ee350a0d4d8080276043823ef7f958b95ed7b3932ab4a51ba93bc5e6f"
+  },
+  {
+    "path": "assets/llmChat-lvCtLL89.js",
+    "sha256": "033d68d303306f50e8aaca4bf8d3d69ec750faca75c12bdaeae8c0993aa0a32a"
+  },
+  {
+    "path": "assets/lock-IiGI4nG6.js",
+    "sha256": "1428a876e739eafe906cc06be4d5bf152e20fe08c54bc90d5416f0d3becebce4"
+  },
+  {
+    "path": "assets/nip19-C_zBHCIb.js",
+    "sha256": "75a761f2ac87a91d6d85dfc95a223ccfe80a18388a8f12b1fc1c12a4180ba45e"
+  },
+  {
+    "path": "assets/nostrAuth-qsBl-na6.js",
+    "sha256": "c9742f461ea3228ff2a290a3743056023e4012aff5bceebe6d39319edfd73ff7"
+  },
+  {
+    "path": "assets/nostrKeys-DE_Wzov8.js",
+    "sha256": "a9b5c8da7a588406ea5253b1ce27f2e83a4dde005099fbaf670a9f11b7c54a39"
+  },
+  {
+    "path": "assets/onboarding-DYtgx3Wk.js",
+    "sha256": "02823ccd0e4b9d9fa619cff62b7c20ae31fdd53935fe058bbdd866ee746503a6"
+  },
+  {
+    "path": "assets/sessionDefaults-Bz8VS4oy.js",
+    "sha256": "863b6947bdc4c7fe3249e25d9b080a7f7aa8474b01e72454284059c193c67cc0"
+  },
+  {
+    "path": "assets/shield-check-WEVjL9Zc.js",
+    "sha256": "8cb734dc2e86b36cde0f28708a1c7ce7b547319dcf644fcaa2b76e29f19e11ac"
+  },
+  {
+    "path": "assets/sparkles-B1iFsoQI.js",
+    "sha256": "ae05d523d6f1b011e9b01f15dc3d8e709f49e76c3e0c588d54ad3d2836af2c2d"
+  },
+  {
+    "path": "assets/square-terminal-CzykVhCI.js",
+    "sha256": "ac29d44900f39c5f779015dda637c8fb7b460f3be8028c5b84b2e325c53a2a55"
+  },
+  {
+    "path": "assets/trash-2-GwSF3JSO.js",
+    "sha256": "1eac13d3934c92ef7f8f5fa4b049fa18554663826365d3564ad69e9be731ae97"
+  },
+  {
+    "path": "assets/ui-CLxBoVRj.js",
+    "sha256": "439c9529bbf2a4b02c56e130286bb006260fc87c5027a1b910687e4634fa8276"
+  },
+  {
+    "path": "assets/user-check-72KH7ZRi.js",
+    "sha256": "2eb6e5fdabcb6ccb0037058c8a69eabd2f58c4394e456cc4e9b2793ac2cb4199"
+  },
+  {
+    "path": "assets/userRosterExportPreparation-kwPkSjUj.js",
+    "sha256": "ce5c4c1e207186586fba1e22bcc0d5cb2e4ad4e4736a89bb7d39bea1057270d2"
+  },
+  {
+    "path": "assets/users-BDUEX8-g.js",
+    "sha256": "099699823452d101aca8718f278ee7b0447349e47ed0c85a66735ba8f8edebf2"
+  },
+  {
+    "path": "assets/wand-sparkles-CePv0DWl.js",
+    "sha256": "4e6b85723b13876b116a29ced005162ee1ce28e7f8d172028b29b177d08c54ff"
+  },
+  {
+    "path": "assets/x-C8vHbIwx.js",
+    "sha256": "4ed8894a866eb6827eac0d3e9c7ed23527df1421100114a86de6d55345b2710d"
+  },
+  {
+    "path": "assets/zap-CCiXgyvK.js",
+    "sha256": "28ffcac7a6905110c3456d6e0cf5128f9106a45dfc055a35ad27952650b4bdcc"
+  },
+  {
+    "path": "demo-branding/entry-background.svg",
+    "sha256": "04b06e39b5d19ecc4e4878400c6f181cf4a8f84a8f50c775d0add25ca3750f47"
+  },
+  {
+    "path": "demo-branding/liberator.svg",
+    "sha256": "a1b311c74103b0d0027b23738edf86721d815acdc7ab62aefdaed3a1e8e54ae9"
+  },
+  {
+    "path": "demo-branding/wlc-white.svg",
+    "sha256": "1d886409ee685a37f015f31cb68e1427ddec3a5ae6122f603123ac5c89b9682a"
+  }
+]
