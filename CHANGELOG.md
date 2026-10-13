@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.26 - 2026-10-13
+
+- Removed a Sage authentication bypass: the public Conversation routes no longer accept the legacy `dev-mode-mock-token` bearer token or signed dev-mode session payloads, matching the control plane. Previously anyone could start Conversations without signing in, and those callers shared one owner.
+- Fixed User deletion failing with a foreign-key error when the User had a retained session log. Retained logs are detached from the deleted User Profile and keep their existing lifecycle.
+- Updated frontend build and test dependencies for new high-severity advisories in `source-map-js` and `undici`.
+- Known limitations: deleting a User still leaves that User's Sage Conversations in place without an owner.
+
 ## 0.4.25 - 2026-09-16
 
 - Fixed Admin Test User Session reuse after User Type migration, preserving the test identity while updating its persona mapping.
