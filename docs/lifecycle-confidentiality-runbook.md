@@ -30,7 +30,7 @@ Historical log/session retention is distinct from active Session Memory deletion
 
 Audit Log detail compaction is irreversible in active product storage: old sensitive old/new values are replaced while rows, actor/action metadata, timestamps, status, lifecycle evidence, and hash-chain verifiability remain reviewable. There is no v1 setting to retain full sensitive Audit Log detail indefinitely.
 
-See `docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md` for the overall lifecycle boundary, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md` for why governance evidence is preserved while old sensitive detail may be compacted, and `CONTEXT.md` for domain terms such as Active Storage Lifecycle, Deployment Surface, Copied Export, Lifecycle Readiness, and Retention Run Record.
+See `docs/adr/0006-retention-and-deletion-are-operator-controlled-but-incomplete.md` for the overall lifecycle boundary, `docs/adr/0007-audit-log-is-a-product-boundary-but-coverage-is-partial.md` for why governance evidence is preserved while old sensitive detail may be compacted, and `GLOSSARY.md` for domain terms such as Active Storage Lifecycle, Deployment Surface, Copied Export, Lifecycle Readiness, and Retention Run Record.
 
 ## Scheduled Retention Automation
 

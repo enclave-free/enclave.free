@@ -298,7 +298,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         self.assertEqual(violations, [])
 
     def test_signal_channel_docs_keep_enclave_free_as_sage_home(self) -> None:
-        context = (REPO_ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+        context = (REPO_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
         adr = (
             REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
         ).read_text(encoding="utf-8")
@@ -325,7 +325,7 @@ class PrototypeCompatibilityDocsTest(unittest.TestCase):
         adr = (
             REPO_ROOT / "docs/adr/0021-signal-is-a-conversation-channel.md"
         ).read_text(encoding="utf-8")
-        context = (REPO_ROOT / "CONTEXT.md").read_text(encoding="utf-8")
+        context = (REPO_ROOT / "GLOSSARY.md").read_text(encoding="utf-8")
         combined = f"{context}\n{adr}"
 
         self.assertIn(
